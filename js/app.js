@@ -44,6 +44,17 @@ function initNavigation() {
 }
 
 // ──────────────────────────────────────────────
+// AUXILIAR: LIMPIEZA DE CLASES DE ANIMACIÓN DE ENTRADA
+// ──────────────────────────────────────────────
+function cleanupAnimationClasses() {
+  setTimeout(() => {
+    document.querySelectorAll('.section-entering, .section-appearing, .item-entering').forEach(el => {
+      el.classList.remove('section-entering', 'section-appearing', 'item-entering');
+    });
+  }, 850);
+}
+
+// ──────────────────────────────────────────────
 // PANTALLA: DIARIO
 // ──────────────────────────────────────────────
 function renderDiaryScreen(options = {}) {
@@ -144,6 +155,7 @@ function renderDiaryScreen(options = {}) {
       }
     }
   }
+  cleanupAnimationClasses();
 }
 
 function animateNumber(elementId, targetValue, suffix = '') {
@@ -1080,6 +1092,7 @@ function renderRecipesScreen() {
     section.appendChild(row);
     container.appendChild(section);
   });
+  cleanupAnimationClasses();
 }
 
 function updateRecipeCardState(recipeId) {
@@ -1222,6 +1235,7 @@ function renderPantryScreen() {
       <p>${_pantryFilterActive ? '¡Todo en orden! No faltan ingredientes.' : 'No hay ingredientes que coincidan.'}</p>`;
     container.appendChild(msg);
   }
+  cleanupAnimationClasses();
 }
 
 // ──────────────────────────────────────────────
