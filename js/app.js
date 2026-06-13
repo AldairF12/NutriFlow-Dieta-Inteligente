@@ -521,7 +521,7 @@ function logMeal(recipeId) {
         setTimeout(() => {
           currentMealSec.classList.add('logging-out');
           setTimeout(() => {
-            renderDiaryScreen();
+            renderDiaryScreen({ animateUpcoming: true });
             renderPantryScreen(); // mantener en sincronía la despensa
           }, 380);
         }, 280);
