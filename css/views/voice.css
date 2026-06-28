@@ -1,0 +1,124 @@
+/* ============================================================
+   BOTTOM SHEET · REGISTRO POR VOZ
+   ============================================================ */
+
+.rs-voice-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 20px;
+  text-align: center;
+}
+
+.rs-voice-hint {
+  font-size: 0.9rem;
+  color: var(--gray-500);
+  margin-bottom: 24px;
+  line-height: 1.4;
+}
+
+.rs-voice-mic-btn {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-image: linear-gradient(135deg, var(--mint-400), var(--mint-500));
+  background-color: var(--mint-500);
+  color: white;
+  font-size: 2rem;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(62,168,140,0.3);
+  transition: all 0.3s ease;
+  margin-bottom: 24px;
+}
+
+.rs-voice-mic-btn:disabled {
+  background: var(--gray-300);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.rs-voice-mic-btn:hover {
+  transform: scale(1.05);
+  background: var(--mint-600);
+}
+
+.rs-voice-mic-btn.recording {
+  background-color: #ef4444 !important; /* Rojo para grabar */
+  color: white !important;
+  box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  animation: mic-pulse 1.5s infinite cubic-bezier(0.66, 0, 0, 1);
+}
+
+@keyframes mic-pulse {
+  to {
+    box-shadow: 0 0 0 30px rgba(239, 68, 68, 0);
+  }
+}
+
+.rs-voice-transcript-area {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: slideInUp 0.3s ease;
+}
+
+.rs-voice-label {
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  text-align: left;
+  font-weight: 500;
+}
+
+.rs-voice-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid var(--gray-200);
+  background: var(--gray-50);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  color: var(--gray-800);
+  resize: none;
+  line-height: 1.4;
+}
+
+.rs-voice-input:focus {
+  outline: none;
+  border-color: var(--mint-400);
+  background: white;
+  box-shadow: 0 0 0 3px rgba(62,168,140,0.1);
+}
+
+.rs-voice-process-btn {
+  margin-top: 4px;
+  background-image: linear-gradient(135deg, var(--mint-400) 0%, var(--mint-500) 100%) !important;
+  background-color: var(--mint-500) !important;
+  border: none;
+  color: #ffffff !important;
+  padding: 12px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(62,168,140,0.25);
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.rs-voice-process-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(62,168,140,0.3);
+}
+
+.rs-voice-status {
+  margin-top: 12px;
+  font-size: 0.85rem;
+  color: var(--mint-600);
+  font-weight: 500;
+  height: 20px;
+}

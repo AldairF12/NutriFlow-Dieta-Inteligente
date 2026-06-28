@@ -45,351 +45,524 @@
   <!-- ══════════════════════════════════════════
        PANTALLA 1 · DIARIO
   ═══════════════════════════════════════════ -->
-  <main id="screen-diary" class="screen active"
-        role="main" aria-label="Diario de comidas">
+  <main id="screen-diary" class="screen active" role="main" aria-label="Diario de comidas">
+      <header class="screen-header">
+        <p id="greeting-text" class="greeting">Hola!</p>
+        <p id="current-date" class="current-date"></p>
+        <span id="slot-badge" class="slot-badge">Cargando...</span>
+        <div class="macro-summary" role="region" aria-label="Resumen de macros del dia">
+          <div class="macro-chip">
+            <span id="macro-cal" class="macro-chip-val">-- kcal</span>
+            <span class="macro-chip-lbl">Calorias</span>
+          </div>
+          <div class="macro-chip">
+            <span id="macro-prot" class="macro-chip-val">--g</span>
+            <span class="macro-chip-lbl">Proteina</span>
+          </div>
+          <div class="macro-chip">
+            <span id="macro-carb" class="macro-chip-val">--g</span>
+            <span class="macro-chip-lbl">Carbos</span>
+          </div>
+          <div class="macro-chip">
+            <span id="macro-fat" class="macro-chip-val">--g</span>
+            <span class="macro-chip-lbl">Grasa</span>
+          </div>
+        </div>
+      </header>
+      <div id="main-content" role="region" aria-label="Sugerencias del momento"></div>
+    </main>
 
-    <header class="screen-header">
-      <p id="greeting-text" class="greeting">¡Hola! 👋</p>
-      <p id="current-date"  class="current-date"></p>
-      <span id="slot-badge" class="slot-badge">🌅 Cargando…</span>
+    <section id="screen-recipes" class="screen" aria-label="Catalogo de recetas">
+      <header class="screen-header-simple">
+        <h1 class="screen-title">Recetas</h1>
+        <p class="screen-subtitle">Tu catalogo de comidas saludables</p>
+      </header>
+      <div id="recipes-list" role="list" aria-label="Lista de recetas por tipo de comida"></div>
+    </section>
 
-      <!-- Resumen macros del día -->
-      <div class="macro-summary" role="region" aria-label="Resumen de macros del día">
-        <div class="macro-chip">
-          <span id="macro-cal"  class="macro-chip-val">— kcal</span>
-          <span class="macro-chip-lbl">Calorías</span>
+    <section id="screen-pantry" class="screen" aria-label="Gestion de despensa">
+      <header class="screen-header-simple">
+        <h1 class="screen-title">Despensa</h1>
+        <p class="screen-subtitle">Controla tus ingredientes disponibles</p>
+      </header>
+      <div class="pantry-toolbar">
+        <div class="pantry-search-wrap">
+          <span class="pantry-search-icon">&#128269;</span>
+          <input id="pantry-search" type="search" class="pantry-search-input" placeholder="Buscar ingrediente..."
+            autocomplete="off" aria-label="Buscar ingrediente" />
         </div>
-        <div class="macro-chip">
-          <span id="macro-prot" class="macro-chip-val">—g</span>
-          <span class="macro-chip-lbl">Proteína</span>
-        </div>
-        <div class="macro-chip">
-          <span id="macro-carb" class="macro-chip-val">—g</span>
-          <span class="macro-chip-lbl">Carbos</span>
-        </div>
-        <div class="macro-chip">
-          <span id="macro-fat"  class="macro-chip-val">—g</span>
-          <span class="macro-chip-lbl">Grasa</span>
-        </div>
+        <button id="btn-pantry-filter" class="btn-pantry-filter" aria-pressed="false"
+          aria-label="Filtrar ingredientes faltantes">
+          Solo faltantes
+        </button>
       </div>
-    </header>
+      <div id="pantry-list" class="pantry-list" role="list" aria-label="Inventario de ingredientes"></div>
+    </section>
 
-    <!-- Contenido dinámico (JS inyecta aquí) -->
-    <div id="main-content" role="region" aria-label="Sugerencias del momento"></div>
+    <section id="screen-profile" class="screen" aria-label="Perfil y preferencias">
+      <header class="screen-header-simple">
+        <h1 class="screen-title">Perfil</h1>
+        <p class="screen-subtitle">Ajusta tus preferencias alimentarias</p>
+      </header>
+      <div class="settings-list">
 
-  </main>
-
-  <!-- ══════════════════════════════════════════
-       PANTALLA 2 · RECETAS
-  ═══════════════════════════════════════════ -->
-  <section id="screen-recipes" class="screen" aria-label="Catálogo de recetas">
-
-    <header class="screen-header-simple">
-      <h1 class="screen-title">Recetas</h1>
-      <p class="screen-subtitle">Tu catálogo de comidas saludables</p>
-    </header>
-
-    <div id="recipes-list" role="list" aria-label="Lista de recetas por tipo de comida"></div>
-
-  </section>
-
-  <!-- ══════════════════════════════════════════
-       PANTALLA 3 · DESPENSA
-  ═══════════════════════════════════════════ -->
-  <section id="screen-pantry" class="screen" aria-label="Gestión de despensa">
-
-    <header class="screen-header-simple">
-      <h1 class="screen-title">Despensa</h1>
-      <p class="screen-subtitle">Controla tus ingredientes disponibles</p>
-    </header>
-
-    <!-- Barra de herramientas -->
-    <div class="pantry-toolbar">
-      <div class="pantry-search-wrap">
-        <span class="pantry-search-icon">🔍</span>
-        <input id="pantry-search" type="search" class="pantry-search-input"
-               placeholder="Buscar ingrediente…" autocomplete="off"
-               aria-label="Buscar ingrediente" />
-      </div>
-      <button id="btn-pantry-filter" class="btn-pantry-filter" aria-pressed="false"
-              aria-label="Filtrar ingredientes faltantes">
-        ⚠️ Faltantes
-      </button>
-    </div>
-
-    <div id="pantry-list" class="pantry-list"
-         role="list" aria-label="Inventario de ingredientes"></div>
-
-  </section>
-
-  <!-- ══════════════════════════════════════════
-       PANTALLA 4 · PERFIL
-  ═══════════════════════════════════════════ -->
-  <section id="screen-profile" class="screen" aria-label="Perfil y preferencias">
-
-    <header class="screen-header-simple">
-      <h1 class="screen-title">Perfil</h1>
-      <p class="screen-subtitle">Ajusta tus preferencias alimentarias</p>
-    </header>
-
-    <div class="settings-list">
-
-      <!-- Card: Ingredientes excluidos -->
-      <details class="settings-card" id="scard-dislikes">
-        <summary class="settings-card-header">
-          <span class="settings-card-icon">🚫</span>
-          <div class="settings-card-header-text">
-            <div class="settings-card-title">Ingredientes excluidos</div>
-            <div class="settings-card-desc">Excluye ingredientes de tus sugerencias de recetas</div>
-          </div>
-          <span class="settings-card-chevron" aria-hidden="true">›</span>
-        </summary>
-        <div class="settings-card-body">
-          <div class="settings-card-body-inner">
-            <div id="dislikes-selected" class="dislikes-selected" role="region" aria-label="Ingredientes excluidos"></div>
-            <p class="dislikes-catalog-label">Catálogo de ingredientes</p>
-            <div id="dislikes-list" class="dislikes-list" role="list" aria-label="Lista de ingredientes"></div>
-          </div>
-        </div>
-      </details>
-
-      <!-- Card: Mis líquidos -->
-      <details class="settings-card" id="scard-liquids">
-        <summary class="settings-card-header">
-          <span class="settings-card-icon">💧</span>
-          <div class="settings-card-header-text">
-            <div class="settings-card-title">Mis líquidos</div>
-            <div class="settings-card-desc">Añade o elimina las bebidas de tu seguimiento</div>
-          </div>
-          <span class="settings-card-chevron" aria-hidden="true">›</span>
-        </summary>
-        <div class="settings-card-body">
-          <div class="settings-card-body-inner">
-            <div id="liquids-manage-list" class="liquids-manage-list"
-                 role="list" aria-label="Lista de líquidos"></div>
-            <form id="liquid-add-form" class="liquid-add-form"
-                  aria-label="Añadir nuevo líquido" novalidate>
-              <div class="liquid-form-row">
-                <div class="liquid-form-field">
-                  <label for="liq-icon" class="liquid-form-label">🙌 Emoji</label>
-                  <input id="liq-icon"  type="text" class="liquid-input liquid-input-sm"
-                         maxlength="2" placeholder="🍐" autocomplete="off" aria-label="Emoji del líquido" />
-                </div>
-                <div class="liquid-form-field liquid-form-field--grow">
-                  <label for="liq-name" class="liquid-form-label">🍿 Nombre</label>
-                  <input id="liq-name"  type="text" class="liquid-input"
-                         maxlength="40" placeholder="Ej. Agua de jamaica"
-                         autocomplete="off" aria-label="Nombre del líquido" />
-                </div>
-                <div class="liquid-form-field">
-                  <label for="liq-type" class="liquid-form-label">🎷 Tipo</label>
-                  <select id="liq-type" class="liquid-input liquid-input-sm" aria-label="Tipo de líquido">
-                    <option value="water">Agua</option>
-                    <option value="milk">Lácteo</option>
-                    <option value="infusion">Infusión</option>
-                    <option value="juice">Jugo</option>
-                    <option value="broth">Caldo</option>
-                    <option value="other">Otro</option>
-                  </select>
-                </div>
-              </div>
-              <button id="btn-add-liquid" type="submit" class="btn-add-liquid"
-                      aria-label="Añadir líquido">
-                + Añadir líquido
-              </button>
-            </form>
-          </div>
-        </div>
-      </details>
-
-      <!-- Card: Horarios de comida -->
-      <details class="settings-card" id="scard-hours">
-        <summary class="settings-card-header">
-          <span class="settings-card-icon">⏰</span>
-          <div class="settings-card-header-text">
-            <div class="settings-card-title">Horarios de comida</div>
-            <div class="settings-card-desc">Ajusta cuándo empieza y termina cada turno</div>
-          </div>
-          <span class="settings-card-chevron" aria-hidden="true">›</span>
-        </summary>
-        <div class="settings-card-body">
-          <div class="settings-card-body-inner">
-            <div id="meal-hours-list" class="meal-hours-list"
-                 role="list" aria-label="Horarios de comida"></div>
-          </div>
-        </div>
-      </details>
-
-      <!-- Card: Importar datos -->
-      <details class="settings-card" id="scard-import">
-        <summary class="settings-card-header">
-          <span class="settings-card-icon">📥</span>
-          <div class="settings-card-header-text">
-            <div class="settings-card-title">Importar datos</div>
-            <div class="settings-card-desc">Sube un .json con ingredientes, recetas y líquidos</div>
-          </div>
-          <span class="settings-card-chevron" aria-hidden="true">›</span>
-        </summary>
-        <div class="settings-card-body">
-          <div class="settings-card-body-inner">
-            <div id="import-drop-zone" class="import-drop-zone">
-              <span class="import-icon">📂</span>
-              <span class="import-drop-label">Arrastra tu archivo .json aquí</span>
-              <span class="import-drop-sub">o haz clic para buscarlo</span>
-              <button id="btn-browse-file" class="btn-import-file" type="button"
-                      aria-label="Seleccionar archivo JSON">
-                Seleccionar archivo
-              </button>
+        <details class="settings-card" id="scard-dislikes">
+          <summary class="settings-card-header">
+            <span class="settings-card-icon">&#128683;</span>
+            <div class="settings-card-header-text">
+              <div class="settings-card-title">Ingredientes excluidos</div>
+              <div class="settings-card-desc">Excluye ingredientes de tus sugerencias de recetas</div>
             </div>
-            <input id="json-file-input" type="file" accept=".json" hidden aria-hidden="true" />
-            <div id="import-status" class="import-status" role="status" aria-live="polite"></div>
+            <span class="settings-card-chevron" aria-hidden="true">&#8250;</span>
+          </summary>
+          <div class="settings-card-body">
+            <div class="settings-card-body-inner">
+              <div id="dislikes-selected" class="dislikes-selected" role="region" aria-label="Ingredientes excluidos"></div>
+              <p class="dislikes-catalog-label">Catalogo de ingredientes</p>
+              <div id="dislikes-list" class="dislikes-list" role="list" aria-label="Lista de ingredientes"></div>
+            </div>
+          </div>
+        </details>
+
+        <details class="settings-card" id="scard-liquids">
+          <summary class="settings-card-header">
+            <span class="settings-card-icon">&#128167;</span>
+            <div class="settings-card-header-text">
+              <div class="settings-card-title">Mis liquidos</div>
+              <div class="settings-card-desc">Anade o elimina las bebidas de tu seguimiento</div>
+            </div>
+            <span class="settings-card-chevron" aria-hidden="true">&#8250;</span>
+          </summary>
+          <div class="settings-card-body">
+            <div class="settings-card-body-inner">
+              <div id="liquids-manage-list" class="liquids-manage-list" role="list" aria-label="Lista de liquidos"></div>
+              <form id="liquid-add-form" class="liquid-add-form" aria-label="Anadir nuevo liquido" novalidate>
+                <div class="liquid-form-row">
+                  <div class="liquid-form-field">
+                    <label for="liq-icon" class="liquid-form-label">Emoji</label>
+                    <input id="liq-icon" type="text" class="liquid-input liquid-input-sm" maxlength="2" placeholder="&#129380;"
+                      autocomplete="off" aria-label="Emoji del liquido" />
+                  </div>
+                  <div class="liquid-form-field liquid-form-field--grow">
+                    <label for="liq-name" class="liquid-form-label">Nombre</label>
+                    <input id="liq-name" type="text" class="liquid-input" maxlength="40"
+                      placeholder="Ej. Agua de jamaica" autocomplete="off" aria-label="Nombre del liquido" />
+                  </div>
+                  <div class="liquid-form-field">
+                    <label for="liq-type" class="liquid-form-label">Tipo</label>
+                    <select id="liq-type" class="liquid-input liquid-input-sm" aria-label="Tipo de liquido">
+                      <option value="water">Agua</option>
+                      <option value="milk">Lacteo</option>
+                      <option value="infusion">Infusion</option>
+                      <option value="juice">Jugo</option>
+                      <option value="broth">Caldo</option>
+                      <option value="other">Otro</option>
+                    </select>
+                  </div>
+                </div>
+                <button id="btn-add-liquid" type="submit" class="btn-add-liquid" aria-label="Anadir liquido">
+                  + Anadir liquido
+                </button>
+              </form>
+            </div>
+          </div>
+        </details>
+
+        <details class="settings-card" id="scard-hours">
+          <summary class="settings-card-header">
+            <span class="settings-card-icon">&#9200;</span>
+            <div class="settings-card-header-text">
+              <div class="settings-card-title">Horarios de comida</div>
+              <div class="settings-card-desc">Ajusta cuando empieza y termina cada turno</div>
+            </div>
+            <span class="settings-card-chevron" aria-hidden="true">&#8250;</span>
+          </summary>
+          <div class="settings-card-body">
+            <div class="settings-card-body-inner">
+              <div id="meal-hours-list" class="meal-hours-list" role="list" aria-label="Horarios de comida"></div>
+            </div>
+          </div>
+        </details>
+
+        <details class="settings-card" id="scard-import">
+          <summary class="settings-card-header">
+            <span class="settings-card-icon">&#128229;</span>
+            <div class="settings-card-header-text">
+              <div class="settings-card-title">Importar datos</div>
+              <div class="settings-card-desc">Sube un .json con ingredientes, recetas y liquidos</div>
+            </div>
+            <span class="settings-card-chevron" aria-hidden="true">&#8250;</span>
+          </summary>
+          <div class="settings-card-body">
+            <div class="settings-card-body-inner">
+              <div id="import-drop-zone" class="import-drop-zone">
+                <span class="import-icon">&#128193;</span>
+                <span class="import-drop-label">Arrastra tu archivo .json aqui</span>
+                <span class="import-drop-sub">o haz clic para buscarlo</span>
+                <button id="btn-browse-file" class="btn-import-file" type="button" aria-label="Seleccionar archivo JSON">
+                  Seleccionar archivo
+                </button>
+              </div>
+              <input id="json-file-input" type="file" accept=".json" hidden aria-hidden="true" />
+              <div id="import-status" class="import-status" role="status" aria-live="polite"></div>
+            </div>
+          </div>
+        </details>
+
+        <details class="settings-card" id="scard-goals">
+          <summary class="settings-card-header">
+            <span class="settings-card-icon">&#127919;</span>
+            <div class="settings-card-header-text">
+              <div class="settings-card-title">Metas nutricionales</div>
+              <div class="settings-card-desc">Define tu objetivo diario de macros</div>
+            </div>
+            <span class="settings-card-chevron" aria-hidden="true">&#8250;</span>
+          </summary>
+          <div class="settings-card-body">
+            <div class="settings-card-body-inner">
+              <p class="settings-hint" style="margin-bottom: 12px; font-size: 0.85rem; color: var(--gray-500); text-align: center;">Si solo ingresas las calorías, los macros se calcularán solos.</p>
+              <div class="goals-form" id="goals-form">
+                <div class="goal-row">
+                  <label class="goal-label">&#128293; Calorias (kcal)</label>
+                  <input type="number" id="goal-calories" class="goal-input" min="500" max="6000" step="50" placeholder="2000" />
+                </div>
+                <div class="goal-row">
+                  <label class="goal-label">&#128170; Proteina (g)</label>
+                  <input type="number" id="goal-protein" class="goal-input" min="20" max="400" step="5" placeholder="150" />
+                </div>
+                <div class="goal-row">
+                  <label class="goal-label">&#127806; Carbohidratos (g)</label>
+                  <input type="number" id="goal-carbs" class="goal-input" min="50" max="600" step="5" placeholder="220" />
+                </div>
+                <div class="goal-row">
+                  <label class="goal-label">&#129361; Grasas (g)</label>
+                  <input type="number" id="goal-fat" class="goal-input" min="10" max="200" step="5" placeholder="65" />
+                </div>
+                <button id="btn-save-goals" class="btn-save-goals">&#10003; Guardar metas</button>
+                <p class="goals-hint">No sabes que poner? Abre el asistente IA y preguntale que recomienda segun tu objetivo.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details class="settings-card" id="scard-ai">
+          <summary class="settings-card-header">
+            <span class="settings-card-icon">&#129302;</span>
+            <div class="settings-card-header-text">
+              <div class="settings-card-title">Asistente IA (Gemini)</div>
+              <div class="settings-card-desc">Configura tu clave para activar la IA</div>
+            </div>
+            <span class="settings-card-chevron" aria-hidden="true">&#8250;</span>
+          </summary>
+          <div class="settings-card-body">
+            <div class="settings-card-body-inner">
+              <div class="ai-key-form" id="ai-key-form">
+                <div id="ai-key-status" class="ai-key-status"></div>
+                <label class="goal-label" for="ai-key-input">&#128273; API Key de Gemini</label>
+                <input type="password" id="ai-key-input" class="goal-input ai-key-input"
+                  placeholder="AIzaSy..." autocomplete="off" />
+                <button id="btn-save-ai-key" class="btn-save-goals">&#10003; Guardar clave</button>
+                <p class="goals-hint">Obten tu clave gratuita en <strong>aistudio.google.com</strong>. Se guarda localmente en tu dispositivo.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+
+      </div>
+    </section>
+
+    <section id="screen-dashboard" class="screen" aria-label="Dashboard nutricional">
+      <header class="screen-header dashboard-header">
+        <div class="dashboard-header-top">
+          <div>
+            <h1 class="screen-title">Dashboard</h1>
+            <p id="dash-date" class="screen-subtitle"></p>
+          </div>
+          <button id="btn-dash-refresh-ai" class="btn-dash-ai" title="Generar insight con IA" aria-label="Actualizar insight IA">
+            &#10024; Insight IA
+          </button>
+        </div>
+      </header>
+      <div class="dashboard-body">
+        <div class="dash-calories-ring" id="dash-calories-ring"></div>
+        <div class="dash-macros-bars" id="dash-macros-bars"></div>
+        <div class="dash-ai-card" id="dash-ai-card">
+          <div class="dash-ai-card-header">
+            <span class="dash-ai-icon">&#129302;</span>
+            <span class="dash-ai-title">Resumen inteligente</span>
+          </div>
+          <p id="dash-ai-text" class="dash-ai-text">Presiona "&#10024; Insight IA" para obtener un resumen personalizado de tu dia.</p>
+          <div id="dash-ai-loading" class="dash-ai-loading" hidden>
+            <span class="ai-typing-dot"></span>
+            <span class="ai-typing-dot"></span>
+            <span class="ai-typing-dot"></span>
           </div>
         </div>
-      </details>
-
-    </div><!-- /.settings-list -->
-
-  </section>
-
-  <!-- ══════════════════════════════════════════
-       BOTTOM NAVIGATION BAR
-  ═══════════════════════════════════════════ -->
-  <nav class="bottom-nav" role="navigation" aria-label="Navegación principal">
-
-    <button class="nav-item active" data-screen="diary"
-            id="nav-diary" aria-label="Diario" aria-current="page">
-      <span class="nav-icon" aria-hidden="true">📅</span>
-      <span class="nav-label">Diario</span>
-    </button>
-
-    <button class="nav-item" data-screen="recipes"
-            id="nav-recipes" aria-label="Recetas">
-      <span class="nav-icon" aria-hidden="true">📋</span>
-      <span class="nav-label">Recetas</span>
-    </button>
-
-    <button class="nav-item" data-screen="pantry"
-            id="nav-pantry" aria-label="Despensa">
-      <span class="nav-icon" aria-hidden="true">🧺</span>
-      <span class="nav-label">Despensa</span>
-    </button>
-
-    <button class="nav-item" data-screen="profile"
-            id="nav-profile" aria-label="Perfil">
-      <span class="nav-icon" aria-hidden="true">👤</span>
-      <span class="nav-label">Perfil</span>
-    </button>
-
-  </nav>
-
-  <!-- ══════════════════════════════════════════
-       MODAL · DETALLE DE RECETA (iOS Sheet)
-  ═══════════════════════════════════════════ -->
-  <div id="modal-overlay" class="modal-overlay" role="presentation"></div>
-
-  <div id="recipe-modal" class="recipe-modal"
-       role="dialog" aria-modal="true" aria-labelledby="modal-recipe-name">
-
-    <div class="modal-handle" aria-hidden="true"></div>
-
-    <header class="modal-header">
-      <p id="modal-recipe-type" class="modal-type">—</p>
-      <h2 id="modal-recipe-name" class="modal-name">Nombre de receta</h2>
-      <button id="modal-close" class="modal-close" aria-label="Cerrar">✕</button>
-    </header>
-
-    <div class="modal-body">
-
-      <!-- Macros -->
-      <div class="modal-macros" role="group" aria-label="Información nutricional">
-        <div class="modal-macro-chip">
-          <span id="modal-cal"  class="modal-macro-val">—</span>
-          <span class="modal-macro-lbl">Calorías</span>
+        <div class="dash-timeline" id="dash-timeline">
+          <h2 class="dash-section-title">&#128203; Comidas de hoy</h2>
+          <div id="dash-timeline-list" class="dash-timeline-list"></div>
         </div>
-        <div class="modal-macro-chip">
-          <span id="modal-prot" class="modal-macro-val">—</span>
-          <span class="modal-macro-lbl">Proteína</span>
+      </div>
+    </section>
+
+    <nav class="bottom-nav" role="navigation" aria-label="Navegacion principal">
+      <button class="nav-item active" data-screen="diary" id="nav-diary" aria-label="Diario" aria-current="page">
+        <span class="nav-icon" aria-hidden="true">&#128197;</span>
+        <span class="nav-label">Diario</span>
+      </button>
+      <button class="nav-item" data-screen="recipes" id="nav-recipes" aria-label="Recetas">
+        <span class="nav-icon" aria-hidden="true">&#128203;</span>
+        <span class="nav-label">Recetas</span>
+      </button>
+      <button class="nav-item" data-screen="pantry" id="nav-pantry" aria-label="Despensa">
+        <span class="nav-icon" aria-hidden="true">&#129530;</span>
+        <span class="nav-label">Despensa</span>
+      </button>
+      <button class="nav-item" data-screen="dashboard" id="nav-dashboard" aria-label="Dashboard">
+        <span class="nav-icon" aria-hidden="true">&#128202;</span>
+        <span class="nav-label">Stats</span>
+      </button>
+      <button class="nav-item" data-screen="profile" id="nav-profile" aria-label="Perfil">
+        <span class="nav-icon" aria-hidden="true">&#128100;</span>
+        <span class="nav-label">Perfil</span>
+      </button>
+    </nav>
+
+    <div id="modal-overlay" class="modal-overlay" role="presentation"></div>
+    <div id="recipe-modal" class="recipe-modal" role="dialog" aria-modal="true" aria-labelledby="modal-recipe-name">
+      <div class="modal-handle" aria-hidden="true"></div>
+      <header class="modal-header">
+        <p id="modal-recipe-type" class="modal-type">-</p>
+        <h2 id="modal-recipe-name" class="modal-name">Nombre de receta</h2>
+        <button id="modal-close" class="modal-close" aria-label="Cerrar">&#10005;</button>
+      </header>
+      <div class="modal-body">
+        <div class="modal-macros" role="group" aria-label="Informacion nutricional">
+          <div class="modal-macro-chip">
+            <span id="modal-cal" class="modal-macro-val">-</span>
+            <span class="modal-macro-lbl">Calorias</span>
+          </div>
+          <div class="modal-macro-chip">
+            <span id="modal-prot" class="modal-macro-val">-</span>
+            <span class="modal-macro-lbl">Proteina</span>
+          </div>
+          <div class="modal-macro-chip">
+            <span id="modal-carb" class="modal-macro-val">-</span>
+            <span class="modal-macro-lbl">Carbos</span>
+          </div>
+          <div class="modal-macro-chip">
+            <span id="modal-fat" class="modal-macro-val">-</span>
+            <span class="modal-macro-lbl">Grasa</span>
+          </div>
         </div>
-        <div class="modal-macro-chip">
-          <span id="modal-carb" class="modal-macro-val">—</span>
-          <span class="modal-macro-lbl">Carbos</span>
+        <h3 class="modal-section-title">&#129365; Ingredientes</h3>
+        <ul id="modal-ingredients" class="ingredients-list" aria-label="Ingredientes de la receta"></ul>
+        <h3 class="modal-section-title">&#128221; Preparacion</h3>
+        <p id="modal-instructions" class="instructions-box"></p>
+        <button id="modal-action-btn" class="btn-log" style="margin-top: 24px;"></button>
+      </div>
+    </div>
+
+    <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+    <div id="ingredient-popover-overlay" class="popover-overlay" role="presentation"></div>
+    <div id="ingredient-popover" class="ingredient-popover" role="dialog" aria-modal="true" aria-label="Ajustar ingrediente">
+      <div class="popover-header">
+        <div class="popover-ing-icon">&#129365;</div>
+        <div class="popover-ing-info">
+          <div id="popover-ing-name" class="popover-ing-name">Ingrediente</div>
+          <div id="popover-ing-needed" class="popover-ing-needed">Necesitas: -g</div>
         </div>
-        <div class="modal-macro-chip">
-          <span id="modal-fat"  class="modal-macro-val">—</span>
-          <span class="modal-macro-lbl">Grasa</span>
+        <button id="popover-close" class="popover-close" aria-label="Cerrar">&#10005;</button>
+      </div>
+      <div class="popover-body">
+        <p class="popover-label">Stock actual en despensa</p>
+        <div class="popover-qty-row">
+          <button id="popover-minus" class="btn-qty btn-minus" aria-label="Reducir">&#8722;</button>
+          <span id="popover-qty-display" class="popover-qty-display">0g</span>
+          <button id="popover-plus" class="btn-qty btn-plus" aria-label="Aumentar">+</button>
+        </div>
+        <button id="popover-save" class="btn-popover-save">&#10003; Guardar</button>
+      </div>
+    </div>
+
+    <div id="shopping-overlay" class="modal-overlay" role="presentation"></div>
+    <div id="shopping-modal" class="shopping-modal" role="dialog" aria-modal="true" aria-labelledby="shopping-title">
+      <div class="modal-handle" aria-hidden="true"></div>
+      <header class="shopping-modal-header">
+        <h2 id="shopping-title" class="shopping-modal-title">&#128722; Lista de compras</h2>
+        <p class="shopping-modal-sub">Toca un ingrediente para actualizar su stock</p>
+        <button id="shopping-close" class="modal-close" aria-label="Cerrar lista de compras">&#10005;</button>
+      </header>
+      <div id="shopping-list-body" class="shopping-list-body"></div>
+    </div>
+
+    <button id="btn-shopping-fab" class="shopping-fab" aria-label="Abrir lista de compras">
+      <span id="shopping-fab-icon" class="shopping-fab-icon">&#128722;</span>
+      <span id="shopping-fab-badge" class="shopping-fab-badge" hidden>0</span>
+    </button>
+
+    <!-- FAB "+" Registro Libre -->
+    <button id="btn-register-fab" class="register-fab" aria-label="Registrar comida o alimento">
+      <span class="register-fab-icon">+</span>
+    </button>
+
+    <!-- BOTTOM SHEET - REGISTRO LIBRE -->
+    <div id="register-overlay" class="modal-overlay" role="presentation"></div>
+    <div id="register-sheet" class="register-sheet" role="dialog" aria-modal="true" aria-label="Registrar comida">
+      <div class="modal-handle" aria-hidden="true"></div>
+
+      <!-- Menu principal -->
+      <div id="rs-view-menu" class="rs-view active">
+        <h2 class="rs-title">&#191;Qu&#233; alimento extra consumiste?</h2>
+        <div class="rs-menu-list">
+          <button class="rs-menu-item" data-view="search">
+            <span class="rs-menu-icon">&#128269;</span>
+            <div class="rs-menu-text">
+              <span class="rs-menu-label">Buscar alimento</span>
+              <span class="rs-menu-desc">Busca en tu BD o con IA</span>
+            </div>
+            <span class="rs-menu-arrow">&#8250;</span>
+          </button>
+          <button class="rs-menu-item" data-view="favorites">
+            <span class="rs-menu-icon">&#11088;</span>
+            <div class="rs-menu-text">
+              <span class="rs-menu-label">Favoritos y frecuentes</span>
+              <span class="rs-menu-desc">Tus mas usados y guardados</span>
+            </div>
+            <span class="rs-menu-arrow">&#8250;</span>
+          </button>
+          <button class="rs-menu-item" data-view="voice">
+            <span class="rs-menu-icon">&#127897;</span>
+            <div class="rs-menu-text">
+              <span class="rs-menu-label">Registro por voz</span>
+              <span class="rs-menu-desc">Dictale a NutriBot que comiste</span>
+            </div>
+            <span class="rs-menu-arrow">&#8250;</span>
+          </button>
         </div>
       </div>
 
-      <!-- Ingredientes -->
-      <h3 class="modal-section-title">🥕 Ingredientes</h3>
-      <ul id="modal-ingredients" class="ingredients-list"
-          aria-label="Ingredientes de la receta"></ul>
 
-      <!-- Preparación -->
-      <h3 class="modal-section-title">📝 Preparación</h3>
-      <p id="modal-instructions" class="instructions-box"></p>
 
-      <!-- Botón de acción en el modal -->
-      <button id="modal-action-btn" class="btn-log" style="margin-top: 24px;"></button>
-
-    </div>
-  </div>
-
-  <!-- ══════════════════════════════════════════
-       TOAST NOTIFICATION
-  ═══════════════════════════════════════════ -->
-  <div id="toast" class="toast" role="alert" aria-live="polite"></div>
-
-  <!-- ══════════════════════════════════════════
-       POPOVER · AJUSTE DE INGREDIENTE
-  ═══════════════════════════════════════════ -->
-  <div id="ingredient-popover-overlay" class="popover-overlay" role="presentation"></div>
-  <div id="ingredient-popover" class="ingredient-popover" role="dialog" aria-modal="true" aria-label="Ajustar ingrediente">
-    <div class="popover-header">
-      <div class="popover-ing-icon">🥕</div>
-      <div class="popover-ing-info">
-        <div id="popover-ing-name" class="popover-ing-name">Ingrediente</div>
-        <div id="popover-ing-needed" class="popover-ing-needed">Necesitas: —g</div>
+      <!-- Vista: Buscar alimento -->
+      <div id="rs-view-search" class="rs-view" hidden>
+        <div class="rs-sub-header">
+          <button class="rs-back" id="rs-back-search" aria-label="Volver">&#8249;</button>
+          <h2 class="rs-title">Buscar alimento</h2>
+        </div>
+        <div class="rs-search-wrap">
+          <input type="search" id="rs-search-input" class="rs-search-input"
+            placeholder="Ej: manzana, arroz, pollo..." autocomplete="off" />
+        </div>
+        <div id="rs-search-results" class="rs-scroll-content"></div>
+        <div id="rs-gram-confirm" class="rs-gram-confirm" hidden>
+          <div class="rs-gram-item-name" id="rs-gram-item-name"></div>
+          <div class="rs-gram-row">
+            <button id="rs-gram-minus" class="btn-qty btn-minus" aria-label="Reducir">&#8722;</button>
+            <input type="number" id="rs-gram-input" class="rs-gram-input" min="1" max="2000" />
+            <span class="rs-gram-unit">g</span>
+            <button id="rs-gram-plus" class="btn-qty btn-plus" aria-label="Aumentar">+</button>
+          </div>
+          <div id="rs-gram-macros" class="rs-gram-macros"></div>
+          <button id="rs-gram-save" class="btn-save-goals">&#10003; Registrar</button>
+        </div>
       </div>
-      <button id="popover-close" class="popover-close" aria-label="Cerrar">✕</button>
-    </div>
-    <div class="popover-body">
-      <p class="popover-label">Stock actual en despensa</p>
-      <div class="popover-qty-row">
-        <button id="popover-minus" class="btn-qty btn-minus" aria-label="Reducir">−</button>
-        <span id="popover-qty-display" class="popover-qty-display">0g</span>
-        <button id="popover-plus"  class="btn-qty btn-plus"  aria-label="Aumentar">+</button>
+
+
+
+      <!-- Vista: Favoritos y frecuentes -->
+      <div id="rs-view-favorites" class="rs-view" hidden>
+        <div class="rs-sub-header">
+          <button class="rs-back" id="rs-back-favorites" aria-label="Volver">&#8249;</button>
+          <h2 class="rs-title">Favoritos y frecuentes</h2>
+        </div>
+        <div id="rs-favorites-content" class="rs-scroll-content"></div>
       </div>
-      <button id="popover-save" class="btn-popover-save">✓ Guardar</button>
+
+      <!-- Vista: Registro por Voz -->
+      <div id="rs-view-voice" class="rs-view" hidden>
+        <div class="rs-sub-header">
+          <button class="rs-back" id="rs-back-voice" aria-label="Volver">&#8249;</button>
+          <h2 class="rs-title">Registro por voz</h2>
+        </div>
+        <div class="rs-voice-container">
+          <p class="rs-voice-hint" id="rs-voice-hint">Toca el microfono y dime que comiste (ej. "Me comi dos huevos con 50 gramos de pan")</p>
+          
+          <button id="btn-rs-voice-mic" class="rs-voice-mic-btn" aria-label="Iniciar grabacion">
+            &#127897;
+          </button>
+
+          <!-- Input editable para la transcripcion -->
+          <div class="rs-voice-transcript-area" id="rs-voice-transcript-area" hidden>
+            <label for="rs-voice-input" class="rs-voice-label">Revisa o edita tu mensaje:</label>
+            <textarea id="rs-voice-input" class="rs-voice-input" rows="3" placeholder="Tu mensaje aparecera aqui..."></textarea>
+            <button id="btn-rs-voice-process" class="rs-voice-process-btn">
+              &#10024; Procesar con IA
+            </button>
+          </div>
+          
+          <div id="rs-voice-status" class="rs-voice-status"></div>
+        </div>
+      </div>
+
     </div>
+
+    <!-- FAB IA -->
+    <button id="btn-ai-fab" class="ai-fab" aria-label="Abrir asistente nutricional">
+      <span class="ai-fab-icon">&#129302;</span>
+    </button>
+
+    <!-- Modal Chat IA -->
+    <div id="ai-chat-overlay" class="modal-overlay" role="presentation"></div>
+    <div id="ai-chat-modal" class="ai-chat-modal" role="dialog" aria-modal="true" aria-labelledby="ai-chat-title">
+      <div class="modal-handle" aria-hidden="true"></div>
+      <header class="ai-chat-header">
+        <div class="ai-chat-header-info">
+          <span class="ai-chat-avatar">&#129302;</span>
+          <div>
+            <h2 id="ai-chat-title" class="ai-chat-title">NutriBot</h2>
+            <p class="ai-chat-subtitle">Asistente nutricional IA</p>
+          </div>
+        </div>
+        <button id="ai-chat-close" class="modal-close" aria-label="Cerrar chat">&#10005;</button>
+      </header>
+      <div id="ai-chat-messages" class="ai-chat-messages" role="log" aria-live="polite"></div>
+      <div id="ai-key-required" class="ai-key-required" hidden>
+        <p>&#128273; Configura tu API Key de Gemini en <strong>Perfil - Asistente IA</strong> para usar esta funcion.</p>
+        <button class="btn-go-profile" id="btn-go-profile-from-chat">Ir a Perfil</button>
+      </div>
+      <div class="ai-chat-input-area" id="ai-chat-input-area">
+        <input type="text" id="ai-chat-input" class="ai-chat-input" placeholder="Pregunta algo sobre tu nutricion..." autocomplete="off" />
+        <button id="ai-chat-send" class="ai-chat-send" aria-label="Enviar">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </div>
+    </div>
+
   </div>
 
-  <!-- ══════════════════════════════════════════
-       SHEET MODAL · LISTA DE COMPRAS
-  ═══════════════════════════════════════════ -->
-  <div id="shopping-overlay" class="modal-overlay" role="presentation"></div>
-  <div id="shopping-modal" class="shopping-modal" role="dialog" aria-modal="true" aria-labelledby="shopping-title">
-    <div class="modal-handle" aria-hidden="true"></div>
-    <header class="shopping-modal-header">
-      <h2 id="shopping-title" class="shopping-modal-title">🛒 Lista de compras</h2>
-      <p class="shopping-modal-sub">Toca un ingrediente para actualizar su stock</p>
-      <button id="shopping-close" class="modal-close" aria-label="Cerrar lista de compras">✕</button>
-    </header>
-    <div id="shopping-list-body" class="shopping-list-body"></div>
-  </div>
+  <!-- Modulos Core -->
+  <script src="js/db.js"></script>
+  <script src="js/calc.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/core/utils.js"></script>
 
-  <!-- Botón flotante Lista de Compras -->
-  <button id="btn-shopping-fab" class="shopping-fab" aria-label="Abrir lista de compras">
-    <span id="shopping-fab-icon" class="shopping-fab-icon">🛒</span>
-    <span id="shopping-fab-badge" class="shopping-fab-badge" hidden>0</span>
-  </button>
+  <!-- Componentes Compartidos -->
+  <script src="js/components/voice.js"></script>
+  <script src="js/components/registerSheet.js"></script>
+  <script src="js/components/aiChat.js"></script>
 
-</div><!-- /#app -->
-
-<!-- Scripts en orden de dependencia -->
-<script src="js/db.js"></script>
-<script src="js/calc.js"></script>
-<script src="js/app.js"></script>
+  <!-- Vistas Principales -->
+  <script src="js/views/diaryView.js"></script>
+  <script src="js/views/dashboardView.js"></script>
+  <script src="js/views/profileView.js"></script>
+  <script src="js/views/pantryView.js"></script>
+  <script src="js/views/shoppingView.js"></script>
+  <script src="js/views/recipesView.js"></script>
 
 <script>
   if ('serviceWorker' in navigator) {

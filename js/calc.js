@@ -185,15 +185,29 @@ function getGreeting() {
  * Resumen de macros del día completo.
  */
 function getDailyMacroSummary() {
-  const todayMealLogs = DB.getTodayLogs().filter(l => l.type === 'meal');
+  const todayLogs = DB.getTodayLogs();
   const totals = { calories: 0, protein: 0, carbs: 0, fat: 0 };
 
-  for (const log of todayMealLogs) {
-    const macros = calcRecipeMacros(log.reference_id);
-    totals.calories += macros.calories;
-    totals.protein  += macros.protein;
-    totals.carbs    += macros.carbs;
-    totals.fat      += macros.fat;
+  for (const log of todayLogs) {
+    if (log.type === 'meal') {
+      // Recetas del plan o libres
+      const macros = calcRecipeMacros(log.reference_id);
+      totals.calories += macros.calories;
+      totals.protein  += macros.protein;
+      totals.carbs    += macros.carbs;
+      totals.fat      += macros.fat;
+    } else if (log.type === 'food_item') {
+      // Alimentos libres (con cantidad en gramos)
+      const fi = DB.getFoodItemById(log.reference_id);
+      if (fi) {
+        const qty = log.quantity_g || 100;
+        const factor = qty / 100;
+        totals.calories += (fi.calories_per_100g || 0) * factor;
+        totals.protein  += (fi.protein_per_100g  || 0) * factor;
+        totals.carbs    += (fi.carbs_per_100g    || 0) * factor;
+        totals.fat      += (fi.fat_per_100g      || 0) * factor;
+      }
+    }
   }
 
   return {
@@ -226,3 +240,43 @@ function getUpcomingNeedsToBuy() {
   }
   return needsToBuy;
 }
+
+/**
+ * Separa las calorías y entradas del día en dos grupos:
+ *   - plan: recetas del plan nutricional (planned === true)
+ *   - extra: alimentos libres o recetas fuera del plan (planned === false, food_item)
+ * @returns {{ plan: {calories, entries}, extra: {calories, entries} }}
+ */
+function getPlanVsExtraSummary() {
+  const todayLogs = DB.getTodayLogs();
+  const plan  = { calories: 0, entries: 0 };
+  const extra = { calories: 0, entries: 0 };
+
+  for (const log of todayLogs) {
+    if (log.type === 'liquid') continue; // líquidos no cuentan aquí
+
+    if (log.type === 'meal') {
+      const macros = calcRecipeMacros(log.reference_id);
+      if (log.planned === true) {
+        plan.calories  += macros.calories;
+        plan.entries   += 1;
+      } else {
+        extra.calories += macros.calories;
+        extra.entries  += 1;
+      }
+    } else if (log.type === 'food_item') {
+      const fi = DB.getFoodItemById(log.reference_id);
+      if (fi) {
+        const qty = log.quantity_g || 100;
+        const kcal = Math.round((fi.calories_per_100g || 0) * qty / 100);
+        extra.calories += kcal;
+        extra.entries  += 1;
+      }
+    }
+  }
+
+  plan.calories  = Math.round(plan.calories);
+  extra.calories = Math.round(extra.calories);
+  return { plan, extra };
+}
+
