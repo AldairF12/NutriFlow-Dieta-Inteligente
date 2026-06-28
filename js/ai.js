@@ -150,81 +150,100 @@ Texto del usuario: "${transcript}"`;
   // ──────────────────────────────────────────────
 
   /**
-   * Pregunta al asistente con el contexto completo del día.
+   * Pregunta al asistente usando la memoria conversacional y el modo de contexto.
    * @param {string} userMessage
+   * @param {string} contextMode - 'general' o 'progress'
+   * @param {Array} chatHistory - Array de { role, text }
    * @returns {string}
    */
-  async askAssistant(userMessage) {
-    const consumed = getDailyMacroSummary();
-    const goals = DB.userPreferences.goals || { calories: 2000, protein: 150, carbs: 220, fat: 65 };
-    const todayLogs = DB.getTodayLogs();
-    const { plan, extra } = getPlanVsExtraSummary();
+  async askAssistant(userMessage, contextMode = 'general', chatHistory = []) {
+    let contextBlock = '';
 
-    // Comidas del plan
-    const plannedMeals = todayLogs
-      .filter(l => l.type === 'meal' && l.planned === true)
-      .map(l => {
-        const r = DB.getRecipeById(l.reference_id);
-        return r ? `- ${r.name} (${r.meal_type})` : null;
-      })
-      .filter(Boolean)
-      .join('\n') || 'Ninguna del plan aun.';
-
-    // Extras registrados
-    const extraItems = todayLogs
-      .filter(l => (l.type === 'meal' && l.planned === false) || l.type === 'food_item')
-      .map(l => {
-        if (l.type === 'meal') {
+    if (contextMode === 'progress') {
+      const consumed = getDailyMacroSummary();
+      const goals = DB.userPreferences.goals || { calories: 2000, protein: 150, carbs: 220, fat: 65 };
+      const todayLogs = DB.getTodayLogs();
+      const { plan, extra } = getPlanVsExtraSummary();
+  
+      // Comidas del plan
+      const plannedMeals = todayLogs
+        .filter(l => l.type === 'meal' && l.planned === true)
+        .map(l => {
           const r = DB.getRecipeById(l.reference_id);
-          return r ? `- ${r.name} (receta extra)` : null;
-        }
-        if (l.type === 'food_item') {
-          const fi = DB.getFoodItemById(l.reference_id);
-          const qty = l.quantity_g || 100;
-          return fi ? `- ${fi.name} (${qty}g)` : null;
-        }
-        return null;
-      })
-      .filter(Boolean)
-      .join('\n') || 'Ninguno.';
+          return r ? `- ${r.name} (${r.meal_type})` : null;
+        })
+        .filter(Boolean)
+        .join('\n') || 'Ninguna del plan aun.';
+  
+      // Extras registrados
+      const extraItems = todayLogs
+        .filter(l => (l.type === 'meal' && l.planned === false) || l.type === 'food_item')
+        .map(l => {
+          if (l.type === 'meal') {
+            const r = DB.getRecipeById(l.reference_id);
+            return r ? `- ${r.name} (receta extra)` : null;
+          }
+          if (l.type === 'food_item') {
+            const fi = DB.getFoodItemById(l.reference_id);
+            const qty = l.quantity_g || 100;
+            return fi ? `- ${fi.name} (${qty}g)` : null;
+          }
+          return null;
+        })
+        .filter(Boolean)
+        .join('\n') || 'Ninguno.';
+  
+      const liquidSummary = todayLogs
+        .filter(l => l.type === 'liquid')
+        .map(l => {
+          const liq = DB.liquids.find(x => x.id === l.reference_id);
+          return liq ? `- ${liq.name}` : null;
+        })
+        .filter(Boolean)
+        .join('\n') || 'Ninguna bebida registrada.';
+  
+      const calRemain = Math.max(0, goals.calories - consumed.calories);
+      const protRemain = Math.max(0, goals.protein - consumed.protein);
+      const totalConsumed = plan.calories + extra.calories;
+      const adherencia = totalConsumed > 0 ? Math.round((plan.calories / totalConsumed) * 100) : 0;
 
-    const liquidSummary = todayLogs
-      .filter(l => l.type === 'liquid')
-      .map(l => {
-        const liq = DB.liquids.find(x => x.id === l.reference_id);
-        return liq ? `- ${liq.name}` : null;
-      })
-      .filter(Boolean)
-      .join('\n') || 'Ninguna bebida registrada.';
-
-    const calRemain = Math.max(0, goals.calories - consumed.calories);
-    const protRemain = Math.max(0, goals.protein - consumed.protein);
-    const totalConsumed = plan.calories + extra.calories;
-    const adherencia = totalConsumed > 0 ? Math.round((plan.calories / totalConsumed) * 100) : 0;
-
-    const prompt = `Eres NutriBot, un asistente nutricional amigable, conciso y practico. Responde SIEMPRE en español.
-
-CONTEXTO DEL USUARIO HOY (${new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}):
-- Calorias totales: ${consumed.calories} kcal / meta ${goals.calories} kcal (faltan ${calRemain} kcal)
-- Proteina: ${consumed.protein}g / ${goals.protein}g (faltan ${Math.max(0, protRemain)}g)
-- Carbohidratos: ${consumed.carbs}g / ${goals.carbs}g
-- Grasas: ${consumed.fat}g / ${goals.fat}g
-- Del plan: ${plan.calories} kcal en ${plan.entries} comida(s)
-- Extras: ${extra.calories} kcal en ${extra.entries} registro(s)
+      contextBlock = `
+CONTEXTO ACTUAL DEL USUARIO HOY (${new Date().toLocaleDateString('es-ES')}):
+- Calorias: ${consumed.calories} / meta ${goals.calories} (faltan ${calRemain} kcal)
+- Proteina: ${consumed.protein}g / meta ${goals.protein}g (faltan ${Math.max(0, protRemain)}g)
+- Carbohidratos: ${consumed.carbs}g / meta ${goals.carbs}g
+- Grasas: ${consumed.fat}g / meta ${goals.fat}g
+- Comidas planificadas registradas: \n${plannedMeals}
+- Extras no planificados: \n${extraItems}
+- Bebidas: \n${liquidSummary}
 - Adherencia al plan: ${adherencia}%
+`;
+    } else {
+      contextBlock = `\nCONTEXTO: El usuario no ha proporcionado contexto de su progreso para esta pregunta, respóndela de manera general.\n`;
+    }
 
-Comidas del plan registradas hoy:
-${plannedMeals}
+    // Formatear historial
+    // Solo tomar los últimos 6 mensajes para no sobrecargar el token limit
+    const recentHistory = chatHistory.slice(-6).map(msg => {
+      const name = msg.role === 'user' ? 'Usuario' : 'NutriBot';
+      return `${name}: ${msg.text}`;
+    }).join('\n\n');
 
-Extras registrados hoy:
-${extraItems}
+    const prompt = `Eres NutriBot, un asistente nutricional experto, amigable y práctico. Responde SIEMPRE en español. 
 
-Bebidas registradas hoy:
-${liquidSummary}
+REGLAS DE INTERACCIÓN:
+- Usa emojis de forma equilibrada para hacer la charla amena, sin saturar.
+- NO saludes en cada mensaje ("Hola", "Qué tal"). Ve directo al punto para mantener la fluidez de la conversación.
+- Limita tus respuestas a máximo 180 palabras para que sean rápidas de leer.
+- Puedes usar markdown para negritas (**texto**) y listas (* o -).
 
-PREGUNTA DEL USUARIO: ${userMessage}
+${contextBlock}
+HISTORIAL DE CONVERSACIÓN RECIENTE:
+${recentHistory || 'No hay mensajes previos.'}
 
-Responde de forma directa y util en maximo 180 palabras. Si das sugerencias de comidas, menciona brevemente por que son buenas para los objetivos actuales. Diferencia cuando sea relevante entre lo que es del plan y lo que es extra.`;
+NUEVO MENSAJE DEL USUARIO: ${userMessage}
+
+Responde directamente al nuevo mensaje del usuario tomando en cuenta el historial para dar continuidad a la conversación.`;
 
     return await this._call(prompt);
   },

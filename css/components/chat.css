@@ -172,13 +172,43 @@
 /* Input area del chat */
 .ai-chat-input-area {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 10px;
   padding: 10px 14px;
   padding-bottom: max(10px, env(safe-area-inset-bottom));
   background: #fff;
   border-top: 1px solid var(--gray-200);
   flex-shrink: 0;
+}
+
+.ai-context-selector {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none; /* Firefox */
+}
+.ai-context-selector::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.ai-context-btn {
+  white-space: nowrap;
+  background: var(--gray-100);
+  color: var(--gray-600);
+  border: 1px solid var(--gray-200);
+  padding: 6px 12px;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.ai-context-btn.active {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 2px 6px rgba(79,70,229,0.25);
 }
 
 .ai-chat-input {

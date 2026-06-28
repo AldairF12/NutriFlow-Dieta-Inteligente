@@ -42,3 +42,28 @@ function debounce(fn, delay) {
     timer = setTimeout(() => fn(...args), delay);
   };
 }
+
+function parseMarkdown(text) {
+  if (!text) return '';
+  let html = text;
+  
+  // Bold
+  html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  
+  // Italic
+  html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  
+  // Numbered lists (1. 2. 3.)
+  html = html.replace(/^\s*(\d+)\.\s+(.*)/gm, '<br><span style="margin-left:8px;font-weight:600">$1.</span> $2');
+  
+  // Bullet lists (- or *)
+  html = html.replace(/^\s*[-*]\s+(.*)/gm, '<br><span style="margin-left:8px">•</span> $1');
+  
+  // New lines
+  html = html.replace(/\n/g, '<br>');
+  
+  // Remove multiple <br> at the beginning if any
+  html = html.replace(/^(<br>)+/, '');
+  
+  return html;
+}

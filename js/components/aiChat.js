@@ -1,3 +1,6 @@
+let _chatMessages = []; // historial local de la sesión
+let _currentContextMode = 'general';
+
 function openAIChat() {
   const overlay = document.getElementById('ai-chat-overlay');
   const modal   = document.getElementById('ai-chat-modal');
@@ -16,7 +19,7 @@ function openAIChat() {
     inputArea.hidden = false;
     // Mensaje de bienvenida si es el primer mensaje
     if (_chatMessages.length === 0) {
-      appendChatMessage('bot', '¡Hola! 👋 Soy NutriBot. Puedo ayudarte con tus dudas nutricionales, sugerirte qué comer según lo que te falta hoy, o responder preguntas sobre tu plan. ¿En qué te ayudo?');
+      appendChatMessage('bot', '¡Hola! 👋 Soy NutriBot.\n\nPuedo ayudarte con tus dudas nutricionales, sugerirte qué comer según tu progreso, o responder preguntas generales.\n\n*Nota: Por tu privacidad y para ahorrar espacio, mi memoria se reiniciará cuando recargues la aplicación. ¡No guardo tu historial a largo plazo!*');
     }
   }
 }
@@ -34,7 +37,9 @@ function appendChatMessage(role, text) {
 
   const msg = document.createElement('div');
   msg.className = `chat-msg chat-msg--${role}`;
-  msg.innerHTML = `<div class="chat-bubble">${text.replace(/\n/g, '<br>')}</div>`;
+  // Parse Markdown si está disponible
+  const formattedText = typeof parseMarkdown === 'function' ? parseMarkdown(text) : text.replace(/\n/g, '<br>');
+  msg.innerHTML = `<div class="chat-bubble">${formattedText}</div>`;
   container.appendChild(msg);
   container.scrollTop = container.scrollHeight;
   _chatMessages.push({ role, text });
@@ -60,6 +65,17 @@ function initAIChat() {
   const sendBtn = document.getElementById('ai-chat-send');
   const input   = document.getElementById('ai-chat-input');
   const goProfile = document.getElementById('btn-go-profile-from-chat');
+  const contextBtns = document.querySelectorAll('.ai-context-btn');
+
+  if (contextBtns.length > 0) {
+    contextBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        contextBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _currentContextMode = btn.dataset.context;
+      });
+    });
+  }
 
   if (fab)     fab.addEventListener('click', openAIChat);
   if (overlay) overlay.addEventListener('click', closeAIChat);
@@ -125,6 +141,37 @@ function initAIChat() {
     });
   }
 }
+
+async function sendChatMessage() {
+  const input = document.getElementById('ai-chat-input');
+  const msg   = input.value.trim();
+  if (!msg) return;
+
+  input.value = '';
+  input.disabled = true;
+  document.getElementById('ai-chat-send').disabled = true;
+
+  appendChatMessage('user', msg);
+  showChatTyping();
+
+  try {
+    const response = await AI.askAssistant(msg, _currentContextMode, _chatMessages);
+    removeChatTyping();
+    appendChatMessage('bot', response);
+  } catch (err) {
+    removeChatTyping();
+    if (err.message === 'NO_KEY') {
+      appendChatMessage('bot', '⚠️ No encontré tu API Key. Ve a Perfil → Asistente IA para configurarla.');
+    } else {
+      appendChatMessage('bot', `❌ Error: ${err.message}`);
+    }
+  } finally {
+    input.disabled  = false;
+    document.getElementById('ai-chat-send').disabled = false;
+    input.focus();
+  }
+}
+
 function initDashboardAIBtn() {
   const btn = document.getElementById('btn-dash-refresh-ai');
   if (!btn) return;

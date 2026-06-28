@@ -533,13 +533,19 @@
         <button class="btn-go-profile" id="btn-go-profile-from-chat">Ir a Perfil</button>
       </div>
       <div class="ai-chat-input-area" id="ai-chat-input-area">
-        <input type="text" id="ai-chat-input" class="ai-chat-input" placeholder="Pregunta algo sobre tu nutricion..." autocomplete="off" />
-        <button id="ai-chat-send" class="ai-chat-send" aria-label="Enviar">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-            <line x1="22" y1="2" x2="11" y2="13"></line>
-            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-          </svg>
-        </button>
+        <div class="ai-context-selector">
+          <button class="ai-context-btn active" data-context="general">🌍 General</button>
+          <button class="ai-context-btn" data-context="progress">📊 Mi Progreso Diario</button>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <input type="text" id="ai-chat-input" class="ai-chat-input" placeholder="Pregunta algo sobre tu nutricion..." autocomplete="off" />
+          <button id="ai-chat-send" class="ai-chat-send" aria-label="Enviar">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
 

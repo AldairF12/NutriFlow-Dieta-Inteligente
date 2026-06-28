@@ -34,10 +34,11 @@ function initNavigation() {
       window.scrollTo(0, 0);
 
       _isTabSwitching = true;
-      if (target === 'diary')   renderDiaryScreen();
-      if (target === 'recipes') renderRecipesScreen();
-      if (target === 'pantry')  renderPantryScreen();
-      if (target === 'profile') renderProfileScreen();
+      if (target === 'diary')     renderDiaryScreen();
+      if (target === 'recipes')   renderRecipesScreen();
+      if (target === 'pantry')    renderPantryScreen();
+      if (target === 'dashboard') renderDashboardScreen();
+      if (target === 'profile')   renderProfileScreen();
       _isTabSwitching = false;
     });
   });
@@ -155,6 +156,8 @@ function renderDiaryScreen(options = {}) {
       }
     }
   }
+  // Añadir siempre las entradas libres del día al final
+  renderFreeDiaryEntries(mainContent);
   cleanupAnimationClasses();
 }
 
@@ -1301,6 +1304,12 @@ function renderProfileScreen() {
 
   // Horas de comida
   renderMealHoursEditor();
+
+  // Metas nutricionales
+  renderGoalsSettings();
+
+  // Estado de API Key de IA
+  renderAIKeySettings();
 }
 
 // ──────────────────────────────────────────────
@@ -1598,11 +1607,13 @@ document.addEventListener('DOMContentLoaded', () => {
   initShoppingModal();
   updateShoppingFab();
   initSettingsCardAccordions();
+  initGoalsForm();
+  initAIKeyForm();
+  initAIChat();
+  initDashboardAIBtn();
+  initRegisterSheet();
 });
 
-// ──────────────────────────────────────────────
-// PERFIL · ACCORDION ANIMADO (JS-driven height)
-// ──────────────────────────────────────────────
 function initSettingsCardAccordions() {
   document.querySelectorAll('.settings-card').forEach(details => {
     const summary = details.querySelector('.settings-card-header');
@@ -1700,4 +1711,1217 @@ function initSettingsCardAccordions() {
       }
     });
   });
+}
+
+// ──────────────────────────────────────────────
+// PANTALLA: DASHBOARD
+// ──────────────────────────────────────────────
+function renderDashboardScreen() {
+  const consumed = getDailyMacroSummary();
+  const goals    = DB.userPreferences.goals || { calories: 2000, protein: 150, carbs: 220, fat: 65 };
+
+  // Fecha
+  const dateEl = document.getElementById('dash-date');
+  if (dateEl) dateEl.textContent = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  // ── Anillo de calorías ─────────────────────────────────────
+  renderCaloriesRing(consumed.calories, goals.calories);
+
+  // ── Barras de macros ───────────────────────────────────────
+  renderMacroBars(consumed, goals);
+
+  // ── Plan vs Extras ─────────────────────────────────────────
+  renderPlanVsExtra();
+
+  // ── Timeline ───────────────────────────────────────────────
+  renderDashTimeline();
+}
+
+function renderCaloriesRing(consumed, goal) {
+  const container = document.getElementById('dash-calories-ring');
+  if (!container) return;
+
+  const SIZE = 160;
+  const R    = 62;
+  const STROKE = 14;
+  const CX = SIZE / 2, CY = SIZE / 2;
+  const CIRC = 2 * Math.PI * R;
+  const pct  = Math.min(1, consumed / goal);
+  const dash = pct * CIRC;
+  const gap  = CIRC - dash;
+
+  // Color dinámico según avance
+  const hue = pct < 0.5 ? 142 : pct < 0.85 ? 38 : pct < 1 ? 20 : 0;
+  const color = `hsl(${hue}, 72%, 52%)`;
+
+  container.innerHTML = `
+    <div class="dash-ring-wrap">
+      <svg width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">
+        <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="${STROKE}" />
+        <circle cx="${CX}" cy="${CY}" r="${R}" fill="none"
+          stroke="${color}"
+          stroke-width="${STROKE}"
+          stroke-linecap="round"
+          stroke-dasharray="${dash} ${gap}"
+          stroke-dashoffset="${CIRC * 0.25}"
+          transform="rotate(-90 ${CX} ${CY})"
+          style="transition: stroke-dasharray 0.7s cubic-bezier(0.34,1.56,0.64,1); filter: drop-shadow(0 0 8px ${color}88)" />
+      </svg>
+      <div class="dash-ring-center">
+        <span class="dash-ring-val">${consumed}</span>
+        <span class="dash-ring-unit">kcal</span>
+        <span class="dash-ring-goal">/ ${goal}</span>
+      </div>
+    </div>
+    <div class="dash-ring-labels">
+      <div class="dash-ring-label-item">
+        <span class="dash-ring-pct" style="color:${color}">${Math.round(pct * 100)}%</span>
+        <span class="dash-ring-lbl">completado</span>
+      </div>
+      <div class="dash-ring-label-item">
+        <span class="dash-ring-pct">${Math.max(0, goal - consumed)}</span>
+        <span class="dash-ring-lbl">kcal restantes</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderMacroBars(consumed, goals) {
+  const container = document.getElementById('dash-macros-bars');
+  if (!container) return;
+
+  const macros = [
+    { label: 'Proteína',      key: 'protein', consumed: consumed.protein, goal: goals.protein, unit: 'g',   color: '#93c5fd', icon: '💪' },
+    { label: 'Carbohidratos', key: 'carbs',   consumed: consumed.carbs,   goal: goals.carbs,   unit: 'g',   color: '#fcd9a0', icon: '🌾' },
+    { label: 'Grasas',        key: 'fat',     consumed: consumed.fat,     goal: goals.fat,     unit: 'g',   color: '#f9a8d4', icon: '🥑' },
+  ];
+
+  container.innerHTML = macros.map(m => {
+    const pct = Math.min(100, Math.round((m.consumed / (m.goal || 1)) * 100));
+    return `
+      <div class="dash-macro-bar-row">
+        <div class="dash-macro-bar-info">
+          <span class="dash-macro-bar-icon">${m.icon}</span>
+          <span class="dash-macro-bar-label">${m.label}</span>
+          <span class="dash-macro-bar-val">${m.consumed}${m.unit} <span class="dash-macro-bar-goal">/ ${m.goal}${m.unit}</span></span>
+        </div>
+        <div class="dash-macro-bar-track">
+          <div class="dash-macro-bar-fill" style="width:${pct}%; background:${m.color}; box-shadow: 0 0 8px ${m.color}88;"></div>
+        </div>
+        <span class="dash-macro-bar-pct">${pct}%</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderDashTimeline() {
+  const container = document.getElementById('dash-timeline-list');
+  if (!container) return;
+
+  const todayLogs = DB.getTodayLogs();
+  const mealLogs     = todayLogs.filter(l => l.type === 'meal');
+  const liqLogs      = todayLogs.filter(l => l.type === 'liquid');
+  const foodItemLogs = todayLogs.filter(l => l.type === 'food_item');
+
+  if (mealLogs.length === 0 && liqLogs.length === 0 && foodItemLogs.length === 0) {
+    container.innerHTML = `<div class="dash-timeline-empty">Nada registrado aún hoy. Empieza a registrar tus comidas! 🌿</div>`;
+    return;
+  }
+
+  container.innerHTML = '';
+
+  // Recetas del plan y libres
+  mealLogs.forEach(log => {
+    const recipe = DB.getRecipeById(log.reference_id);
+    if (!recipe) return;
+    const macros = calcRecipeMacros(recipe.id);
+    const isPlanned = log.planned === true;
+    const item = document.createElement('div');
+    item.className = 'dash-timeline-item';
+    item.innerHTML = `
+      <div class="dash-tl-dot ${isPlanned ? 'meal-dot' : 'extra-dot'}"></div>
+      <div class="dash-tl-content">
+        <div class="dash-tl-name">${recipe.name}${!isPlanned ? ' <span class="dash-tl-extra-badge">extra</span>' : ''}</div>
+        <div class="dash-tl-meta">${getMealTypeEmoji(recipe.meal_type)} ${recipe.meal_type} · ${macros.calories} kcal · ${macros.protein}g prot</div>
+      </div>
+    `;
+    container.appendChild(item);
+  });
+
+  // Alimentos libres (food_item)
+  foodItemLogs.forEach(log => {
+    const fi = DB.getFoodItemById(log.reference_id);
+    if (!fi) return;
+    const qty  = log.quantity_g || 100;
+    const kcal = Math.round((fi.calories_per_100g || 0) * qty / 100);
+    const item = document.createElement('div');
+    item.className = 'dash-timeline-item';
+    item.innerHTML = `
+      <div class="dash-tl-dot extra-dot"></div>
+      <div class="dash-tl-content">
+        <div class="dash-tl-name">${fi.name} <span class="dash-tl-extra-badge">extra</span></div>
+        <div class="dash-tl-meta">🥗 Alimento libre · ${qty}g · ${kcal} kcal</div>
+      </div>
+    `;
+    container.appendChild(item);
+  });
+
+  // Líquidos
+  liqLogs.forEach(log => {
+    const liq = DB.liquids.find(l => l.id === log.reference_id);
+    if (!liq) return;
+    const item = document.createElement('div');
+    item.className = 'dash-timeline-item';
+    item.innerHTML = `
+      <div class="dash-tl-dot liquid-dot"></div>
+      <div class="dash-tl-content">
+        <div class="dash-tl-name">${liq.name}</div>
+        <div class="dash-tl-meta">${liq.icon} Hidratación</div>
+      </div>
+    `;
+    container.appendChild(item);
+  });
+}
+
+// ──────────────────────────────────────────────
+// DASHBOARD: SECCIÓN PLAN vs EXTRAS
+// ──────────────────────────────────────────────
+function renderPlanVsExtra() {
+  // Insertar la sección entre dash-macros-bars y dash-ai-card si no existe
+  let section = document.getElementById('dash-plan-vs-extra');
+  if (!section) {
+    const aiCard = document.getElementById('dash-ai-card');
+    if (!aiCard) return;
+    section = document.createElement('div');
+    section.id = 'dash-plan-vs-extra';
+    section.className = 'dash-plan-vs-extra-section';
+    aiCard.parentNode.insertBefore(section, aiCard);
+  }
+
+  const { plan, extra } = getPlanVsExtraSummary();
+  const goals = DB.userPreferences.goals || { calories: 2000 };
+  const totalCalGoal = goals.calories || 2000;
+
+  const planPct  = Math.min(100, Math.round((plan.calories  / totalCalGoal) * 100));
+  const extraPct = Math.min(100, Math.round((extra.calories / totalCalGoal) * 100));
+
+  // Porcentaje del plan cumplido respecto a las kcal totales consumidas
+  const totalConsumed = plan.calories + extra.calories;
+  const planCompliance = totalConsumed > 0
+    ? Math.round((plan.calories / totalConsumed) * 100)
+    : 0;
+
+  section.innerHTML = `
+    <h2 class="dash-section-title">📊 Plan vs Extras de hoy</h2>
+    <div class="dash-pve-cards">
+      <div class="dash-pve-card dash-pve-card--plan">
+        <div class="dash-pve-icon">📋</div>
+        <div class="dash-pve-val">${plan.calories} <span class="dash-pve-unit">kcal</span></div>
+        <div class="dash-pve-lbl">Del plan · ${plan.entries} comida${plan.entries !== 1 ? 's' : ''}</div>
+        <div class="dash-pve-bar-track">
+          <div class="dash-pve-bar-fill dash-pve-bar--plan" style="width:${planPct}%"></div>
+        </div>
+        <div class="dash-pve-pct">${planPct}% del objetivo</div>
+      </div>
+      <div class="dash-pve-card dash-pve-card--extra">
+        <div class="dash-pve-icon">➕</div>
+        <div class="dash-pve-val">${extra.calories} <span class="dash-pve-unit">kcal</span></div>
+        <div class="dash-pve-lbl">Extras · ${extra.entries} registro${extra.entries !== 1 ? 's' : ''}</div>
+        <div class="dash-pve-bar-track">
+          <div class="dash-pve-bar-fill dash-pve-bar--extra" style="width:${extraPct}%"></div>
+        </div>
+        <div class="dash-pve-pct">${extraPct}% del objetivo</div>
+      </div>
+    </div>
+    ${totalConsumed > 0 ? `
+    <div class="dash-pve-compliance">
+      <span class="dash-pve-compliance-lbl">Adherencia al plan</span>
+      <div class="dash-pve-compliance-bar-track">
+        <div class="dash-pve-compliance-bar" style="width:${planCompliance}%"></div>
+      </div>
+      <span class="dash-pve-compliance-pct" style="color:${planCompliance >= 70 ? '#3ab98d' : planCompliance >= 40 ? '#f59e0b' : '#ef4444'}">${planCompliance}%</span>
+    </div>` : ''}
+  `;
+}
+
+// ──────────────────────────────────────────────
+// PERFIL: METAS NUTRICIONALES
+// ──────────────────────────────────────────────
+function renderGoalsSettings() {
+  const goals = DB.userPreferences.goals || { calories: 2000, protein: 150, carbs: 220, fat: 65 };
+  const fields = { calories: 'goal-calories', protein: 'goal-protein', carbs: 'goal-carbs', fat: 'goal-fat' };
+  Object.entries(fields).forEach(([key, id]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = goals[key] || '';
+  });
+}
+
+function initGoalsForm() {
+  const btn = document.getElementById('btn-save-goals');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    const calories = parseInt(document.getElementById('goal-calories').value, 10);
+    const protein  = parseInt(document.getElementById('goal-protein').value, 10);
+    const carbs    = parseInt(document.getElementById('goal-carbs').value, 10);
+    const fat      = parseInt(document.getElementById('goal-fat').value, 10);
+    if ([calories, protein, carbs, fat].some(n => isNaN(n) || n <= 0)) {
+      showToast('⚠️ Por favor ingresa valores válidos');
+      return;
+    }
+    DB.updateGoals({ calories, protein, carbs, fat });
+    showToast('🎯 Metas guardadas');
+  });
+}
+
+// ──────────────────────────────────────────────
+// PERFIL: API KEY DE GEMINI
+// ──────────────────────────────────────────────
+function renderAIKeySettings() {
+  const key    = DB.userPreferences.gemini_api_key || '';
+  const input  = document.getElementById('ai-key-input');
+  const status = document.getElementById('ai-key-status');
+  if (input)  input.value = key ? '••••••••' + key.slice(-4) : '';
+  if (status) {
+    status.textContent = key ? '✅ Clave configurada' : '⚠️ Sin configurar';
+    status.className   = `ai-key-status ${key ? 'key-ok' : 'key-missing'}`;
+  }
+}
+
+function initAIKeyForm() {
+  const btn   = document.getElementById('btn-save-ai-key');
+  const input = document.getElementById('ai-key-input');
+  if (!btn || !input) return;
+
+  // Al hacer focus limpiar el valor enmascarado para que el usuario pueda escribir
+  input.addEventListener('focus', () => {
+    if (input.value.startsWith('••••')) input.value = '';
+  });
+
+  btn.addEventListener('click', () => {
+    const key = input.value.trim();
+    if (!key || key.length < 10) {
+      showToast('⚠️ Ingresa una API Key válida');
+      return;
+    }
+    DB.updateGeminiKey(key);
+    renderAIKeySettings();
+    showToast('🔑 API Key guardada');
+  });
+}
+
+// ──────────────────────────────────────────────
+// CHAT IA (Modal)
+// ──────────────────────────────────────────────
+let _chatMessages = []; // historial local de la sesión
+
+function openAIChat() {
+  const overlay = document.getElementById('ai-chat-overlay');
+  const modal   = document.getElementById('ai-chat-modal');
+  const keyReq  = document.getElementById('ai-key-required');
+  const inputArea = document.getElementById('ai-chat-input-area');
+
+  overlay.classList.add('open');
+  modal.classList.add('open');
+  document.body.classList.add('modal-open');
+
+  if (!AI.isConfigured()) {
+    keyReq.hidden    = false;
+    inputArea.hidden = true;
+  } else {
+    keyReq.hidden    = true;
+    inputArea.hidden = false;
+    // Mensaje de bienvenida si es el primer mensaje
+    if (_chatMessages.length === 0) {
+      appendChatMessage('bot', '¡Hola! 👋 Soy NutriBot. Puedo ayudarte con tus dudas nutricionales, sugerirte qué comer según lo que te falta hoy, o responder preguntas sobre tu plan. ¿En qué te ayudo?');
+    }
+  }
+}
+
+function closeAIChat() {
+  const overlay = document.getElementById('ai-chat-overlay');
+  const modal   = document.getElementById('ai-chat-modal');
+  overlay.classList.remove('open');
+  modal.classList.remove('open');
+  document.body.classList.remove('modal-open');
+}
+
+function appendChatMessage(role, text) {
+  const container = document.getElementById('ai-chat-messages');
+  if (!container) return;
+
+  const msg = document.createElement('div');
+  msg.className = `chat-msg chat-msg--${role}`;
+  msg.innerHTML = `<div class="chat-bubble">${text.replace(/\n/g, '<br>')}</div>`;
+  container.appendChild(msg);
+  container.scrollTop = container.scrollHeight;
+  _chatMessages.push({ role, text });
+}
+
+function showChatTyping() {
+  const container = document.getElementById('ai-chat-messages');
+  if (!container) return;
+  const typing = document.createElement('div');
+  typing.className = 'chat-msg chat-msg--bot chat-typing';
+  typing.id = 'chat-typing-indicator';
+  typing.innerHTML = `<div class="chat-bubble"><span class="ai-typing-dot"></span><span class="ai-typing-dot"></span><span class="ai-typing-dot"></span></div>`;
+  container.appendChild(typing);
+  container.scrollTop = container.scrollHeight;
+}
+
+function removeChatTyping() {
+  document.getElementById('chat-typing-indicator')?.remove();
+}
+
+async function sendChatMessage() {
+  const input = document.getElementById('ai-chat-input');
+  const msg   = input.value.trim();
+  if (!msg) return;
+
+  input.value = '';
+  input.disabled = true;
+  document.getElementById('ai-chat-send').disabled = true;
+
+  appendChatMessage('user', msg);
+  showChatTyping();
+
+  try {
+    const response = await AI.askAssistant(msg);
+    removeChatTyping();
+    appendChatMessage('bot', response);
+  } catch (err) {
+    removeChatTyping();
+    if (err.message === 'NO_KEY') {
+      appendChatMessage('bot', '⚠️ No encontré tu API Key. Ve a Perfil → Asistente IA para configurarla.');
+    } else {
+      appendChatMessage('bot', `❌ Error: ${err.message}`);
+    }
+  } finally {
+    input.disabled  = false;
+    document.getElementById('ai-chat-send').disabled = false;
+    input.focus();
+  }
+}
+
+function initAIChat() {
+  const fab     = document.getElementById('btn-ai-fab');
+  const overlay = document.getElementById('ai-chat-overlay');
+  const closeBtn = document.getElementById('ai-chat-close');
+  const sendBtn = document.getElementById('ai-chat-send');
+  const input   = document.getElementById('ai-chat-input');
+  const goProfile = document.getElementById('btn-go-profile-from-chat');
+
+  if (fab)     fab.addEventListener('click', openAIChat);
+  if (overlay) overlay.addEventListener('click', closeAIChat);
+  if (closeBtn) closeBtn.addEventListener('click', closeAIChat);
+
+  if (sendBtn) sendBtn.addEventListener('click', sendChatMessage);
+  if (input) {
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChatMessage();
+      }
+    });
+  }
+
+  if (goProfile) {
+    goProfile.addEventListener('click', () => {
+      closeAIChat();
+      document.querySelector('[data-screen="profile"]').click();
+      // Abrir automáticamente la card de IA
+      setTimeout(() => {
+        const aiCard = document.getElementById('scard-ai');
+        if (aiCard && !aiCard.open) {
+          aiCard.querySelector('.settings-card-header')?.click();
+        }
+      }, 350);
+    });
+  }
+}
+
+// Dashboard: botón de Insight IA
+function initDashboardAIBtn() {
+  const btn = document.getElementById('btn-dash-refresh-ai');
+  if (!btn) return;
+  btn.addEventListener('click', async () => {
+    if (!AI.isConfigured()) {
+      showToast('⚠️ Configura tu API Key en Perfil → Asistente IA');
+      return;
+    }
+    const textEl    = document.getElementById('dash-ai-text');
+    const loadingEl = document.getElementById('dash-ai-loading');
+    btn.disabled = true;
+    btn.textContent = '⏳ Generando…';
+    if (loadingEl) loadingEl.hidden = false;
+    if (textEl)    textEl.style.opacity = '0.4';
+    try {
+      const summary = await AI.getDailySummary();
+      if (textEl) { textEl.textContent = summary; textEl.style.opacity = '1'; }
+    } catch (err) {
+      showToast('❌ Error al conectar con Gemini');
+      if (textEl) textEl.style.opacity = '1';
+    } finally {
+      if (loadingEl) loadingEl.hidden = true;
+      btn.disabled = false;
+      btn.textContent = '✨ Insight IA';
+    }
+  });
+}
+
+
+// ══════════════════════════════════════════════════════════════
+// BOTTOM SHEET · REGISTRO LIBRE
+// ══════════════════════════════════════════════════════════════
+
+let _selectedFoodItem = null; // Item seleccionado para gramaje
+
+function openRegisterSheet() {
+  const sheet   = document.getElementById('register-sheet');
+  const overlay = document.getElementById('register-overlay');
+  if (!sheet) return;
+  // Siempre empieza en el menú principal
+  switchRSView('menu');
+  sheet.classList.add('open');
+  overlay.classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeRegisterSheet() {
+  const sheet   = document.getElementById('register-sheet');
+  const overlay = document.getElementById('register-overlay');
+  if (!sheet) return;
+  sheet.classList.remove('open');
+  overlay.classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function switchRSView(viewName) {
+  document.querySelectorAll('.rs-view').forEach(v => {
+    if (v.id === `rs-view-${viewName}`) {
+      v.hidden = false;
+      v.classList.add('active');
+    } else {
+      v.hidden = true;
+      v.classList.remove('active');
+    }
+  });
+
+  // Limpiar contenidos al entrar a cada vista
+  if (viewName === 'plan')      renderRSPlanView();
+  if (viewName === 'search')    resetRSSearchView();
+  if (viewName === 'recipe')    resetRSRecipeView();
+  if (viewName === 'favorites') renderRSFavoritesView();
+  if (viewName === 'voice')     resetRSVoiceView();
+}
+
+function initRegisterSheet() {
+  const fab     = document.getElementById('btn-register-fab');
+  const overlay = document.getElementById('register-overlay');
+
+  if (fab)     fab.addEventListener('click', openRegisterSheet);
+  if (overlay) overlay.addEventListener('click', closeRegisterSheet);
+
+  // Botones de volver
+  ['plan','search','recipe','favorites','voice'].forEach(view => {
+    const btn = document.getElementById(`rs-back-${view}`);
+    if (btn) btn.addEventListener('click', () => switchRSView('menu'));
+  });
+
+  // Botones del menú principal
+  document.querySelectorAll('.rs-menu-item[data-view]').forEach(btn => {
+    btn.addEventListener('click', () => switchRSView(btn.dataset.view));
+  });
+
+  // ── Búsqueda de alimentos ──
+  const searchInput = document.getElementById('rs-search-input');
+  if (searchInput) {
+    searchInput.addEventListener('input', debounce(handleFoodSearch, 280));
+  }
+
+  // ── Búsqueda de recetas ──
+  const recipeInput = document.getElementById('rs-recipe-input');
+  if (recipeInput) {
+    recipeInput.addEventListener('input', debounce(handleRecipeSearch, 280));
+  }
+
+  // ── Gramaje: botones +/− y guardado ──
+  const gramMinus = document.getElementById('rs-gram-minus');
+  const gramPlus  = document.getElementById('rs-gram-plus');
+  const gramInput = document.getElementById('rs-gram-input');
+  const gramSave  = document.getElementById('rs-gram-save');
+
+  if (gramMinus) gramMinus.addEventListener('click', () => {
+    const v = parseInt(gramInput.value) || 100;
+    gramInput.value = Math.max(1, v - 10);
+    updateGramMacros();
+  });
+  if (gramPlus) gramPlus.addEventListener('click', () => {
+    const v = parseInt(gramInput.value) || 100;
+    gramInput.value = Math.min(2000, v + 10);
+    updateGramMacros();
+  });
+  if (gramInput) gramInput.addEventListener('input', updateGramMacros);
+  if (gramSave)  gramSave.addEventListener('click', saveFreeFoodEntry);
+
+  // ── Voz: inicializar ──
+  initVoiceRegistration();
+
+  // Visibilidad del FAB según pestaña activa
+  updateRegisterFabVisibility();
+  document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', updateRegisterFabVisibility);
+  });
+}
+
+function updateRegisterFabVisibility() {
+  const fab = document.getElementById('btn-register-fab');
+  if (!fab) return;
+  const diaryActive = document.getElementById('screen-diary')?.classList.contains('active');
+  fab.style.display = diaryActive ? 'flex' : 'none';
+}
+
+// ────────────────────────────────────────────
+// Vista: DESDE MI PLAN
+// ────────────────────────────────────────────
+function renderRSPlanView() {
+  const container = document.getElementById('rs-plan-list');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const { slot, currentRecipes, nextSlot, nextRecipes } = getDiaryState();
+  const todayLogs = DB.getTodayLogs();
+  const loggedMealIds = new Set(todayLogs.filter(l => l.type === 'meal').map(l => l.reference_id));
+
+  // Mostrar recetas del turno actual primero, luego del siguiente
+  const groups = [
+    { label: `🍳 ${slot.label} (ahora)`, recipes: [...(currentRecipes?.canCook || []), ...(currentRecipes?.needsToBuy || [])] },
+    { label: nextSlot ? `⏭ ${nextSlot.label} (próximo)` : null, recipes: nextRecipes ? [...(nextRecipes.canCook || []), ...(nextRecipes.needsToBuy || [])] : [] }
+  ];
+
+  let hasAny = false;
+  groups.forEach(group => {
+    if (!group.label || group.recipes.length === 0) return;
+    hasAny = true;
+    const lbl = document.createElement('div');
+    lbl.className = 'rs-fav-section-title';
+    lbl.textContent = group.label;
+    container.appendChild(lbl);
+
+    group.recipes.forEach(recipe => {
+      const isLogged = loggedMealIds.has(recipe.id);
+      const item = document.createElement('div');
+      item.className = `rs-plan-item${isLogged ? ' already-logged' : ''}`;
+      const kcal = calcRecipeMacros(recipe.id).calories;
+      item.innerHTML = `
+        <div class="rs-plan-icon">${recipe.meal_type === 'desayuno' ? '🌅' : recipe.meal_type === 'almuerzo' ? '🍽️' : recipe.meal_type === 'cena' ? '🌙' : '🍳'}</div>
+        <div class="rs-plan-info">
+          <div class="rs-plan-name">${recipe.name}</div>
+          <div class="rs-plan-meta">${kcal} kcal${isLogged ? ' · Ya registrado' : ''}</div>
+        </div>
+        ${isLogged ? '<span class="rs-plan-check">✓</span>' : ''}
+      `;
+      if (!isLogged) {
+        item.addEventListener('click', () => {
+          DB.addFoodLog({ type: 'meal', reference_id: recipe.id, planned: true });
+          showToast(`✅ ${recipe.name} registrado`);
+          closeRegisterSheet();
+          renderDiaryScreen({ animateUpcoming: true });
+          renderDailyMacros();
+        });
+      }
+      container.appendChild(item);
+    });
+  });
+
+  if (!hasAny) {
+    container.innerHTML = '<div class="rs-result-empty">No hay recetas planificadas para hoy 🌿</div>';
+  }
+}
+
+// ────────────────────────────────────────────
+// Vista: BUSCAR ALIMENTO
+// ────────────────────────────────────────────
+function resetRSSearchView() {
+  const searchView = document.getElementById('rs-view-search');
+  const confirmEl = document.getElementById('rs-gram-confirm');
+  if (searchView && confirmEl && confirmEl.parentNode !== searchView) {
+    searchView.appendChild(confirmEl);
+  }
+  const input   = document.getElementById('rs-search-input');
+  const results = document.getElementById('rs-search-results');
+  const confirm = document.getElementById('rs-gram-confirm');
+  if (input)   input.value = '';
+  if (results) results.innerHTML = '<div class="rs-result-empty">Escribe para buscar un alimento 🔍</div>';
+  if (confirm) confirm.hidden = true;
+  _selectedFoodItem = null;
+}
+
+async function handleFoodSearch() {
+  const query   = document.getElementById('rs-search-input')?.value.trim();
+  const results = document.getElementById('rs-search-results');
+  const confirm = document.getElementById('rs-gram-confirm');
+  if (!results) return;
+  if (confirm) confirm.hidden = true;
+  _selectedFoodItem = null;
+
+  if (!query || query.length < 2) {
+    results.innerHTML = '<div class="rs-result-empty">Escribe para buscar un alimento 🔍</div>';
+    return;
+  }
+
+  // 1. Buscar localmente en food_items
+  const localMatches = DB.searchFoodItems(query);
+
+  // 2. Buscar en ingredientes del sistema
+  const ingMatches = DB.ingredients.filter(i =>
+    i.name.toLowerCase().includes(query.toLowerCase())
+  ).slice(0, 5);
+
+  results.innerHTML = '';
+
+  if (localMatches.length > 0) {
+    localMatches.forEach(item => {
+      results.appendChild(buildFoodResultItem(item, 'food_item'));
+    });
+  }
+
+  if (ingMatches.length > 0) {
+    ingMatches.forEach(ing => {
+      // Convertir ingrediente a pseudo-food-item para display
+      const pseudo = {
+        id: ing.id,
+        name: ing.name,
+        calories_per_100g: ing.calories_per_100g || 0,
+        protein_per_100g:  ing.protein_per_100g  || 0,
+        carbs_per_100g:    ing.carbs_per_100g    || 0,
+        fat_per_100g:      ing.fat_per_100g      || 0,
+        typical_serving_g: 100,
+        _fromIngredient: true
+      };
+      results.appendChild(buildFoodResultItem(pseudo, 'ingredient'));
+    });
+  }
+
+  if (localMatches.length === 0 && ingMatches.length === 0) {
+    // No encontrado — botón IA
+    const emptyDiv = document.createElement('div');
+    emptyDiv.className = 'rs-result-empty';
+    emptyDiv.innerHTML = `
+      <span>No encontrado en tu BD 🤔</span>
+      ${AI.isConfigured()
+        ? `<button class="btn-search-ai" id="btn-search-ai-now">🤖 Buscar con IA: "${query}"</button>`
+        : `<span style="font-size:0.75rem">Configura tu API Key en Perfil para usar IA</span>`
+      }
+    `;
+    results.appendChild(emptyDiv);
+
+    document.getElementById('btn-search-ai-now')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      btn.textContent = '⏳ Consultando Gemini…';
+      try {
+        const nutritionData = await AI.fetchNutritionInfo(query);
+        if (nutritionData) {
+          const saved = DB.addFoodItem({ ...nutritionData, source: 'gemini', verified: false });
+          results.innerHTML = '';
+          results.appendChild(buildFoodResultItem(saved, 'food_item'));
+          showToast('✨ Información nutricional encontrada y guardada');
+        } else {
+          showToast('❌ Gemini no encontró información de ese alimento');
+        }
+      } catch {
+        showToast('❌ Error al consultar Gemini');
+        btn.disabled = false;
+        btn.textContent = `🤖 Buscar con IA: "${query}"`;
+      }
+    });
+  }
+}
+
+function buildFoodResultItem(item, _type) {
+  const el = document.createElement('div');
+  el.className = 'rs-result-item';
+  const kcalPer100 = Math.round(item.calories_per_100g || 0);
+  el.innerHTML = `
+    <div>
+      <div class="rs-result-name">${item.name}</div>
+      <div class="rs-result-meta">${kcalPer100} kcal / 100g</div>
+    </div>
+    <div class="rs-result-kcal">${kcalPer100} kcal</div>
+  `;
+  el.addEventListener('click', () => selectFoodForGram(item));
+  return el;
+}
+
+function selectFoodForGram(item) {
+  _selectedFoodItem = item;
+  const confirm  = document.getElementById('rs-gram-confirm');
+  const nameEl   = document.getElementById('rs-gram-item-name');
+  const gramInp  = document.getElementById('rs-gram-input');
+  if (!confirm) return;
+
+  nameEl.textContent = item.name;
+  gramInp.value = item.typical_serving_g || 100;
+  confirm.hidden = false;
+  updateGramMacros();
+
+  // Scroll para ver el panel
+  setTimeout(() => confirm.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
+}
+
+function updateGramMacros() {
+  const gramInput = document.getElementById('rs-gram-input');
+  const macrosEl  = document.getElementById('rs-gram-macros');
+  if (!gramInput || !macrosEl || !_selectedFoodItem) return;
+
+  const g = Math.max(1, parseInt(gramInput.value) || 100);
+  const factor = g / 100;
+  const kcal = Math.round(((_selectedFoodItem.calories_per_100g || 0) * factor));
+  const prot = (((_selectedFoodItem.protein_per_100g  || 0) * factor)).toFixed(1);
+  const carb = (((_selectedFoodItem.carbs_per_100g    || 0) * factor)).toFixed(1);
+  const fat  = (((_selectedFoodItem.fat_per_100g      || 0) * factor)).toFixed(1);
+
+  macrosEl.innerHTML = `
+    <div class="rs-gram-macro-chip"><span class="rs-gram-macro-chip-val">${kcal}</span><span class="rs-gram-macro-chip-lbl">kcal</span></div>
+    <div class="rs-gram-macro-chip"><span class="rs-gram-macro-chip-val">${prot}g</span><span class="rs-gram-macro-chip-lbl">Prot.</span></div>
+    <div class="rs-gram-macro-chip"><span class="rs-gram-macro-chip-val">${carb}g</span><span class="rs-gram-macro-chip-lbl">Carbs</span></div>
+    <div class="rs-gram-macro-chip"><span class="rs-gram-macro-chip-val">${fat}g</span><span class="rs-gram-macro-chip-lbl">Grasa</span></div>
+  `;
+}
+
+function saveFreeFoodEntry() {
+  const gramInput = document.getElementById('rs-gram-input');
+  if (!_selectedFoodItem || !gramInput) return;
+  const qty = Math.max(1, parseInt(gramInput.value) || 100);
+
+  // Si es un ingrediente del sistema que aún no está en food_items, lo añadimos
+  let refId = _selectedFoodItem.id;
+  if (_selectedFoodItem._fromIngredient) {
+    // Crear como food_item a partir del ingrediente
+    const saved = DB.addFoodItem({
+      name: _selectedFoodItem.name,
+      calories_per_100g: _selectedFoodItem.calories_per_100g || 0,
+      protein_per_100g:  _selectedFoodItem.protein_per_100g  || 0,
+      carbs_per_100g:    _selectedFoodItem.carbs_per_100g    || 0,
+      fat_per_100g:      _selectedFoodItem.fat_per_100g      || 0,
+      typical_serving_g: 100,
+      source: 'ingredient'
+    });
+    refId = saved.id;
+  }
+
+  DB.addFoodLog({
+    type: 'food_item',
+    reference_id: refId,
+    quantity_g: qty,
+    planned: false
+  });
+
+  showToast(`✅ ${_selectedFoodItem.name} (${qty}g) registrado`);
+  closeRegisterSheet();
+  renderDiaryScreen();
+  renderDailyMacros();
+}
+
+// ────────────────────────────────────────────
+// Vista: BUSCAR RECETA
+// ────────────────────────────────────────────
+function resetRSRecipeView() {
+  const input   = document.getElementById('rs-recipe-input');
+  const results = document.getElementById('rs-recipe-results');
+  if (input)   input.value = '';
+  if (results) {
+    results.innerHTML = '';
+    // Mostrar todas las recetas al abrir
+    renderRecipeResults(DB.recipes);
+  }
+}
+
+function handleRecipeSearch() {
+  const query = document.getElementById('rs-recipe-input')?.value.trim().toLowerCase();
+  const filtered = query
+    ? DB.recipes.filter(r => r.name.toLowerCase().includes(query))
+    : DB.recipes;
+  renderRecipeResults(filtered);
+}
+
+function renderRecipeResults(recipes) {
+  const container = document.getElementById('rs-recipe-results');
+  if (!container) return;
+  container.innerHTML = '';
+
+  if (recipes.length === 0) {
+    container.innerHTML = '<div class="rs-result-empty">No se encontraron recetas 🌿</div>';
+    return;
+  }
+
+  const todayLogs = DB.getTodayLogs();
+  const loggedIds = new Set(todayLogs.filter(l => l.type === 'meal').map(l => l.reference_id));
+
+  recipes.forEach(recipe => {
+    const isLogged = loggedIds.has(recipe.id);
+    const kcal = calcRecipeMacros(recipe.id).calories;
+    const item = document.createElement('div');
+    item.className = `rs-plan-item${isLogged ? ' already-logged' : ''}`;
+    const typeEmoji = { desayuno:'🌅', almuerzo:'🍽️', cena:'🌙', merienda:'🥪' }[recipe.meal_type] || '🍳';
+    item.innerHTML = `
+      <div class="rs-plan-icon">${typeEmoji}</div>
+      <div class="rs-plan-info">
+        <div class="rs-plan-name">${recipe.name}</div>
+        <div class="rs-plan-meta">${kcal} kcal · ${recipe.meal_type}${isLogged ? ' · ✓ Registrado' : ''}</div>
+      </div>
+      ${isLogged ? '<span class="rs-plan-check">✓</span>' : ''}
+    `;
+    if (!isLogged) {
+      item.addEventListener('click', () => {
+        DB.addFoodLog({ type: 'meal', reference_id: recipe.id, planned: false });
+        showToast(`✅ ${recipe.name} registrado`);
+        closeRegisterSheet();
+        renderDiaryScreen({ animateUpcoming: true });
+        renderDailyMacros();
+      });
+    }
+    container.appendChild(item);
+  });
+}
+
+// ────────────────────────────────────────────
+// Vista: FAVORITOS Y FRECUENTES
+// ────────────────────────────────────────────
+function renderRSFavoritesView() {
+  const container = document.getElementById('rs-favorites-content');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const favorites  = DB.getFavorites();
+  const frequents  = DB.getFrequentItems(8);
+
+  // ── Favoritos ──
+  const favResolved = favorites.map(fav => resolveItemLabel(fav)).filter(Boolean);
+  if (favResolved.length > 0) {
+    const title = document.createElement('div');
+    title.className = 'rs-fav-section-title';
+    title.textContent = '⭐ Tus favoritos';
+    container.appendChild(title);
+
+    const chips = document.createElement('div');
+    chips.className = 'rs-fav-chips';
+    favResolved.forEach(({ label, emoji, fav }) => {
+      const chip = document.createElement('button');
+      chip.className = 'rs-fav-chip';
+      chip.textContent = `${emoji} ${label}`;
+      chip.addEventListener('click', () => quickRegisterFav(fav));
+      chips.appendChild(chip);
+    });
+    container.appendChild(chips);
+  }
+
+  // ── Frecuentes ──
+  const freqResolved = frequents.map(f => resolveItemLabel(f)).filter(Boolean);
+  if (freqResolved.length > 0) {
+    const title2 = document.createElement('div');
+    title2.className = 'rs-fav-section-title';
+    title2.textContent = '🔥 Más usados (últimos 30 días)';
+    container.appendChild(title2);
+
+    const chips2 = document.createElement('div');
+    chips2.className = 'rs-fav-chips';
+    freqResolved.forEach(({ label, emoji, fav }) => {
+      const chip = document.createElement('button');
+      chip.className = 'rs-fav-chip';
+      chip.textContent = `${emoji} ${label}`;
+      chip.addEventListener('click', () => quickRegisterFav(fav));
+      chips2.appendChild(chip);
+    });
+    container.appendChild(chips2);
+  }
+
+  if (favResolved.length === 0 && freqResolved.length === 0) {
+    container.innerHTML = '<div class="rs-result-empty">Aún no tienes favoritos ni frecuentes.<br>Regístra alimentos para que aparezcan aquí 🌱</div>';
+  }
+}
+
+function resolveItemLabel({ type, reference_id }) {
+  const emojis = { desayuno:'🌅', almuerzo:'🍽️', cena:'🌙', merienda:'🥪', food_item:'🥗', liquid:'💧' };
+  if (type === 'meal') {
+    const r = DB.getRecipeById(reference_id);
+    if (!r) return null;
+    return { label: r.name, emoji: emojis[r.meal_type] || '🍳', fav: { type, reference_id } };
+  }
+  if (type === 'food_item') {
+    const fi = DB.getFoodItemById(reference_id);
+    if (!fi) return null;
+    return { label: fi.name, emoji: '🥗', fav: { type, reference_id } };
+  }
+  if (type === 'ingredient') {
+    const ing = DB.getIngredientById(reference_id);
+    if (!ing) return null;
+    return { label: ing.name, emoji: '🥕', fav: { type, reference_id } };
+  }
+  return null;
+}
+
+function quickRegisterFav({ type, reference_id }) {
+  if (type === 'meal') {
+    DB.addFoodLog({ type: 'meal', reference_id, planned: false });
+    const r = DB.getRecipeById(reference_id);
+    showToast(`✅ ${r?.name || 'Receta'} registrada`);
+  } else if (type === 'food_item') {
+    const fi = DB.getFoodItemById(reference_id);
+    const qty = fi?.typical_serving_g || 100;
+    DB.addFoodLog({ type: 'food_item', reference_id, quantity_g: qty, planned: false });
+    showToast(`✅ ${fi?.name || 'Alimento'} (${qty}g) registrado`);
+  }
+  closeRegisterSheet();
+  renderDiaryScreen();
+  renderDailyMacros();
+}
+
+// ────────────────────────────────────────────
+// RENDERIZADO DE ALIMENTOS LIBRES EN EL DIARIO
+// ────────────────────────────────────────────
+function renderFreeDiaryEntries(parentEl) {
+  const todayLogs = DB.getTodayLogs();
+  const freeEntries = todayLogs.filter(l => l.type === 'food_item' || (l.type === 'meal' && l.planned === false));
+  if (freeEntries.length === 0) return;
+
+  const section = document.createElement('section');
+  section.className = 'content-section';
+
+  const title = document.createElement('div');
+  title.className = 'extras-section-title';
+  title.textContent = '+ Añadido fuera del plan';
+  section.appendChild(title);
+
+  freeEntries.forEach(log => {
+    const card = buildFreeFoodCard(log);
+    if (card) section.appendChild(card);
+  });
+
+  parentEl.appendChild(section);
+}
+
+function buildFreeFoodCard(log) {
+  let name = '—', kcal = 0, meta = '';
+
+  if (log.type === 'food_item') {
+    const fi = DB.getFoodItemById(log.reference_id);
+    if (!fi) return null;
+    const qty = log.quantity_g || 100;
+    kcal = Math.round((fi.calories_per_100g || 0) * qty / 100);
+    const prot = ((fi.protein_per_100g || 0) * qty / 100).toFixed(1);
+    name = fi.name;
+    meta = `${qty}g · ${kcal} kcal · ${prot}g prot.`;
+  } else if (log.type === 'meal') {
+    const r = DB.getRecipeById(log.reference_id);
+    if (!r) return null;
+    kcal = calcRecipeMacros(r.id).calories;
+    name = r.name;
+    meta = `${kcal} kcal (receta extra)`;
+  }
+
+  const card = document.createElement('div');
+  card.className = 'card--free-food';
+  card.innerHTML = `
+    <div class="free-food-info">
+      <div class="free-food-name">${name}</div>
+      <div class="free-food-meta">${meta}</div>
+    </div>
+    <div class="free-food-actions">
+      <button class="btn-free-delete" data-log-id="${log.id}" aria-label="Eliminar">🗑</button>
+    </div>
+  `;
+
+  card.querySelector('.btn-free-delete').addEventListener('click', () => {
+    DB.removeFoodLog(log.id);
+    renderDiaryScreen();
+    renderDailyMacros();
+    showToast('🗑 Registro eliminado');
+  });
+
+  return card;
+}
+
+// ────────────────────────────────────────────
+// REGISTRO POR VOZ
+// ────────────────────────────────────────────
+
+let recognition = null;
+let isRecording = false;
+
+function initVoiceRegistration() {
+  const micBtn = document.getElementById('btn-rs-voice-mic');
+  const processBtn = document.getElementById('btn-rs-voice-process');
+
+  if (micBtn) {
+    micBtn.addEventListener('click', toggleVoiceRecording);
+  }
+  if (processBtn) {
+    processBtn.addEventListener('click', processVoiceInput);
+  }
+
+  // Inicializar SpeechRecognition
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'es-ES';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => {
+      isRecording = true;
+      micBtn.classList.add('recording');
+      const hint = document.getElementById('rs-voice-hint');
+      if (hint) hint.textContent = 'Escuchando...';
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript;
+      const input = document.getElementById('rs-voice-input');
+      const area = document.getElementById('rs-voice-transcript-area');
+      
+      if (input && area) {
+        input.value = transcript;
+        area.hidden = false;
+      }
+    };
+
+    recognition.onerror = (event) => {
+      console.error('SpeechRecognition error:', event.error);
+      const status = document.getElementById('rs-voice-status');
+      if (status) status.textContent = `Error: ${event.error}`;
+      stopVoiceRecording();
+    };
+
+    recognition.onend = () => {
+      stopVoiceRecording();
+    };
+  } else {
+    // No soportado
+    if (micBtn) {
+      micBtn.disabled = true;
+      micBtn.style.opacity = '0.5';
+    }
+    const hint = document.getElementById('rs-voice-hint');
+    if (hint) hint.textContent = 'Tu navegador no soporta registro por voz.';
+  }
+}
+
+function toggleVoiceRecording() {
+  if (!recognition) return;
+  if (isRecording) {
+    recognition.stop();
+  } else {
+    // Reset estado
+    const input = document.getElementById('rs-voice-input');
+    const status = document.getElementById('rs-voice-status');
+    const area = document.getElementById('rs-voice-transcript-area');
+    if (input) input.value = '';
+    if (status) status.textContent = '';
+    if (area) area.hidden = true;
+    
+    recognition.start();
+  }
+}
+
+function stopVoiceRecording() {
+  isRecording = false;
+  const micBtn = document.getElementById('btn-rs-voice-mic');
+  if (micBtn) micBtn.classList.remove('recording');
+  
+  const hint = document.getElementById('rs-voice-hint');
+  if (hint && hint.textContent === 'Escuchando...') {
+    hint.textContent = 'Puedes editar el texto abajo y luego procesarlo.';
+  }
+}
+
+function resetRSVoiceView() {
+  const hint = document.getElementById('rs-voice-hint');
+  const input = document.getElementById('rs-voice-input');
+  const area = document.getElementById('rs-voice-transcript-area');
+  const status = document.getElementById('rs-voice-status');
+  
+  if (hint) hint.textContent = 'Toca el microfono y dime que comiste (ej. "Me comi dos huevos con 50 gramos de pan")';
+  if (input) input.value = '';
+  if (area) area.hidden = true;
+  if (status) status.textContent = '';
+  if (isRecording && recognition) recognition.stop();
+}
+
+async function processVoiceInput() {
+  const input = document.getElementById('rs-voice-input');
+  const status = document.getElementById('rs-voice-status');
+  const processBtn = document.getElementById('btn-rs-voice-process');
+  
+  const text = input?.value.trim();
+  if (!text) return;
+
+  if (processBtn) processBtn.disabled = true;
+  if (status) status.textContent = 'Procesando con IA... ⏳';
+
+  try {
+    const parsed = await AI.parseVoiceInput(text);
+    if (!parsed || !parsed.food_name) throw new Error('No se detectó alimento');
+    
+    if (status) status.textContent = `Analizando: ${parsed.food_name}...`;
+
+    // Buscar si existe en la BD o en favoritos
+    const allItems = DB.getFoodItemsList();
+    let bestMatch = allItems.find(i => i.name.toLowerCase().includes(parsed.food_name.toLowerCase()) || parsed.food_name.toLowerCase().includes(i.name.toLowerCase()));
+    
+    // Si no existe, usamos IA para obtener sus macros
+    if (!bestMatch) {
+      const macroPrompt = `Proporciona la información nutricional por 100g para el alimento: "${parsed.food_name}". Devuelve SOLO un JSON valido sin markdown. Las claves deben ser: name, calories_per_100g, protein_per_100g. Si no tienes datos exactos, estima.`;
+      const macroRaw = await AI._call(macroPrompt);
+      const macroCleaned = macroRaw.replace(/```json|```/g, '').trim();
+      const macroData = JSON.parse(macroCleaned);
+      
+      bestMatch = {
+        id: 'voice_' + Date.now(),
+        name: macroData.name || parsed.food_name,
+        calories_per_100g: Number(macroData.calories_per_100g) || 0,
+        protein_per_100g: Number(macroData.protein_per_100g) || 0,
+      };
+      // Guardar en DB para uso futuro
+      DB.food_items.push(bestMatch);
+      DB._save();
+    }
+    
+    if (status) status.textContent = '¡Listo!';
+    
+    // Pasar al confirmador de gramaje
+    currentSelectedFood = bestMatch;
+    
+    // Ocultar la UI de voz, mostrar el confirmador
+    const voiceContainer = document.querySelector('.rs-voice-container');
+    const gramConfirm = document.getElementById('rs-gram-confirm'); // usar el mismo del search view
+    
+    // Movemos el confirmador a la vista actual
+    const voiceView = document.getElementById('rs-view-voice');
+    if (voiceView && gramConfirm) {
+      voiceView.appendChild(gramConfirm);
+      gramConfirm.hidden = false;
+      if (voiceContainer) voiceContainer.style.display = 'none'; // ocultar
+      
+      const gramInput = document.getElementById('rs-gram-input');
+      if (gramInput) gramInput.value = parsed.quantity_g || 100;
+      
+      updateGramMacros(); // Refresca UI
+    }
+    
+  } catch (err) {
+    console.error('Error parseVoiceInput:', err);
+    if (status) status.textContent = 'Error al entender. Intenta editar el texto.';
+  } finally {
+    if (processBtn) processBtn.disabled = false;
+  }
+}
+
+// ── Utilidad debounce ──
+function debounce(fn, delay) {
+  let timer;
+  return (...args) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
 }

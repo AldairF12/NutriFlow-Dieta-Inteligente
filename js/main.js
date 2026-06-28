@@ -225,42 +225,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ──────────────────────────────────────────────
 // CHAT IA (Modal)
 // ──────────────────────────────────────────────
-let _chatMessages = []; // historial local de la sesión
-
-
-
-
-
-
-async function sendChatMessage() {
-  const input = document.getElementById('ai-chat-input');
-  const msg   = input.value.trim();
-  if (!msg) return;
-
-  input.value = '';
-  input.disabled = true;
-  document.getElementById('ai-chat-send').disabled = true;
-
-  appendChatMessage('user', msg);
-  showChatTyping();
-
-  try {
-    const response = await AI.askAssistant(msg);
-    removeChatTyping();
-    appendChatMessage('bot', response);
-  } catch (err) {
-    removeChatTyping();
-    if (err.message === 'NO_KEY') {
-      appendChatMessage('bot', '⚠️ No encontré tu API Key. Ve a Perfil → Asistente IA para configurarla.');
-    } else {
-      appendChatMessage('bot', `❌ Error: ${err.message}`);
-    }
-  } finally {
-    input.disabled  = false;
-    document.getElementById('ai-chat-send').disabled = false;
-    input.focus();
-  }
-}
+// Métodos movidos a aiChat.js
 
 
 // Dashboard: botón de Insight IA
