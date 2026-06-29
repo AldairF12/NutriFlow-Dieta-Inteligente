@@ -268,6 +268,24 @@
           </div>
         </details>
 
+        <!-- Debugging / Avanzado -->
+        <details class="settings-card" id="scard-debug">
+          <summary class="settings-card-header">
+            <div class="settings-card-title">
+              <span class="settings-card-icon">🛠️</span>
+              Avanzado
+            </div>
+            <span class="settings-card-chevron">▼</span>
+          </summary>
+          <div class="settings-card-content">
+            <div class="form-group">
+              <label>Depuración de Errores</label>
+              <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 8px;">Descarga un registro interno de errores para enviarlo a soporte si la IA falla.</p>
+              <button type="button" class="btn btn-outline" style="width: 100%;" onclick="if(window.Logger) window.Logger.exportLogs()">Descargar Logs (.txt)</button>
+            </div>
+          </div>
+        </details>
+
       </div>
     </section>
 
@@ -458,6 +476,7 @@
         <div id="rs-search-results" class="rs-scroll-content"></div>
         <div id="rs-gram-confirm" class="rs-gram-confirm" hidden>
           <div class="rs-gram-item-name" id="rs-gram-item-name"></div>
+          <div style="text-align: center; font-size: 0.85rem; color: var(--gray-600); margin-bottom: 10px;">Cantidad consumida:</div>
           <div class="rs-gram-row">
             <button id="rs-gram-minus" class="btn-qty btn-minus" aria-label="Reducir">&#8722;</button>
             <input type="number" id="rs-gram-input" class="rs-gram-input" min="1" max="2000" />
@@ -552,6 +571,7 @@
   </div>
 
   <!-- Modulos Core -->
+  <script src="js/core/logger.js"></script>
   <script src="js/db.js"></script>
   <script src="js/calc.js"></script>
   <script src="js/ai.js"></script>

@@ -179,7 +179,8 @@ async function processVoiceInput() {
 
       const inputG = document.getElementById('rs-gram-input');
       if (inputG) {
-        inputG.value = parsed.quantity_g || 100;
+        inputG.placeholder = `Ej: ${bestMatch.typical_serving_g || 100}`;
+        inputG.value = parsed.quantity_g || bestMatch.typical_serving_g || 100;
       }
       
       if (typeof updateGramMacros === 'function') updateGramMacros();

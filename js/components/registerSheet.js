@@ -142,7 +142,9 @@ function resetRSSearchView() {
   const input   = document.getElementById('rs-search-input');
   const results = document.getElementById('rs-search-results');
   const confirm = document.getElementById('rs-gram-confirm');
+  const gramInp = document.getElementById('rs-gram-input');
   if (input)   input.value = '';
+  if (gramInp) gramInp.value = '';
   if (results) results.innerHTML = '<div class="rs-result-empty">Escribe para buscar un alimento 🔍</div>';
   if (confirm) {
     confirm.hidden = true;
@@ -220,6 +222,7 @@ async function handleFoodSearch() {
           const saved = DB.addFoodItem({ ...nutritionData, source: 'gemini', verified: false });
           results.innerHTML = '';
           results.appendChild(buildFoodResultItem(saved, 'food_item'));
+          selectFoodForGram(saved);
           showToast('✨ Información nutricional encontrada y guardada');
         } else {
           showToast('❌ Gemini no encontró información de ese alimento');
@@ -254,6 +257,7 @@ function selectFoodForGram(item) {
   if (!confirm) return;
 
   nameEl.textContent = item.name;
+  gramInp.placeholder = `Ej: ${item.typical_serving_g || 100}`;
   gramInp.value = item.typical_serving_g || 100;
   confirm.hidden = false;
   updateGramMacros();
