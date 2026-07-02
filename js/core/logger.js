@@ -45,6 +45,9 @@ window.Logger = {
     
     // Convertir argumentos a strings de forma segura
     const msg = args.map(arg => {
+      if (arg instanceof Error) {
+        return `${arg.name}: ${arg.message}\n${arg.stack}`;
+      }
       if (typeof arg === 'object') {
         try { return JSON.stringify(arg); } 
         catch (e) { return String(arg); }

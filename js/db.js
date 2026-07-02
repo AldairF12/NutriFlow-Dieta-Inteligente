@@ -292,12 +292,15 @@ const DB = {
   },
   getFoodItemById(id) { return (appState.food_items || []).find(f => f.id === id) || null; },
   searchFoodItems(query) {
-    const q = query.toLowerCase();
-    return (appState.food_items || []).filter(f => f.name.toLowerCase().includes(q));
+    const q = query.toLowerCase().trim();
+    const items = appState.food_items || [];
+    return items.filter(f => f && f.name && f.name.toLowerCase().includes(q));
   },
+
   getFoodItemByExactName(name) {
+    if (!name) return null;
     const q = name.toLowerCase().trim();
-    return (appState.food_items || []).find(f => f.name.toLowerCase().trim() === q) || null;
+    return (appState.food_items || []).find(f => f && f.name && f.name.toLowerCase().trim() === q) || null;
   },
 
   addFoodLog(entry) {
@@ -364,8 +367,9 @@ const DB = {
 
   addFoodItem(item) {
     if (!appState.food_items) appState.food_items = [];
+    if (!item || !item.name) return null;
     // Evitar duplicados por nombre
-    const existing = appState.food_items.find(f => f.name.toLowerCase() === item.name.toLowerCase());
+    const existing = appState.food_items.find(f => f && f.name && f.name.toLowerCase() === item.name.toLowerCase());
     if (existing) return existing;
     const newItem = {
       id: `fi_${Date.now()}`,
