@@ -476,11 +476,22 @@
         <div id="rs-search-results" class="rs-scroll-content"></div>
         <div id="rs-gram-confirm" class="rs-gram-confirm" hidden>
           <div class="rs-gram-item-name" id="rs-gram-item-name"></div>
-          <div style="text-align: center; font-size: 0.85rem; color: var(--gray-600); margin-bottom: 10px;">Cantidad consumida:</div>
+          
+          <div style="margin-bottom: 12px; text-align: center;">
+            <div class="rs-meal-chips" id="rs-meal-chips">
+              <div class="rs-meal-chip" data-val="breakfast">Desayuno</div>
+              <div class="rs-meal-chip" data-val="lunch">Almuerzo</div>
+              <div class="rs-meal-chip" data-val="merienda">Merienda</div>
+              <div class="rs-meal-chip" data-val="dinner">Cena</div>
+              <div class="rs-meal-chip active" data-val="snack">Snack</div>
+            </div>
+            <input type="hidden" id="rs-gram-meal-type" value="snack" />
+          </div>
+
+          <div style="text-align: center; font-size: 0.9rem; font-weight: 600; color: var(--gray-700); margin-bottom: 12px;">Cantidad consumida (g):</div>
           <div class="rs-gram-row">
             <button id="rs-gram-minus" class="btn-qty btn-minus" aria-label="Reducir">&#8722;</button>
             <input type="number" id="rs-gram-input" class="rs-gram-input" min="1" max="2000" />
-            <span class="rs-gram-unit">g</span>
             <button id="rs-gram-plus" class="btn-qty btn-plus" aria-label="Aumentar">+</button>
           </div>
           <div id="rs-gram-macros" class="rs-gram-macros"></div>
@@ -544,7 +555,10 @@
             <p class="ai-chat-subtitle">Asistente nutricional IA</p>
           </div>
         </div>
-        <button id="ai-chat-close" class="modal-close" aria-label="Cerrar chat">&#10005;</button>
+        <div style="display: flex; gap: 24px; align-items: center;">
+          <button id="ai-chat-clear" class="modal-action-btn" title="Limpiar chat (mantiene los fijados)" style="background: none; border: none; font-size: 1.35rem; color: rgba(255,255,255,0.85); cursor: pointer; transition: transform 0.2s;">🧹</button>
+          <button id="ai-chat-close" class="modal-close" aria-label="Cerrar chat">&#10005;</button>
+        </div>
       </header>
       <div id="ai-chat-messages" class="ai-chat-messages" role="log" aria-live="polite"></div>
       <div id="ai-key-required" class="ai-key-required" hidden>
@@ -556,14 +570,30 @@
           <button class="ai-context-btn active" data-context="general">🌍 General</button>
           <button class="ai-context-btn" data-context="progress">📊 Mi Progreso Diario</button>
         </div>
-        <div style="display:flex; gap:8px;">
-          <input type="text" id="ai-chat-input" class="ai-chat-input" placeholder="Pregunta algo sobre tu nutricion..." autocomplete="off" />
-          <button id="ai-chat-send" class="ai-chat-send" aria-label="Enviar">
+        <div style="display:flex; gap:8px; align-items: flex-end;">
+          <button id="ai-chat-mic" class="ai-chat-mic" aria-label="Dictar por voz" style="flex-shrink: 0; background: none; border: none; font-size: 1.5rem; color: var(--gray-500); cursor: pointer; padding: 10px 5px; transition: color 0.2s;">
+            🎙️
+          </button>
+          <textarea id="ai-chat-input" class="ai-chat-input" rows="1" placeholder="Pregunta algo sobre nutrición..." autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" style="resize: none; overflow-y: hidden;"></textarea>
+          <button id="ai-chat-send" class="ai-chat-send" aria-label="Enviar" style="flex-shrink: 0;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
               <line x1="22" y1="2" x2="11" y2="13"></line>
               <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
             </svg>
           </button>
+        </div>
+      </div>
+      </div>
+      
+      <!-- Modal Confirmar Limpieza de Chat -->
+      <div id="ai-clear-confirm" class="ai-clear-confirm" hidden>
+        <div class="ai-clear-content">
+          <h4>🧹 Limpiar Historial</h4>
+          <p>¿Deseas borrar todo el chat? Se conservarán los mensajes que hayas fijado (📌).</p>
+          <div class="ai-clear-actions">
+            <button id="ai-clear-cancel" class="btn-cancel">Cancelar</button>
+            <button id="ai-clear-yes" class="btn-danger">Limpiar</button>
+          </div>
         </div>
       </div>
     </div>
