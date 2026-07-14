@@ -310,7 +310,8 @@ const DB = {
       type: entry.type,                          // 'meal' | 'liquid' | 'food_item'
       reference_id: entry.reference_id,
       quantity_g: entry.quantity_g || null,
-      planned: entry.planned !== undefined ? entry.planned : (entry.type === 'meal')  // meals del plan = true por defecto
+      planned: entry.planned !== undefined ? entry.planned : (entry.type === 'meal'),
+      mealCategory: entry.mealCategory || null
     };
     appState.food_logs.push(newLog);
     persistState();

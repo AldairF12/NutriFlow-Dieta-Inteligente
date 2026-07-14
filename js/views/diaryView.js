@@ -584,12 +584,35 @@ function renderFreeDiaryEntries(parentEl) {
 
   const title = document.createElement('div');
   title.className = 'extras-section-title';
-  title.textContent = '+ Añadido fuera del plan';
+  title.textContent = '+ Extras y Consumos Sueltos';
   section.appendChild(title);
 
+  const groups = {
+    breakfast: { label: '🌅 En el Desayuno', items: [] },
+    lunch: { label: '☀️ En el Almuerzo', items: [] },
+    merienda: { label: '☕ En la Merienda', items: [] },
+    dinner: { label: '🌙 En la Cena', items: [] },
+    snack: { label: '🍿 Snacks / Otros', items: [] }
+  };
+  
   freeEntries.forEach(log => {
-    const card = buildFreeFoodCard(log);
-    if (card) section.appendChild(card);
+    const cat = log.mealCategory || 'snack';
+    if (groups[cat]) groups[cat].items.push(log);
+    else groups.snack.items.push(log);
+  });
+
+  ['breakfast', 'lunch', 'merienda', 'dinner', 'snack'].forEach(key => {
+    if (groups[key].items.length > 0) {
+      const catTitle = document.createElement('div');
+      catTitle.style = 'font-size: 0.8rem; color: var(--gray-500); margin: 12px 0 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;';
+      catTitle.textContent = groups[key].label;
+      section.appendChild(catTitle);
+      
+      groups[key].items.forEach(log => {
+        const card = buildFreeFoodCard(log);
+        if (card) section.appendChild(card);
+      });
+    }
   });
 
   parentEl.appendChild(section);

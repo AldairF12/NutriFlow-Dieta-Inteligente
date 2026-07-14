@@ -115,7 +115,8 @@ const AI = {
 Devuelve SOLO un objeto JSON válido (NUNCA un array, sin texto adicional) con esta estructura exacta. Si hay varios alimentos, únelos en un solo nombre (ej. "huevos con pan"):
 {
   "food_name": "nombre del alimento o combinación (MANTÉN modificadores importantes como 'sin azúcar', 'frito', 'light', etc.)",
-  "quantity_g": numero entero en gramos (SI el usuario NO especifica una cantidad exacta ni un peso, devuelve null. NO intentes adivinar ni estimar la porción aquí)
+  "quantity_g": numero entero en gramos (SI el usuario NO especifica una cantidad exacta ni un peso, devuelve null. NO intentes adivinar ni estimar la porción aquí),
+  "meal_type": "Desayuno" | "Almuerzo" | "Cena" | "Merienda" | "Snack" (Infiere por el contexto como "cené", "almorcé". Usa "Snack" si no es claro)
 }
 
 Texto del usuario: "${transcript}"`;
@@ -133,7 +134,8 @@ Texto del usuario: "${transcript}"`;
         if (result.length > 0) {
           result = {
             food_name: result.map(r => r.food_name).join(" con "),
-            quantity_g: result.reduce((sum, r) => sum + (Number(r.quantity_g) || 0), 0) || null
+            quantity_g: result.reduce((sum, r) => sum + (Number(r.quantity_g) || 0), 0) || null,
+            meal_type: result[0].meal_type || 'Snack'
           };
         } else {
           throw new Error('Array vacío');

@@ -1,5 +1,6 @@
 let recognition = null;
 let isRecording = false;
+let recordingTimeout = null;
 function initVoiceRegistration() {
   const micBtn = document.getElementById('btn-rs-voice-mic');
   const processBtn = document.getElementById('btn-rs-voice-process');
@@ -17,21 +18,30 @@ function initVoiceRegistration() {
     recognition = new SpeechRecognition();
     recognition.lang = 'es-ES';
     recognition.interimResults = true;
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
       isRecording = true;
       micBtn.classList.add('recording');
       const hint = document.getElementById('rs-voice-hint');
-      if (hint) hint.textContent = 'Escuchando...';
+      if (hint) hint.textContent = 'Escuchando... (Toca para detener)';
+      
+      // Límite de 30 segundos por seguridad
+      if (recordingTimeout) clearTimeout(recordingTimeout);
+      recordingTimeout = setTimeout(() => {
+        if (isRecording) {
+          recognition.stop();
+          if (typeof showToast === 'function') showToast('El micrófono se apagó por límite de tiempo (30s)');
+        }
+      }, 30000);
     };
 
     recognition.onresult = (event) => {
       let finalTranscript = '';
       let interimTranscript = '';
       
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
+      for (let i = 0; i < event.results.length; ++i) {
         if (event.results[i].isFinal) {
           finalTranscript += event.results[i][0].transcript;
         } else {
@@ -43,18 +53,14 @@ function initVoiceRegistration() {
       const area = document.getElementById('rs-voice-transcript-area');
       
       if (input && area) {
-        // Combinamos lo que ya hay con lo nuevo si es final
-        if (finalTranscript) {
-          input.value = finalTranscript; 
-          recognition.stop(); // Detener automáticamente al tener un resultado final
-        } else {
-          input.value = interimTranscript;
-        }
+        // En modo continuo, mostramos todo el texto final + el texto intermedio actual
+        input.value = finalTranscript + interimTranscript;
         area.hidden = false;
       }
     };
 
     recognition.onerror = (event) => {
+      if (recordingTimeout) clearTimeout(recordingTimeout);
       console.error('SpeechRecognition error:', event.error);
       const status = document.getElementById('rs-voice-status');
       if (status) status.textContent = `Error: ${event.error}`;
@@ -62,6 +68,7 @@ function initVoiceRegistration() {
     };
 
     recognition.onend = () => {
+      if (recordingTimeout) clearTimeout(recordingTimeout);
       stopVoiceRecording();
       const hint = document.getElementById('rs-voice-hint');
       if (hint && !document.getElementById('rs-voice-input').value) {
@@ -169,10 +176,11 @@ async function processVoiceInput() {
     
     // Movemos el confirmador a la vista actual
     const voiceView = document.getElementById('rs-view-voice');
-    if (voiceView && gramConfirm) {
-      voiceView.appendChild(gramConfirm);
+    if (voiceContainer && gramConfirm) {
+      voiceContainer.appendChild(gramConfirm);
       gramConfirm.hidden = false;
-      if (voiceContainer) voiceContainer.style.display = 'none'; // ocultar
+      // Ya NO ocultamos voiceContainer para que el usuario pueda ver/editar su transcripción
+      // si voiceContainer) voiceContainer.style.display = 'none';
       
       const nameEl = document.getElementById('rs-gram-item-name');
       if (nameEl) nameEl.textContent = bestMatch.name;
@@ -183,6 +191,24 @@ async function processVoiceInput() {
         inputG.value = parsed.quantity_g || bestMatch.typical_serving_g || 100;
       }
       
+      const mealSelect = document.getElementById('rs-gram-meal-type');
+      if (mealSelect) {
+        let val = 'snack';
+        if (parsed.meal_type) {
+          const mt = parsed.meal_type.toLowerCase();
+          if (mt.includes('desayuno')) val = 'breakfast';
+          else if (mt.includes('almuerzo')) val = 'lunch';
+          else if (mt.includes('cena')) val = 'dinner';
+          else if (mt.includes('merienda')) val = 'merienda';
+        }
+        mealSelect.value = val;
+        // Actualizar visual de chips
+        document.querySelectorAll('.rs-meal-chip').forEach(c => {
+          if (c.dataset.val === val) c.classList.add('active');
+          else c.classList.remove('active');
+        });
+      }
+
       if (typeof updateGramMacros === 'function') updateGramMacros();
     }
     

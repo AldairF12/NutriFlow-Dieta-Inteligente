@@ -219,16 +219,48 @@
   flex-direction: column;
   gap: 14px;
   background: #fff;
+  animation: slideDown 0.3s ease-out;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .rs-gram-confirm[hidden] {
   display: none !important;
 }
 
 .rs-gram-item-name {
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: 1.15rem;
+  font-weight: 800;
   color: var(--gray-800);
   text-align: center;
+  text-transform: capitalize;
+  margin-bottom: 4px;
+}
+
+/* Meal Chips */
+.rs-meal-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.rs-meal-chip {
+  padding: 5px 10px;
+  border-radius: 20px;
+  background: var(--gray-100);
+  color: var(--gray-600);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s;
+  user-select: none;
+}
+.rs-meal-chip.active {
+  background: var(--mint-100);
+  color: var(--mint-700);
+  border-color: var(--mint-300);
 }
 
 .rs-gram-row {

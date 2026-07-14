@@ -55,6 +55,15 @@ function initRegisterSheet() {
     });
   });
 
+  // Selector de chips de comida
+  document.getElementById('rs-meal-chips')?.addEventListener('click', e => {
+    const chip = e.target.closest('.rs-meal-chip');
+    if (!chip) return;
+    document.querySelectorAll('.rs-meal-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    document.getElementById('rs-gram-meal-type').value = chip.dataset.val;
+  });
+
   // Gestos tactiles para cerrar (Swipe down)
   const sheet = document.getElementById('register-sheet');
   if (sheet) {
@@ -217,13 +226,12 @@ async function handleFoodSearch() {
       btn.disabled = true;
       btn.textContent = '⏳ Consultando Gemini…';
       try {
-        const nutritionData = await AI.fetchNutritionInfo(query);
-        if (nutritionData) {
-          const saved = DB.addFoodItem({ ...nutritionData, source: 'gemini', verified: false });
+        const { item } = await AI.fetchNutritionInfo(query);
+        if (item) {
           results.innerHTML = '';
-          results.appendChild(buildFoodResultItem(saved, 'food_item'));
-          selectFoodForGram(saved);
-          showToast('✨ Información nutricional encontrada y guardada');
+          results.appendChild(buildFoodResultItem(item, 'food_item'));
+          selectFoodForGram(item);
+          showToast('✨ Información obtenida de Gemini');
         } else {
           showToast('❌ Gemini no encontró información de ese alimento');
         }
@@ -312,11 +320,15 @@ function saveFreeFoodEntry() {
     refId = saved.id;
   }
 
+  const mealSelect = document.getElementById('rs-gram-meal-type');
+  const mealCategory = mealSelect ? mealSelect.value : 'snack';
+
   DB.addFoodLog({
     type: 'food_item',
     reference_id: refId,
     quantity_g: qty,
-    planned: false
+    planned: false,
+    mealCategory: mealCategory
   });
 
   showToast(`✅ ${_selectedFoodItem.name} (${qty}g) registrado`);
