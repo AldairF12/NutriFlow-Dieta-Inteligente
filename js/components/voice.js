@@ -1,120 +1,191 @@
-let recognition = null;
-let isRecording = false;
+/**
+ * Helper compartido para inicializar dictado por voz en cualquier botón/input.
+ * Utiliza encadenamiento de sesiones por pausas (onspeechend) para permitir dictado continuo
+ * fluido con feedback en tiempo real sin duplicación ni fallos en Android.
+ */
+function initVoiceDictation({ button, input, onStart, onEnd, onResult, onError }) {
+  const btnEl = typeof button === 'string' ? document.getElementById(button) : button;
+  const inputEl = typeof input === 'string' ? document.getElementById(input) : input;
+  
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.style.opacity = '0.5';
+    }
+    return { supported: false, start: () => {}, stop: () => {}, toggle: () => {}, isRecording: () => false };
+  }
+
+  let isRecording = false;
+  let activeRecognition = null;
+  let baseText = '';
+
+  function startRecognitionSession() {
+    if (!isRecording) return;
+
+    try {
+      if (activeRecognition) {
+        try { activeRecognition.abort(); } catch(e) {}
+      }
+
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'es-ES';
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
+      activeRecognition = recognition;
+
+      recognition.onstart = () => {
+        if (onStart) onStart();
+      };
+
+      recognition.onresult = (event) => {
+        if (!isRecording) return;
+        const resultItem = event.results[0];
+        if (!resultItem) return;
+
+        const transcript = resultItem[0].transcript;
+
+        if (resultItem.isFinal) {
+          // Frase confirmada: se acumula en el texto base
+          baseText = (baseText ? baseText + ' ' : '') + transcript.trim();
+          if (inputEl) {
+            inputEl.value = baseText;
+            inputEl.dispatchEvent(new Event('input'));
+          }
+        } else {
+          // Frase provisional: se muestra en vivo concatenada al texto base
+          if (inputEl) {
+            inputEl.value = (baseText ? baseText + ' ' : '') + transcript;
+            inputEl.dispatchEvent(new Event('input'));
+          }
+        }
+
+        if (onResult) {
+          onResult(inputEl ? inputEl.value : (baseText || transcript));
+        }
+      };
+
+      recognition.onspeechend = () => {
+        // Pausa detectada: reanuda inmediatamente una nueva sesión limpia para la siguiente frase
+        if (isRecording) {
+          setTimeout(() => {
+            if (isRecording) startRecognitionSession();
+          }, 50);
+        }
+      };
+
+      recognition.onerror = (event) => {
+        if (event.error === 'no-speech' || event.error === 'aborted') {
+          if (isRecording) {
+            setTimeout(() => {
+              if (isRecording) startRecognitionSession();
+            }, 100);
+            return;
+          }
+        }
+        console.warn('SpeechRecognition notice:', event.error);
+        if (event.error !== 'no-speech' && event.error !== 'aborted') {
+          if (onError) onError(event.error);
+          controller.stop();
+        }
+      };
+
+      recognition.onend = () => {
+        if (isRecording) {
+          // Si el navegador cortó la sesión pero el usuario no ha tocado detener, reinicia
+          setTimeout(() => {
+            if (isRecording) startRecognitionSession();
+          }, 50);
+        } else {
+          if (onEnd) onEnd();
+        }
+      };
+
+      recognition.start();
+    } catch (e) {
+      console.warn('Error al iniciar sesión de reconocimiento:', e);
+      if (isRecording) {
+        setTimeout(() => {
+          if (isRecording) startRecognitionSession();
+        }, 300);
+      }
+    }
+  }
+
+  const controller = {
+    supported: true,
+    isRecording: () => isRecording,
+    start: () => {
+      if (isRecording) return;
+      isRecording = true;
+      baseText = inputEl && inputEl.value ? inputEl.value.trim() : '';
+      startRecognitionSession();
+    },
+    stop: () => {
+      isRecording = false;
+      if (activeRecognition) {
+        try { activeRecognition.stop(); } catch (e) {}
+        activeRecognition = null;
+      }
+      if (inputEl && baseText) {
+        inputEl.value = baseText.trim();
+        inputEl.dispatchEvent(new Event('input'));
+      }
+      if (onEnd) onEnd();
+    },
+    toggle: () => {
+      if (isRecording) controller.stop();
+      else controller.start();
+    }
+  };
+
+  if (btnEl) {
+    btnEl.addEventListener('click', controller.toggle);
+  }
+
+  return controller;
+}
+
+let _voiceDictation = null;
 
 function initVoiceRegistration() {
   const micBtn = document.getElementById('btn-rs-voice-mic');
   const processBtn = document.getElementById('btn-rs-voice-process');
+  const input = document.getElementById('rs-voice-input');
+  const hint = document.getElementById('rs-voice-hint');
+  const area = document.getElementById('rs-voice-transcript-area');
+  const status = document.getElementById('rs-voice-status');
 
-  if (micBtn) {
-    micBtn.addEventListener('click', toggleVoiceRecording);
-  }
   if (processBtn) {
     processBtn.addEventListener('click', processVoiceInput);
   }
 
-  // Inicializar SpeechRecognition
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (SpeechRecognition) {
-    recognition = new SpeechRecognition();
-    recognition.lang = 'es-ES';
-    recognition.interimResults = true;
-    recognition.maxAlternatives = 1;
-
-    recognition.onstart = () => {
-      isRecording = true;
-      micBtn.classList.add('recording');
-      const hint = document.getElementById('rs-voice-hint');
+  _voiceDictation = initVoiceDictation({
+    button: micBtn,
+    input: input,
+    onStart: () => {
+      if (micBtn) micBtn.classList.add('recording');
       if (hint) hint.textContent = 'Escuchando...';
-    };
-
-    recognition.onresult = (event) => {
-      let finalTranscript = '';
-      let interimTranscript = '';
-
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
-        } else {
-          interimTranscript += event.results[i][0].transcript;
-        }
+      if (status) status.textContent = '';
+    },
+    onResult: () => {
+      if (area) area.hidden = false;
+    },
+    onError: (err) => {
+      if (status) status.textContent = `Error: ${err}`;
+    },
+    onEnd: () => {
+      if (micBtn) micBtn.classList.remove('recording');
+      if (hint && input && input.value) {
+        hint.textContent = 'Puedes editar el texto abajo y luego procesarlo.';
+      } else if (hint) {
+        hint.textContent = 'Toca el micrófono para dictar...';
       }
-
-      const input = document.getElementById('rs-voice-input');
-      const area = document.getElementById('rs-voice-transcript-area');
-
-      if (input && area) {
-        const base = input.dataset.baseText || '';
-        /// Mientras habla: mostramos lo provisional
-        if (interimTranscript) {
-          input.value = (base + finalTranscript + interimTranscript).trim();
-        }
-        // Cuando termina: dejamos solamente el resultado definitivo
-        if (finalTranscript) {
-          input.value = (base + finalTranscript).trim();
-        }
-        area.hidden = false;
-      }
-    };
-
-    recognition.onerror = (event) => {
-      console.error('SpeechRecognition error:', event.error);
-      const status = document.getElementById('rs-voice-status');
-      if (status) status.textContent = `Error: ${event.error}`;
-      stopVoiceRecording();
-    };
-
-    recognition.onend = () => {
-      stopVoiceRecording();
-    };
-  } else {
-    // No soportado
-    if (micBtn) {
-      micBtn.disabled = true;
-      micBtn.style.opacity = '0.5';
     }
-    const hint = document.getElementById('rs-voice-hint');
-    if (hint) hint.textContent = 'Tu navegador no soporta registro por voz.';
-  }
-}
+  });
 
-function stopVoiceRecording() {
-  isRecording = false;
-  if (recognition) {
-    try { recognition.stop(); } catch(e) {}
-  }
-  const micBtn = document.getElementById('btn-rs-voice-mic');
-  if (micBtn) micBtn.classList.remove('recording');
-  
-  const hint = document.getElementById('rs-voice-hint');
-  const input = document.getElementById('rs-voice-input');
-  if (hint && input && input.value) {
-    hint.textContent = 'Puedes editar el texto abajo y luego procesarlo.';
-  } else if (hint) {
-    hint.textContent = 'Toca el micrófono para dictar...';
-  }
-}
-
-function toggleVoiceRecording() {
-  if (!recognition) return;
-  if (isRecording) {
-    stopVoiceRecording();
-    return;
-  }
-  
-  const input = document.getElementById('rs-voice-input');
-  const status = document.getElementById('rs-voice-status');
-  const area = document.getElementById('rs-voice-transcript-area');
-  
-  if (input) {
-    input.dataset.baseText = input.value ? input.value.trim() + ' ' : '';
-  }
-  if (status) status.textContent = '';
-  if (area && input && !input.value) area.hidden = true;
-  
-  try {
-    recognition.start();
-  } catch(e) {
-    console.warn("Error al iniciar dictado", e);
+  if (!_voiceDictation.supported && hint) {
+    hint.textContent = 'Tu navegador no soporta registro por voz.';
   }
 }
 
@@ -128,7 +199,7 @@ function resetRSVoiceView() {
   if (input) input.value = '';
   if (area) area.hidden = true;
   if (status) status.textContent = '';
-  if (isRecording && recognition) recognition.stop();
+  if (_voiceDictation) _voiceDictation.stop();
   
   // Restaurar UI de confirmación a su lugar original
   const voiceContainer = document.querySelector('.rs-voice-container');
