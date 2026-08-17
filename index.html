@@ -47,9 +47,24 @@
   ═══════════════════════════════════════════ -->
   <main id="screen-diary" class="screen active" role="main" aria-label="Diario de comidas">
       <header class="screen-header">
-        <p id="greeting-text" class="greeting">Hola!</p>
-        <p id="current-date" class="current-date"></p>
-        <span id="slot-badge" class="slot-badge">Cargando...</span>
+        <div class="header-main-row">
+          <div class="header-text-group">
+            <p id="greeting-text" class="greeting">¡Hola!</p>
+            <p id="current-date" class="current-date"></p>
+          </div>
+          <div id="header-dynamic-art" class="header-dynamic-art" aria-hidden="true"></div>
+        </div>
+
+        <div class="header-badges-row">
+          <span id="slot-badge" class="slot-badge">Cargando...</span>
+          <span id="streak-badge" class="streak-badge">🔥 Cargando racha...</span>
+        </div>
+
+        <div id="daily-tip-box" class="daily-tip-box">
+          <span class="daily-tip-icon">✨</span>
+          <span id="daily-tip-text" class="daily-tip-text">Cargando consejo nutricional...</span>
+        </div>
+
         <div class="macro-summary" role="region" aria-label="Resumen de macros del dia">
           <div class="macro-chip">
             <span id="macro-cal" class="macro-chip-val">-- kcal</span>

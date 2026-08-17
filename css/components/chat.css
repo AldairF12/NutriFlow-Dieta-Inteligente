@@ -609,3 +609,263 @@
   -webkit-backdrop-filter: none !important;
 }
 
+/* ============================================================
+   FASE 2: GAMIFICACIÓN, RACHA, ILUSTRACIÓN DINÁMICA E HIDRATACIÓN
+   ============================================================ */
+
+/* 1. Encabezado principal dinámico */
+.header-main-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header-text-group {
+  flex: 1;
+}
+
+.header-dynamic-art {
+  width: 58px;
+  height: 58px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: artFloat 3.5s ease-in-out infinite alternate;
+}
+
+@keyframes artFloat {
+  0%   { transform: translateY(0) scale(1); }
+  100% { transform: translateY(-4px) scale(1.04); }
+}
+
+.header-badges-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+/* 2. Badge de Racha Diaria (Streak) */
+.streak-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  background: rgba(255, 255, 255, 0.22);
+  border-radius: var(--r-full, 99px);
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  letter-spacing: -0.2px;
+}
+
+.streak-badge--active {
+  background: linear-gradient(135deg, #f59e0b, #ef4444);
+  box-shadow: 0 3px 12px rgba(239, 68, 68, 0.4);
+  border-color: rgba(255, 255, 255, 0.6);
+  animation: streakGlow 2s infinite alternate;
+}
+
+@keyframes streakGlow {
+  0%   { box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4); }
+  100% { box-shadow: 0 4px 16px rgba(239, 68, 68, 0.65); transform: scale(1.02); }
+}
+
+/* 3. Caja de Tip / Frase del Día */
+.daily-tip-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  transition: opacity 0.3s ease;
+}
+
+.daily-tip-icon {
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.daily-tip-text {
+  font-size: 0.74rem;
+  line-height: 1.35;
+  color: rgba(255, 255, 255, 0.94);
+  font-weight: 500;
+}
+
+/* 4. Tarjeta de Hidratación Líquida Animada */
+.hydration-card-animated {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 16px 18px;
+  box-shadow: 0 4px 18px rgba(56, 189, 248, 0.12), 0 1px 3px rgba(0,0,0,0.04);
+  border: 1.5px solid rgba(56, 189, 248, 0.22);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 6px;
+  overflow: hidden;
+  position: relative;
+}
+
+.hydration-top-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+/* Vaso de agua estilizado con ola animada */
+.water-glass-wrap {
+  width: 58px;
+  height: 82px;
+  background: #f0f9ff;
+  border: 2.5px solid #38bdf8;
+  border-radius: 6px 6px 16px 16px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 2px 6px rgba(56, 189, 248, 0.2);
+  flex-shrink: 0;
+}
+
+.water-wave-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(180deg, #38bdf8, #0284c7);
+  transition: height 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  min-height: 4px;
+}
+
+.water-wave-anim {
+  position: absolute;
+  top: -8px;
+  left: 0;
+  width: 200%;
+  height: 12px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M0,0 C150,90 350,-40 500,40 C650,120 900,10 1200,40 L1200,120 L0,120 Z' fill='%2338bdf8'/%3E%3C/svg%3E") repeat-x;
+  background-size: 58px 12px;
+  animation: waveScroll 2.2s linear infinite;
+  opacity: 0.85;
+}
+
+@keyframes waveScroll {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-58px); }
+}
+
+.water-stats-panel {
+  flex: 1;
+}
+
+.water-stats-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #0284c7;
+  margin: 0 0 2px;
+}
+
+.water-vol-display {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.water-current-ml {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+}
+
+.water-target-ml {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #64748b;
+}
+
+.water-progress-bar-wrap {
+  width: 100%;
+  height: 6px;
+  background: #e2e8f0;
+  border-radius: 99px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.water-progress-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8, #0284c7);
+  border-radius: 99px;
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Botones de Registro Rápido de Hidratación */
+.quick-water-buttons {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+.quick-water-buttons::-webkit-scrollbar { display: none; }
+
+.btn-water-quick {
+  flex: 1;
+  min-width: 68px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 12px;
+  padding: 7px 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-water-quick:hover {
+  background: #e0f2fe;
+  border-color: #7dd3fc;
+  transform: translateY(-1px);
+}
+.btn-water-quick:active {
+  transform: scale(0.95);
+  background: #bae6fd;
+}
+
+.btn-water-icon { font-size: 1.1rem; line-height: 1; }
+.btn-water-amount { font-size: 0.72rem; font-weight: 700; color: #0284c7; }
+.btn-water-lbl { font-size: 0.62rem; color: #64748b; }
+
+.btn-water-reset {
+  background: transparent;
+  border: 1px dashed #cbd5e1;
+  color: #94a3b8;
+  border-radius: 12px;
+  padding: 7px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.btn-water-reset:hover {
+  background: #f1f5f9;
+  color: #ef4444;
+  border-color: #fca5a5;
+}
+
