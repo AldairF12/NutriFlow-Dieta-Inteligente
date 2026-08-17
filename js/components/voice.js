@@ -44,10 +44,12 @@ function initVoiceRegistration() {
 
       if (input && area) {
         const base = input.dataset.baseText || '';
-        // Combinamos lo que ya hay con lo nuevo si es final
-        if (finalTranscript) {
+        /// Mientras habla: mostramos lo provisional
+        if (interimTranscript) {
           input.value = (base + finalTranscript + interimTranscript).trim();
-        } else {
+        }
+        // Cuando termina: dejamos solamente el resultado definitivo
+        if (finalTranscript) {
           input.value = (base + finalTranscript).trim();
         }
         area.hidden = false;
