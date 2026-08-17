@@ -1,334 +1,236 @@
-let _chatMessages = []; // historial local de la sesión
-let _currentContextMode = 'general';
-let _chatSpeechRecognition = null;
-
-function openAIChat() {
-  const overlay = document.getElementById('ai-chat-overlay');
-  const modal   = document.getElementById('ai-chat-modal');
-  const keyReq  = document.getElementById('ai-key-required');
-  const inputArea = document.getElementById('ai-chat-input-area');
-
-  overlay.classList.add('open');
-  modal.classList.add('open');
-  document.body.classList.add('modal-open');
-
-  if (!AI.isConfigured()) {
-    keyReq.hidden    = false;
-    inputArea.hidden = true;
-  } else {
-    keyReq.hidden    = true;
-    inputArea.hidden = false;
-    
-    // Si no hay historial en la variable, intentamos cargarlo localmente
-    if (_chatMessages.length === 0) {
-      loadChatHistory();
-    }
-    
-    // Mensaje de bienvenida si el historial está vacío (incluso tras cargar)
-    if (_chatMessages.length === 0) {
-      appendChatMessage('bot', '¡Hola! 👋 Soy NutriBot.\n\nPuedo ayudarte con tus dudas nutricionales, sugerirte qué comer según tu progreso, o responder preguntas generales.');
-    }
-  }
-}
-function closeAIChat() {
-  const overlay = document.getElementById('ai-chat-overlay');
-  const modal   = document.getElementById('ai-chat-modal');
-  overlay.classList.remove('open');
-  modal.classList.remove('open');
-  modal.style.transform = ''; // Reset transform
-  document.body.classList.remove('modal-open');
-}
-function saveChatHistory() {
-  if (_chatMessages.length > 50) {
-    _chatMessages = _chatMessages.slice(_chatMessages.length - 50);
-  }
-  try {
-    localStorage.setItem('nutriflow_chat', JSON.stringify(_chatMessages));
-  } catch(e) {}
-}
-
-function loadChatHistory() {
-  try {
-    const saved = localStorage.getItem('nutriflow_chat');
-    if (saved) {
-      const msgs = JSON.parse(saved);
-      const container = document.getElementById('ai-chat-messages');
-      if (container) container.innerHTML = ''; 
-      _chatMessages = [];
-      msgs.forEach(m => appendChatMessage(m.role, m.text, true, m.id, m.pinned));
-    }
-  } catch(e) {}
-}
-
-function togglePinMessage(id) {
-  const msg = _chatMessages.find(m => m.id === id);
-  if (msg) {
-    msg.pinned = !msg.pinned;
-    saveChatHistory();
-    const btn = document.querySelector(`.chat-pin-btn[data-id="${id}"]`);
-    if (btn) {
-      if (msg.pinned) btn.classList.add('pinned');
-      else btn.classList.remove('pinned');
-    }
-  }
-}
-
-function appendChatMessage(role, text, isLoad = false, msgId = null, isPinned = false) {
-  const container = document.getElementById('ai-chat-messages');
-  if (!container) return;
-
-  const id = msgId || 'msg_' + Date.now() + Math.random().toString(36).substr(2, 5);
-  const msg = document.createElement('div');
-  msg.className = `chat-msg chat-msg--${role}`;
+/**
+ * Helper compartido para inicializar dictado por voz en cualquier botón/input.
+ */
+function initVoiceDictation({ button, input, onStart, onEnd, onResult, onError }) {
+  const btnEl = typeof button === 'string' ? document.getElementById(button) : button;
+  const inputEl = typeof input === 'string' ? document.getElementById(input) : input;
   
-  const formattedText = typeof parseMarkdown === 'function' ? parseMarkdown(text) : text.replace(/\n/g, '<br>');
-  
-  let pinHtml = '';
-  if (role === 'bot') {
-    pinHtml = `<button class="chat-pin-btn ${isPinned ? 'pinned' : ''}" data-id="${id}" onclick="togglePinMessage('${id}')" title="Fijar mensaje">📌</button>`;
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    if (btnEl) {
+      btnEl.disabled = true;
+      btnEl.style.opacity = '0.5';
+    }
+    return { supported: false, start: () => {}, stop: () => {}, toggle: () => {}, isRecording: () => false };
   }
 
-  msg.innerHTML = `<div class="chat-bubble-container">
-    <div class="chat-bubble">
-      ${formattedText}
-      ${pinHtml}
-    </div>
-  </div>`;
-  
-  container.appendChild(msg);
-  container.scrollTop = container.scrollHeight;
-  
-  if (!isLoad) {
-    _chatMessages.push({ id, role, text, pinned: isPinned });
-    saveChatHistory();
-  } else {
-    _chatMessages.push({ id, role, text, pinned: isPinned });
-  }
-}
-function showChatTyping() {
-  const container = document.getElementById('ai-chat-messages');
-  if (!container) return;
-  const typing = document.createElement('div');
-  typing.className = 'chat-msg chat-msg--bot chat-typing';
-  typing.id = 'chat-typing-indicator';
-  typing.innerHTML = `<div class="chat-bubble"><span class="ai-typing-dot"></span><span class="ai-typing-dot"></span><span class="ai-typing-dot"></span></div>`;
-  container.appendChild(typing);
-  container.scrollTop = container.scrollHeight;
-}
-function removeChatTyping() {
-  document.getElementById('chat-typing-indicator')?.remove();
-}
-function initAIChat() {
-  const fab     = document.getElementById('btn-ai-fab');
-  const overlay = document.getElementById('ai-chat-overlay');
-  const modal   = document.getElementById('ai-chat-modal');
-  const closeBtn = document.getElementById('ai-chat-close');
-  const sendBtn = document.getElementById('ai-chat-send');
-  const input   = document.getElementById('ai-chat-input');
-  const goProfile = document.getElementById('btn-go-profile-from-chat');
-  const contextBtns = document.querySelectorAll('.ai-context-btn');
+  let isRecording = false;
+  let baseText = '';
+  let recognition = null;
 
-  if (contextBtns.length > 0) {
-    contextBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        contextBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        _currentContextMode = btn.dataset.context;
-        if (input) {
-          if (_currentContextMode === 'progress') {
-            input.placeholder = "Ej: ¿Me paso de calorías con un helado?";
-          } else {
-            input.placeholder = "Pregunta algo sobre nutrición...";
-          }
-        }
-      });
-    });
-  }
-
-  if (fab)     fab.addEventListener('click', openAIChat);
-  if (overlay) overlay.addEventListener('click', closeAIChat);
-  if (closeBtn) closeBtn.addEventListener('click', closeAIChat);
-
-  const clearBtn = document.getElementById('ai-chat-clear');
-  const clearConfirmModal = document.getElementById('ai-clear-confirm');
-  const clearCancel = document.getElementById('ai-clear-cancel');
-  const clearYes = document.getElementById('ai-clear-yes');
-
-  if (clearBtn && clearConfirmModal) {
-    clearBtn.addEventListener('click', () => {
-      clearConfirmModal.classList.add('open');
-    });
-    clearCancel.addEventListener('click', () => {
-      clearConfirmModal.classList.remove('open');
-    });
-    clearYes.addEventListener('click', () => {
-      clearConfirmModal.classList.remove('open');
-      // Mantener solo los fijados
-      _chatMessages = _chatMessages.filter(m => m.pinned);
-      saveChatHistory();
+  const controller = {
+    supported: true,
+    isRecording: () => isRecording,
+    start: () => {
+      if (isRecording) return;
+      isRecording = true;
+      baseText = inputEl && inputEl.value ? inputEl.value.trim() : '';
       
-      // Limpiar UI y volver a renderizar los fijados
-      const container = document.getElementById('ai-chat-messages');
-      if (container) {
-        container.innerHTML = '';
-        _chatMessages.forEach(m => appendChatMessage(m.role, m.text, true, m.id, m.pinned));
+      try {
+        recognition = new SpeechRecognition();
+        recognition.lang = 'es-ES';
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = () => {
+          if (onStart) onStart();
+        };
+
+        recognition.onresult = (event) => {
+          const resultItem = event.results[0];
+          if (!resultItem) return;
+
+          const transcript = resultItem[0].transcript;
+          if (inputEl) {
+            inputEl.value = (baseText ? baseText + ' ' : '') + (resultItem.isFinal ? transcript.trim() : transcript);
+            inputEl.dispatchEvent(new Event('input'));
+          }
+          if (onResult) onResult(inputEl ? inputEl.value : transcript);
+        };
+
+        recognition.onerror = (event) => {
+          isRecording = false;
+          if (event.error !== 'no-speech' && event.error !== 'aborted') {
+            if (onError) onError(event.error);
+          }
+        };
+
+        recognition.onend = () => {
+          isRecording = false;
+          if (inputEl) {
+            inputEl.value = inputEl.value.trim();
+          }
+          if (onEnd) onEnd();
+        };
+
+        recognition.start();
+      } catch (e) {
+        console.warn('Error al iniciar reconocimiento:', e);
+        isRecording = false;
+        if (onError) onError(e.message);
       }
-    });
-  }
-
-  if (sendBtn) sendBtn.addEventListener('click', sendChatMessage);
-  if (input) {
-    input.addEventListener('input', function() {
-      this.style.height = '40px';
-      this.style.height = (this.scrollHeight) + 'px';
-    });
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendChatMessage();
-      }
-    });
-  }
-
-  // Dictado por voz
-  const micBtn = document.getElementById('ai-chat-mic');
-  if (micBtn && input) {
-    let originalPlaceholder = '';
-
-    _chatSpeechRecognition = initVoiceDictation({
-      button: micBtn,
-      input: input,
-      onStart: () => {
-        micBtn.style.color = '#ef4444';
-        micBtn.classList.add('recording-pulse');
-        micBtn.innerHTML = '⏹️';
-        originalPlaceholder = input.placeholder;
-        input.placeholder = 'Escuchando...';
-      },
-      onEnd: () => {
-        micBtn.style.color = 'var(--gray-500)';
-        micBtn.classList.remove('recording-pulse');
-        micBtn.innerHTML = '🎙️';
-        if (originalPlaceholder) input.placeholder = originalPlaceholder;
-      }
-    });
-
-    if (!_chatSpeechRecognition.supported) {
-      micBtn.style.display = 'none';
+    },
+    stop: () => {
+      if (!isRecording) return;
+      isRecording = false;
+      try {
+        if (recognition) recognition.stop();
+      } catch (e) {}
+    },
+    toggle: () => {
+      if (isRecording) controller.stop();
+      else controller.start();
     }
+  };
+
+  if (btnEl) {
+    btnEl.addEventListener('click', controller.toggle);
   }
 
-  if (goProfile) {
-    goProfile.addEventListener('click', () => {
-      closeAIChat();
-      document.querySelector('[data-screen="profile"]').click();
-      // Abrir automáticamente la card de IA
-      setTimeout(() => {
-        const aiCard = document.getElementById('scard-ai');
-        if (aiCard && !aiCard.open) {
-          aiCard.querySelector('.settings-card-header')?.click();
-        }
-      }, 350);
-    });
-  }
-
-  // Gestos táctiles (Swipe down) para cerrar el chat
-  if (modal) {
-    let startY = 0;
-    let isDragging = false;
-
-    modal.addEventListener('touchstart', (e) => {
-      const target = e.target;
-      if (target.closest('.ai-chat-messages') && target.closest('.ai-chat-messages').scrollTop > 0) return;
-      startY = e.touches[0].clientY;
-      isDragging = true;
-    }, { passive: true });
-
-    modal.addEventListener('touchmove', (e) => {
-      if (!isDragging) return;
-      const currentY = e.touches[0].clientY;
-      const diffY = currentY - startY;
-      if (diffY > 0) {
-        modal.style.transform = `translateX(-50%) translateY(${diffY}px)`;
-        modal.style.transition = 'none';
-      }
-    }, { passive: true });
-
-    modal.addEventListener('touchend', (e) => {
-      if (!isDragging) return;
-      isDragging = false;
-      modal.style.transition = '';
-      const currentY = e.changedTouches[0].clientY;
-      const diffY = currentY - startY;
-      if (diffY > 80) {
-        closeAIChat();
-      } else {
-        modal.style.transform = '';
-      }
-    });
-  }
+  return controller;
 }
 
-async function sendChatMessage() {
-  const input = document.getElementById('ai-chat-input');
-  const msg   = input.value.trim();
-  if (!msg) return;
+let _voiceDictation = null;
 
-  // Detener micrófono si estaba grabando
-  if (_chatSpeechRecognition) {
-    try { _chatSpeechRecognition.stop(); } catch(e) {}
+function initVoiceRegistration() {
+  const micBtn = document.getElementById('btn-rs-voice-mic');
+  const processBtn = document.getElementById('btn-rs-voice-process');
+  const input = document.getElementById('rs-voice-input');
+  const hint = document.getElementById('rs-voice-hint');
+  const area = document.getElementById('rs-voice-transcript-area');
+  const status = document.getElementById('rs-voice-status');
+
+  if (processBtn) {
+    processBtn.addEventListener('click', processVoiceInput);
   }
 
-  input.value = '';
-  input.style.height = '40px'; // reset height
-  input.disabled = true;
-  document.getElementById('ai-chat-send').disabled = true;
-
-  appendChatMessage('user', msg);
-  showChatTyping();
-
-  try {
-    const response = await AI.askAssistant(msg, _currentContextMode, _chatMessages);
-    removeChatTyping();
-    appendChatMessage('bot', response);
-  } catch (err) {
-    removeChatTyping();
-    if (err.message === 'NO_KEY') {
-      appendChatMessage('bot', '⚠️ No encontré tu API Key. Ve a Perfil → Asistente IA para configurarla.');
-    } else {
-      appendChatMessage('bot', `❌ Error: ${err.message}`);
-    }
-  } finally {
-    input.disabled  = false;
-    document.getElementById('ai-chat-send').disabled = false;
-    input.focus();
-  }
-}
-
-function initDashboardAIBtn() {
-  const btn = document.getElementById('btn-dash-refresh-ai');
-  if (!btn) return;
-  btn.addEventListener('click', async () => {
-    if (!AI.isConfigured()) {
-      showToast('⚠️ Configura tu API Key en Perfil → Asistente IA');
-      return;
-    }
-    const textEl    = document.getElementById('dash-ai-text');
-    const loadingEl = document.getElementById('dash-ai-loading');
-    btn.disabled = true;
-    btn.textContent = '⏳ Generando…';
-    if (loadingEl) loadingEl.hidden = false;
-    if (textEl)    textEl.style.opacity = '0.4';
-    try {
-      const summary = await AI.getDailySummary();
-      if (textEl) { textEl.textContent = summary; textEl.style.opacity = '1'; }
-    } catch (err) {
-      showToast('❌ Error al conectar con Gemini');
-      if (textEl) textEl.style.opacity = '1';
-    } finally {
-      if (loadingEl) loadingEl.hidden = true;
-      btn.disabled = false;
-      btn.textContent = '✨ Insight IA';
+  _voiceDictation = initVoiceDictation({
+    button: micBtn,
+    input: input,
+    onStart: () => {
+      if (micBtn) micBtn.classList.add('recording');
+      if (hint) hint.textContent = 'Escuchando...';
+      if (status) status.textContent = '';
+    },
+    onResult: () => {
+      if (area) area.hidden = false;
+    },
+    onError: (err) => {
+      if (status) status.textContent = `Error: ${err}`;
+    },
+    onEnd: () => {
+      if (micBtn) micBtn.classList.remove('recording');
+      if (hint && input && input.value) {
+        hint.textContent = 'Puedes editar el texto abajo y luego procesarlo.';
+      } else if (hint) {
+        hint.textContent = 'Toca el micrófono para dictar...';
+      }
     }
   });
+
+  if (!_voiceDictation.supported && hint) {
+    hint.textContent = 'Tu navegador no soporta registro por voz.';
+  }
+}
+
+function resetRSVoiceView() {
+  const hint = document.getElementById('rs-voice-hint');
+  const input = document.getElementById('rs-voice-input');
+  const area = document.getElementById('rs-voice-transcript-area');
+  const status = document.getElementById('rs-voice-status');
+  
+  if (hint) hint.textContent = 'Toca el micrófono y dime qué consumiste\n(Ej. "Me comí dos huevos con pan" o "Un vaso de leche")';
+  if (input) input.value = '';
+  if (area) area.hidden = true;
+  if (status) status.textContent = '';
+  if (_voiceDictation) _voiceDictation.stop();
+  
+  // Restaurar UI de confirmación a su lugar original
+  const voiceContainer = document.querySelector('.rs-voice-container');
+  if (voiceContainer) voiceContainer.style.display = 'flex';
+  
+  const gramConfirm = document.getElementById('rs-gram-confirm');
+  const searchView = document.getElementById('rs-view-search');
+  if (gramConfirm && searchView) {
+    gramConfirm.hidden = true;
+    searchView.appendChild(gramConfirm);
+  }
+}
+async function processVoiceInput() {
+  const input = document.getElementById('rs-voice-input');
+  const status = document.getElementById('rs-voice-status');
+  const processBtn = document.getElementById('btn-rs-voice-process');
+  
+  const text = input?.value.trim();
+  if (!text) return;
+
+  if (processBtn) processBtn.disabled = true;
+  if (status) status.textContent = 'Procesando con IA... ⏳';
+
+  try {
+    const parsed = await AI.parseVoiceInput(text);
+    if (!parsed || !parsed.food_name) throw new Error('No se detectó alimento');
+    
+    if (status) status.textContent = `Analizando: ${parsed.food_name}...`;
+
+    // Usar la IA centralizada para buscar en BD o consultar macros
+    const { item } = await AI.fetchNutritionInfo(parsed.food_name);
+    let bestMatch = item;
+    
+    if (status) status.textContent = '¡Listo!';
+    
+    // Pasar al confirmador de gramaje
+    // Pasar al confirmador de gramaje
+    if (typeof _selectedFoodItem !== 'undefined') {
+      _selectedFoodItem = bestMatch; // Global state for updateGramMacros
+    }
+    
+    // Ocultar la UI de voz, mostrar el confirmador
+    const voiceContainer = document.querySelector('.rs-voice-container');
+    const gramConfirm = document.getElementById('rs-gram-confirm'); // usar el mismo del search view
+    
+    // Movemos el confirmador a la vista actual
+    const voiceView = document.getElementById('rs-view-voice');
+    if (voiceContainer && gramConfirm) {
+      voiceContainer.appendChild(gramConfirm);
+      gramConfirm.hidden = false;
+      // Ya NO ocultamos voiceContainer para que el usuario pueda ver/editar su transcripción
+      // si voiceContainer) voiceContainer.style.display = 'none';
+      
+      const nameEl = document.getElementById('rs-gram-item-name');
+      if (nameEl) nameEl.textContent = bestMatch.name;
+
+      const inputG = document.getElementById('rs-gram-input');
+      if (inputG) {
+        inputG.placeholder = `Ej: ${bestMatch.typical_serving_g || 100}`;
+        inputG.value = parsed.quantity_g || bestMatch.typical_serving_g || 100;
+      }
+      
+      const mealSelect = document.getElementById('rs-gram-meal-type');
+      if (mealSelect) {
+        let val = 'snack';
+        if (parsed.meal_type) {
+          const mt = parsed.meal_type.toLowerCase();
+          if (mt.includes('desayuno')) val = 'breakfast';
+          else if (mt.includes('almuerzo')) val = 'lunch';
+          else if (mt.includes('cena')) val = 'dinner';
+          else if (mt.includes('merienda')) val = 'merienda';
+        }
+        mealSelect.value = val;
+        // Actualizar visual de chips
+        document.querySelectorAll('.rs-meal-chip').forEach(c => {
+          if (c.dataset.val === val) c.classList.add('active');
+          else c.classList.remove('active');
+        });
+      }
+
+      if (typeof updateGramMacros === 'function') updateGramMacros();
+    }
+    
+  } catch (err) {
+    console.error('Error parseVoiceInput:', err);
+    if (status) status.textContent = 'Error al entender. Intenta editar el texto.';
+  } finally {
+    if (processBtn) processBtn.disabled = false;
+  }
 }
