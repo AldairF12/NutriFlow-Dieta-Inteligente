@@ -1,3 +1,207 @@
+// ============================================================
+// GESTIÓN UNIVERSAL DE HISTORIAL Y BOTÓN ATRÁS EN ANDROID (PWA History)
+// Observa cualquier modal/sheet que se abra y gestiona el botón Atrás
+// ============================================================
+window.ModalHistory = {
+  _stack: [],
+  _isPopping: false,
+
+  open(modalId, closeFn) {
+    if (!this._stack.some(m => m.id === modalId)) {
+      this._stack.push({ id: modalId, closeFn });
+      history.pushState({ modalId: modalId }, '');
+    }
+  },
+
+  close(modalId) {
+    const idx = this._stack.findIndex(m => m.id === modalId);
+    if (idx !== -1) {
+      this._stack.splice(idx, 1);
+      if (history.state && history.state.modalId === modalId && !this._isPopping) {
+        this._isPopping = true;
+        history.back();
+        setTimeout(() => { this._isPopping = false; }, 80);
+      }
+    }
+  },
+
+  hasOpenModals() {
+    return this._stack.length > 0;
+  }
+};
+
+(function initUniversalModalObserver() {
+  const modalDefs = [
+    { selector: '#ai-chat-modal', closeFn: () => typeof closeAIChat === 'function' ? closeAIChat() : document.getElementById('ai-chat-modal')?.classList.remove('open') },
+    { selector: '#ai-clear-confirm', closeFn: () => document.getElementById('ai-clear-confirm')?.classList.remove('open') },
+    { selector: '#register-sheet', closeFn: () => typeof closeRegisterSheet === 'function' ? closeRegisterSheet() : document.getElementById('register-sheet')?.classList.remove('open') },
+    { selector: '#shopping-modal', closeFn: () => typeof closeShoppingModal === 'function' ? closeShoppingModal() : document.getElementById('shopping-modal')?.classList.remove('open') },
+    { selector: '#recipe-modal', closeFn: () => typeof closeRecipeModal === 'function' ? closeRecipeModal() : document.getElementById('recipe-modal')?.classList.remove('open') },
+    { selector: '#ingredient-popover', closeFn: () => typeof closeIngredientPopover === 'function' ? closeIngredientPopover() : document.getElementById('ingredient-popover')?.classList.remove('open') }
+  ];
+
+  let activeModals = [];
+  let isPopping = false;
+
+  function checkModals() {
+    modalDefs.forEach(def => {
+      const el = document.querySelector(def.selector);
+      if (!el) return;
+      const isOpen = el.classList.contains('open') || (el.classList.contains('active') && !el.hidden && el.style.display !== 'none');
+      const idx = activeModals.indexOf(def.selector);
+
+      if (isOpen && idx === -1) {
+        activeModals.push(def.selector);
+        history.pushState({ modalSelector: def.selector }, '');
+      } else if (!isOpen && idx !== -1) {
+        activeModals.splice(idx, 1);
+        if (history.state && history.state.modalSelector === def.selector && !isPopping) {
+          isPopping = true;
+          history.back();
+          setTimeout(() => { isPopping = false; }, 80);
+        }
+      }
+    });
+  }
+
+  const observer = new MutationObserver(checkModals);
+
+  const startObserving = () => {
+    modalDefs.forEach(def => {
+      const el = document.querySelector(def.selector);
+      if (el) {
+        observer.observe(el, { attributes: true, attributeFilter: ['class', 'hidden', 'style'] });
+      }
+    });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startObserving);
+  } else {
+    startObserving();
+  }
+
+  window.addEventListener('popstate', () => {
+    if (isPopping) return;
+    if (activeModals.length > 0) {
+      const topSelector = activeModals.pop();
+      const def = modalDefs.find(m => m.selector === topSelector);
+      if (def && typeof def.closeFn === 'function') {
+        isPopping = true;
+        def.closeFn();
+        setTimeout(() => { isPopping = false; }, 80);
+      }
+    }
+  });
+})();
+
+// ============================================================
+// MEJORA DE UI: SECCIONES COLAPSABLES ("UÑAS" / ACORDEONES)
+// ============================================================
+function initCollapsibleSections() {
+  const enhance = () => {
+    // 1. Próximas comidas
+    document.querySelectorAll('.upcoming-section').forEach(sec => {
+      if (sec.dataset.collapsibleInit) return;
+      sec.dataset.collapsibleInit = 'true';
+      sec.classList.add('collapsible-section');
+      
+      const header = sec.querySelector('.upcoming-header') || sec.querySelector('.section-title');
+      if (header) {
+        header.classList.add('section-collapse-toggle');
+        if (!header.querySelector('.section-toggle-btn')) {
+          const btn = document.createElement('button');
+          btn.className = 'section-toggle-btn';
+          btn.innerHTML = '<span class="toggle-icon">▾</span>';
+          btn.setAttribute('aria-label', 'Colapsar sección');
+          header.appendChild(btn);
+        }
+        
+        // Wrap children after header in collapsible-body
+        let body = sec.querySelector('.collapsible-body');
+        if (!body) {
+          body = document.createElement('div');
+          body.className = 'collapsible-body';
+          const children = Array.from(sec.children).filter(c => c !== header);
+          children.forEach(c => body.appendChild(c));
+          sec.appendChild(body);
+        }
+
+        const isCollapsed = localStorage.getItem('nf_collapse_upcoming') === 'true';
+        if (isCollapsed) sec.classList.add('collapsed');
+
+        header.addEventListener('click', () => {
+          sec.classList.toggle('collapsed');
+          localStorage.setItem('nf_collapse_upcoming', sec.classList.contains('collapsed'));
+        });
+      }
+    });
+
+    // 2. Te falta comprar
+    document.querySelectorAll('.needs-buy').forEach(sec => {
+      if (sec.dataset.collapsibleInit) return;
+      sec.dataset.collapsibleInit = 'true';
+      sec.classList.add('collapsible-section');
+
+      const title = sec.querySelector('.section-title');
+      if (title) {
+        title.classList.add('section-collapse-toggle');
+        if (!title.querySelector('.section-toggle-btn')) {
+          const count = sec.querySelectorAll('.card').length;
+          const wrap = document.createElement('div');
+          wrap.style.display = 'flex';
+          wrap.style.alignItems = 'center';
+          wrap.style.gap = '8px';
+          
+          if (count > 0) {
+            const badge = document.createElement('span');
+            badge.className = 'collapse-count-badge';
+            badge.textContent = count;
+            title.appendChild(badge);
+          }
+
+          const btn = document.createElement('button');
+          btn.className = 'section-toggle-btn';
+          btn.innerHTML = '<span class="toggle-icon">▾</span>';
+          btn.setAttribute('aria-label', 'Colapsar sección');
+          title.appendChild(btn);
+        }
+
+        let body = sec.querySelector('.collapsible-body');
+        if (!body) {
+          body = document.createElement('div');
+          body.className = 'collapsible-body';
+          const children = Array.from(sec.children).filter(c => c !== title);
+          children.forEach(c => body.appendChild(c));
+          sec.appendChild(body);
+        }
+
+        const isCollapsed = localStorage.getItem('nf_collapse_needsbuy') === 'true';
+        if (isCollapsed) sec.classList.add('collapsed');
+
+        title.addEventListener('click', () => {
+          sec.classList.toggle('collapsed');
+          localStorage.setItem('nf_collapse_needsbuy', sec.classList.contains('collapsed'));
+        });
+      }
+    });
+  };
+
+  enhance();
+  // Re-ejecutar cuando cambien las vistas del diario
+  const mainContent = document.getElementById('main-content');
+  if (mainContent) {
+    const observer = new MutationObserver(() => enhance());
+    observer.observe(mainContent, { childList: true, subtree: false });
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initCollapsibleSections);
+} else {
+  initCollapsibleSections();
+}
+
 /**
  * Helper compartido para inicializar dictado por voz en cualquier botón/input.
  */

@@ -7,6 +7,7 @@ function openRegisterSheet() {
   sheet.classList.add('open');
   overlay.classList.add('open');
   document.body.style.overflow = 'hidden';
+  if (window.ModalHistory) window.ModalHistory.open('register-sheet', closeRegisterSheet);
 }
 function closeRegisterSheet() {
   const sheet   = document.getElementById('register-sheet');
@@ -17,6 +18,7 @@ function closeRegisterSheet() {
   }
   if (overlay) overlay.classList.remove('open');
   document.body.style.overflow = '';
+  if (window.ModalHistory) window.ModalHistory.close('register-sheet');
 }
 function switchRSView(viewName) {
   document.querySelectorAll('.rs-view').forEach(v => {

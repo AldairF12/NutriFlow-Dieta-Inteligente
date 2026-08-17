@@ -11,6 +11,7 @@ function openAIChat() {
   overlay.classList.add('open');
   modal.classList.add('open');
   document.body.classList.add('modal-open');
+  if (window.ModalHistory) window.ModalHistory.open('ai-chat', closeAIChat);
 
   if (!AI.isConfigured()) {
     keyReq.hidden    = false;
@@ -37,6 +38,7 @@ function closeAIChat() {
   modal.classList.remove('open');
   modal.style.transform = ''; // Reset transform
   document.body.classList.remove('modal-open');
+  if (window.ModalHistory) window.ModalHistory.close('ai-chat');
 }
 function saveChatHistory() {
   if (_chatMessages.length > 50) {
@@ -309,15 +311,19 @@ function initAIChat() {
   const clearCancel = document.getElementById('ai-clear-cancel');
   const clearYes = document.getElementById('ai-clear-yes');
 
+  const closeClearConfirm = () => {
+    if (clearConfirmModal) clearConfirmModal.classList.remove('open');
+    if (window.ModalHistory) window.ModalHistory.close('ai-clear-confirm');
+  };
+
   if (clearBtn && clearConfirmModal) {
     clearBtn.addEventListener('click', () => {
       clearConfirmModal.classList.add('open');
+      if (window.ModalHistory) window.ModalHistory.open('ai-clear-confirm', closeClearConfirm);
     });
-    clearCancel.addEventListener('click', () => {
-      clearConfirmModal.classList.remove('open');
-    });
+    clearCancel.addEventListener('click', closeClearConfirm);
     clearYes.addEventListener('click', () => {
-      clearConfirmModal.classList.remove('open');
+      closeClearConfirm();
       // Mantener solo los fijados
       _chatMessages = _chatMessages.filter(m => m.pinned);
       saveChatHistory();
