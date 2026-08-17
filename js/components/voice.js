@@ -28,13 +28,28 @@ function initVoiceRegistration() {
     };
 
     recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript;
+      let finalTranscript = '';
+      let interimTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+
       const input = document.getElementById('rs-voice-input');
       const area = document.getElementById('rs-voice-transcript-area');
-      
+
       if (input && area) {
-        const base = input.dataset.baseText || '';
-        input.value = (base + transcript).trim();
+        // Combinamos lo que ya hay con lo nuevo si es final
+        if (finalTranscript) {
+          input.value = finalTranscript; 
+          recognition.stop(); // Detener automáticamente al tener un resultado final
+        } else {
+          input.value = interimTranscript;
+        }
         area.hidden = false;
       }
     };
