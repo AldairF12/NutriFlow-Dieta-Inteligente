@@ -45,11 +45,12 @@ function initVoiceRegistration() {
       let finalTranscript = '';
       let interimTranscript = '';
       
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
+      for (let i = 0; i < event.results.length; ++i) {
+        const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
+          finalTranscript += transcript;
         } else {
-          interimTranscript += event.results[i][0].transcript;
+          interimTranscript += transcript;
         }
       }
       
@@ -57,18 +58,14 @@ function initVoiceRegistration() {
       const area = document.getElementById('rs-voice-transcript-area');
       
       if (input && area) {
-        if (finalTranscript || interimTranscript) {
-           input.value = (input.dataset.originalText || '') + finalTranscript + interimTranscript;
-           area.hidden = false;
-        }
-        if (finalTranscript) {
-           input.dataset.originalText = (input.dataset.originalText || '') + finalTranscript;
-        }
+        const baseText = input.dataset.baseText || '';
+        input.value = baseText + finalTranscript + interimTranscript;
+        area.hidden = false;
       }
     };
 
     recognition.onerror = (event) => {
-      // Ignorar errores de "no speech" para que pueda reiniciar
+      // Ignorar errores de "no speech" para que pueda reiniciar sin cortar
       if (event.error === 'no-speech') return;
       
       if (recordingTimeout) clearTimeout(recordingTimeout);
@@ -81,10 +78,13 @@ function initVoiceRegistration() {
 
     recognition.onend = () => {
       if (shouldAutoRestart && isRecording) {
-        // Reinicio automático si el navegador lo cortó por silencio
+        const input = document.getElementById('rs-voice-input');
+        if (input && input.value) {
+          input.dataset.baseText = input.value.trim() + ' ';
+        }
         try {
           recognition.start();
-          return; // Salir sin cambiar la UI
+          return;
         } catch(e) {
           console.warn('No se pudo reiniciar reconocimiento', e);
         }
@@ -112,12 +112,11 @@ function initVoiceRegistration() {
 function stopVoiceRecording() {
   if (!recognition) return;
   isRecording = false;
-  // Ya no queremos que reinicie
   if (recognition) recognition.stop();
   const micBtn = document.getElementById('btn-rs-voice-mic');
   if (micBtn) micBtn.classList.remove('recording');
   const input = document.getElementById('rs-voice-input');
-  if (input) delete input.dataset.originalText;
+  if (input) delete input.dataset.baseText;
 }
 
 function toggleVoiceRecording() {
@@ -132,8 +131,7 @@ function toggleVoiceRecording() {
   const area = document.getElementById('rs-voice-transcript-area');
   
   if (input) {
-    // Si ya hay texto, dejamos un espacio para continuar dictando
-    input.dataset.originalText = input.value ? input.value + ' ' : '';
+    input.dataset.baseText = input.value ? input.value.trim() + ' ' : '';
   }
   if (status) status.textContent = '';
   if (area && input && !input.value) area.hidden = true;
