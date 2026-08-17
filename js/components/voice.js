@@ -1,6 +1,8 @@
 let recognition = null;
 let isRecording = false;
 let recordingTimeout = null;
+let _voiceFinalTranscript = '';
+
 function initVoiceRegistration() {
   const micBtn = document.getElementById('btn-rs-voice-mic');
   const processBtn = document.getElementById('btn-rs-voice-process');
@@ -38,26 +40,21 @@ function initVoiceRegistration() {
     };
 
     recognition.onresult = (event) => {
-      let finalTranscript = '';
       let interimTranscript = '';
       
-      for (let i = 0; i < event.results.length; ++i) {
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
         if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript.trim() + ' ';
+          _voiceFinalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
         }
-      }
-      
-      // En Android y Web Speech, el texto provisional actual es únicamente el último item no finalizado
-      if (event.results.length > 0 && !event.results[event.results.length - 1].isFinal) {
-        interimTranscript = event.results[event.results.length - 1][0].transcript;
       }
       
       const input = document.getElementById('rs-voice-input');
       const area = document.getElementById('rs-voice-transcript-area');
       
       if (input && area) {
-        const baseText = input.dataset.baseText || '';
-        input.value = baseText + finalTranscript + interimTranscript;
+        input.value = _voiceFinalTranscript + interimTranscript;
         area.hidden = false;
       }
     };
@@ -97,8 +94,6 @@ function stopVoiceRecording() {
   if (recognition) recognition.stop();
   const micBtn = document.getElementById('btn-rs-voice-mic');
   if (micBtn) micBtn.classList.remove('recording');
-  const input = document.getElementById('rs-voice-input');
-  if (input) delete input.dataset.baseText;
 }
 
 function toggleVoiceRecording() {
@@ -112,9 +107,8 @@ function toggleVoiceRecording() {
   const status = document.getElementById('rs-voice-status');
   const area = document.getElementById('rs-voice-transcript-area');
   
-  if (input) {
-    input.dataset.baseText = input.value ? input.value.trim() + ' ' : '';
-  }
+  _voiceFinalTranscript = input && input.value ? input.value.trim() + ' ' : '';
+  
   if (status) status.textContent = '';
   if (area && input && !input.value) area.hidden = true;
   
@@ -125,6 +119,7 @@ function toggleVoiceRecording() {
   }
 }
 function resetRSVoiceView() {
+  _voiceFinalTranscript = '';
   const hint = document.getElementById('rs-voice-hint');
   const input = document.getElementById('rs-voice-input');
   const area = document.getElementById('rs-voice-transcript-area');

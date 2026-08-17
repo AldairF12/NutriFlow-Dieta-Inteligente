@@ -212,19 +212,18 @@ function initAIChat() {
         input.placeholder = 'Escuchando...';
       };
 
+      let _chatFinalTranscript = '';
+
       _chatSpeechRecognition.onresult = (event) => {
-        let finalTranscript = '';
         let interimTranscript = '';
-        for (let i = 0; i < event.results.length; ++i) {
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
           if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript.trim() + ' ';
+            _chatFinalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
           }
         }
-        if (event.results.length > 0 && !event.results[event.results.length - 1].isFinal) {
-          interimTranscript = event.results[event.results.length - 1][0].transcript;
-        }
-        const baseText = input.dataset.baseText || '';
-        input.value = baseText + finalTranscript + interimTranscript;
+        input.value = _chatFinalTranscript + interimTranscript;
         input.dispatchEvent(new Event('input')); // auto-resize
       };
 
@@ -234,7 +233,6 @@ function initAIChat() {
         micBtn.classList.remove('recording-pulse');
         micBtn.innerHTML = '🎙️';
         input.placeholder = originalPlaceholder;
-        delete input.dataset.baseText;
       };
 
       _chatSpeechRecognition.onerror = () => {
@@ -243,7 +241,6 @@ function initAIChat() {
         micBtn.classList.remove('recording-pulse');
         micBtn.innerHTML = '🎙️';
         input.placeholder = originalPlaceholder;
-        delete input.dataset.baseText;
       };
 
       micBtn.addEventListener('click', () => {
@@ -252,7 +249,7 @@ function initAIChat() {
           _chatSpeechRecognition.stop();
         } else {
           isRecording = true;
-          input.dataset.baseText = input.value ? input.value.trim() + ' ' : '';
+          _chatFinalTranscript = input.value ? input.value.trim() + ' ' : '';
           try { _chatSpeechRecognition.start(); } catch (e) {}
         }
       });
