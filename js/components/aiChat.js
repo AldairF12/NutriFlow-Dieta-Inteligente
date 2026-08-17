@@ -73,6 +73,22 @@ function togglePinMessage(id) {
   }
 }
 
+function copyChatMessage(id) {
+  const msg = _chatMessages.find(m => m.id === id);
+  if (msg && msg.text) {
+    navigator.clipboard.writeText(msg.text).then(() => {
+      showToast('📋 Copiado al portapapeles');
+      const btn = document.querySelector(`.chat-copy-btn[data-id="${id}"]`);
+      if (btn) {
+        btn.textContent = '✓';
+        setTimeout(() => { btn.textContent = '📋'; }, 1500);
+      }
+    }).catch(() => {
+      showToast('No se pudo copiar el texto');
+    });
+  }
+}
+
 function parseChatMarkdown(text) {
   if (!text) return '';
 
@@ -166,7 +182,9 @@ function formatChatInline(str) {
     .replace(/\*([^\*]+?)\*/g, '<em>$1</em>')
     .replace(/_([^_]+?)_/g, '<em>$1</em>')
     // Código inline (`código`)
-    .replace(/`([^`]+?)`/g, '<code class="chat-code">$1</code>');
+    .replace(/`([^`]+?)`/g, '<code class="chat-code">$1</code>')
+    // Resaltado de macros y calorías
+    .replace(/\b(\d+(?:\.\d+)?\s*(?:kcal|calorías|calorias|g\s*(?:de\s*)?(?:prote[ií]na|carbohidratos|carbos|grasas?|fibra)))\b/gi, '<span class="chat-macro-highlight">$1</span>');
 }
 
 function appendChatMessage(role, text, isLoad = false, msgId = null, isPinned = false) {
@@ -179,15 +197,18 @@ function appendChatMessage(role, text, isLoad = false, msgId = null, isPinned = 
   
   const formattedText = parseChatMarkdown(text);
   
-  let pinHtml = '';
+  let actionsHtml = '';
   if (role === 'bot') {
-    pinHtml = `<button class="chat-pin-btn ${isPinned ? 'pinned' : ''}" data-id="${id}" onclick="togglePinMessage('${id}')" title="Fijar mensaje">📌</button>`;
+    actionsHtml = `<div class="chat-msg-actions">
+      <button class="chat-action-btn chat-copy-btn" data-id="${id}" onclick="copyChatMessage('${id}')" title="Copiar respuesta">📋</button>
+      <button class="chat-action-btn chat-pin-btn ${isPinned ? 'pinned' : ''}" data-id="${id}" onclick="togglePinMessage('${id}')" title="Fijar mensaje">📌</button>
+    </div>`;
   }
 
   msg.innerHTML = `<div class="chat-bubble-container">
     <div class="chat-bubble">
       ${formattedText}
-      ${pinHtml}
+      ${actionsHtml}
     </div>
   </div>`;
   
@@ -214,6 +235,41 @@ function showChatTyping() {
 function removeChatTyping() {
   document.getElementById('chat-typing-indicator')?.remove();
 }
+const QUICK_PROMPTS = {
+  general: [
+    { icon: '💡', text: 'Ideas de cena ligera y proteica' },
+    { icon: '🥑', text: 'Grasas saludables para mi dieta' },
+    { icon: '💧', text: '¿Cuánta agua debo tomar al día?' },
+    { icon: '⚙️', text: '¿Cómo calcular mis metas calóricas?' }
+  ],
+  progress: [
+    { icon: '📊', text: '¿Cómo voy con mis proteínas hoy?' },
+    { icon: '🍦', text: '¿Me paso de calorías si como un postre?' },
+    { icon: '⚖️', text: '¿Qué me falta para cumplir mi meta?' },
+    { icon: '🍎', text: 'Sugerencia para mi próxima comida' }
+  ]
+};
+
+function renderQuickPrompts(contextMode) {
+  const container = document.getElementById('ai-quick-prompts');
+  if (!container) return;
+
+  const prompts = QUICK_PROMPTS[contextMode] || QUICK_PROMPTS.general;
+  container.innerHTML = prompts.map(p => `
+    <button class="ai-quick-chip" onclick="sendQuickPrompt('${p.text.replace(/'/g, "\\'")}')">
+      <span>${p.icon}</span> ${p.text}
+    </button>
+  `).join('');
+}
+
+function sendQuickPrompt(text) {
+  const input = document.getElementById('ai-chat-input');
+  if (!input) return;
+  input.value = text;
+  input.blur(); // Cerrar teclado
+  sendChatMessage();
+}
+
 function initAIChat() {
   const fab     = document.getElementById('btn-ai-fab');
   const overlay = document.getElementById('ai-chat-overlay');
@@ -224,17 +280,18 @@ function initAIChat() {
   const goProfile = document.getElementById('btn-go-profile-from-chat');
   const contextBtns = document.querySelectorAll('.ai-context-btn');
 
+  renderQuickPrompts(_currentContextMode);
+
   if (contextBtns.length > 0) {
     contextBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         contextBtns.forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         _currentContextMode = btn.dataset.context;
+        renderQuickPrompts(_currentContextMode);
         if (input) {
           if (_currentContextMode === 'progress') {
             input.placeholder = "Ej: ¿Puedo comer un helado hoy?";
-          } else if (_currentContextMode === 'recipes') {
-            input.placeholder = "Ej: Receta rápida alta en proteína";
           } else {
             input.placeholder = "Pregunta algo sobre nutrición...";
           }
@@ -285,12 +342,9 @@ function initAIChat() {
     };
 
     input.addEventListener('input', adjustInputHeight);
-    input.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        sendChatMessage();
-        setTimeout(adjustInputHeight, 10);
-      }
+    // Enter ahora añade un salto de línea normal en el textarea sin enviar
+    input.addEventListener('keydown', () => {
+      setTimeout(adjustInputHeight, 10);
     });
   }
 
@@ -388,8 +442,11 @@ async function sendChatMessage() {
     try { _chatSpeechRecognition.stop(); } catch(e) {}
   }
 
+  // Ocultar teclado en móvil para dejar espacio libre de lectura
+  input.blur();
   input.value = '';
-  input.style.height = '40px'; // reset height
+  input.style.height = '40px';
+  input.style.overflowY = 'hidden';
   input.disabled = true;
   document.getElementById('ai-chat-send').disabled = true;
 
@@ -408,9 +465,8 @@ async function sendChatMessage() {
       appendChatMessage('bot', `❌ Error: ${err.message}`);
     }
   } finally {
-    input.disabled  = false;
+    input.disabled = false;
     document.getElementById('ai-chat-send').disabled = false;
-    input.focus();
   }
 }
 

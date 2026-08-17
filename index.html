@@ -570,11 +570,12 @@
           <button class="ai-context-btn active" data-context="general">🌍 General</button>
           <button class="ai-context-btn" data-context="progress">📊 Mi Progreso Diario</button>
         </div>
+        <div class="ai-quick-prompts" id="ai-quick-prompts"></div>
         <div style="display:flex; gap:8px; align-items: flex-end;">
           <button id="ai-chat-mic" class="ai-chat-mic" aria-label="Dictar por voz" style="flex-shrink: 0; background: none; border: none; font-size: 1.5rem; color: var(--gray-500); cursor: pointer; padding: 10px 5px; transition: color 0.2s;">
             🎙️
           </button>
-          <textarea id="ai-chat-input" class="ai-chat-input" rows="1" placeholder="Pregunta algo sobre nutrición..." autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" style="resize: none; overflow-y: hidden;"></textarea>
+          <textarea id="ai-chat-input" class="ai-chat-input" rows="1" placeholder="Pregunta algo sobre nutrición..." autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other"></textarea>
           <button id="ai-chat-send" class="ai-chat-send" aria-label="Enviar" style="flex-shrink: 0;">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
               <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -582,7 +583,6 @@
             </svg>
           </button>
         </div>
-      </div>
       </div>
       
       <!-- Modal Confirmar Limpieza de Chat -->
