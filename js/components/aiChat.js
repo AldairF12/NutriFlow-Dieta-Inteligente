@@ -73,6 +73,102 @@ function togglePinMessage(id) {
   }
 }
 
+function parseChatMarkdown(text) {
+  if (!text) return '';
+
+  const lines = text.split(/\r?\n/);
+  const result = [];
+  let inUl = false;
+  let inOl = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trim();
+
+    // Elemento de lista con viñetas (- item o * item)
+    const ulMatch = line.match(/^\s*[-*•]\s+(.*)$/);
+    // Elemento de lista numerada (1. item)
+    const olMatch = line.match(/^\s*\d+[\.\)]\s+(.*)$/);
+
+    if (ulMatch) {
+      if (inOl) {
+        result.push('</ol>');
+        inOl = false;
+      }
+      if (!inUl) {
+        result.push('<ul class="chat-list">');
+        inUl = true;
+      }
+      result.push(`<li>${formatChatInline(ulMatch[1])}</li>`);
+      continue;
+    }
+
+    if (olMatch) {
+      if (inUl) {
+        result.push('</ul>');
+        inUl = false;
+      }
+      if (!inOl) {
+        result.push('<ol class="chat-list">');
+        inOl = true;
+      }
+      result.push(`<li>${formatChatInline(olMatch[1])}</li>`);
+      continue;
+    }
+
+    // Si no es un elemento de lista, cerrar listas abiertas
+    if (inUl) {
+      result.push('</ul>');
+      inUl = false;
+    }
+    if (inOl) {
+      result.push('</ol>');
+      inOl = false;
+    }
+
+    // Línea en blanco -> Espacio vertical entre párrafos
+    if (trimmed === '') {
+      result.push('<div class="chat-spacer"></div>');
+      continue;
+    }
+
+    // Encabezados (# ## ###)
+    if (trimmed.startsWith('### ')) {
+      result.push(`<div class="chat-heading">${formatChatInline(trimmed.substring(4))}</div>`);
+      continue;
+    }
+    if (trimmed.startsWith('## ')) {
+      result.push(`<div class="chat-heading">${formatChatInline(trimmed.substring(3))}</div>`);
+      continue;
+    }
+    if (trimmed.startsWith('# ')) {
+      result.push(`<div class="chat-heading">${formatChatInline(trimmed.substring(2))}</div>`);
+      continue;
+    }
+
+    // Línea de texto normal
+    result.push(`<div class="chat-line">${formatChatInline(line)}</div>`);
+  }
+
+  // Cerrar listas que hayan quedado al final
+  if (inUl) result.push('</ul>');
+  if (inOl) result.push('</ol>');
+
+  return result.join('');
+}
+
+function formatChatInline(str) {
+  if (!str) return '';
+  return str
+    // Negrita (**texto**)
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    // Cursiva (*texto* o _texto_)
+    .replace(/\*([^\*]+?)\*/g, '<em>$1</em>')
+    .replace(/_([^_]+?)_/g, '<em>$1</em>')
+    // Código inline (`código`)
+    .replace(/`([^`]+?)`/g, '<code class="chat-code">$1</code>');
+}
+
 function appendChatMessage(role, text, isLoad = false, msgId = null, isPinned = false) {
   const container = document.getElementById('ai-chat-messages');
   if (!container) return;
@@ -81,7 +177,7 @@ function appendChatMessage(role, text, isLoad = false, msgId = null, isPinned = 
   const msg = document.createElement('div');
   msg.className = `chat-msg chat-msg--${role}`;
   
-  const formattedText = typeof parseMarkdown === 'function' ? parseMarkdown(text) : text.replace(/\n/g, '<br>');
+  const formattedText = parseChatMarkdown(text);
   
   let pinHtml = '';
   if (role === 'bot') {
@@ -136,7 +232,9 @@ function initAIChat() {
         _currentContextMode = btn.dataset.context;
         if (input) {
           if (_currentContextMode === 'progress') {
-            input.placeholder = "Ej: ¿Me paso de calorías con un helado?";
+            input.placeholder = "Ej: ¿Puedo comer un helado hoy?";
+          } else if (_currentContextMode === 'recipes') {
+            input.placeholder = "Ej: Receta rápida alta en proteína";
           } else {
             input.placeholder = "Pregunta algo sobre nutrición...";
           }
@@ -178,14 +276,20 @@ function initAIChat() {
 
   if (sendBtn) sendBtn.addEventListener('click', sendChatMessage);
   if (input) {
-    input.addEventListener('input', function() {
-      this.style.height = '40px';
-      this.style.height = (this.scrollHeight) + 'px';
-    });
+    const adjustInputHeight = () => {
+      input.style.height = 'auto';
+      const maxHeight = 120;
+      const newHeight = Math.min(input.scrollHeight, maxHeight);
+      input.style.height = Math.max(40, newHeight) + 'px';
+      input.style.overflowY = input.scrollHeight > maxHeight ? 'auto' : 'hidden';
+    };
+
+    input.addEventListener('input', adjustInputHeight);
     input.addEventListener('keydown', e => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         sendChatMessage();
+        setTimeout(adjustInputHeight, 10);
       }
     });
   }
@@ -239,6 +343,11 @@ function initAIChat() {
 
     modal.addEventListener('touchstart', (e) => {
       const target = e.target;
+      // No arrastrar el modal si se interactúa con el input, botones o textarea
+      if (target.closest('.ai-chat-input-area') || target.closest('button') || target.closest('textarea') || target.closest('input')) {
+        isDragging = false;
+        return;
+      }
       if (target.closest('.ai-chat-messages') && target.closest('.ai-chat-messages').scrollTop > 0) return;
       startY = e.touches[0].clientY;
       isDragging = true;

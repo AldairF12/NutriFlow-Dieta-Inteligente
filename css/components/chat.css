@@ -110,7 +110,7 @@
 /* Mensajes del chat */
 .chat-msg {
   display: flex;
-  max-width: 82%;
+  max-width: 86%;
   animation: chatMsgIn 0.25s cubic-bezier(0.34, 1.4, 0.64, 1) both;
 }
 
@@ -122,19 +122,22 @@
 .chat-msg--user {
   align-self: flex-end;
   flex-direction: row-reverse;
+  max-width: 85%;
 }
 
 .chat-msg--bot {
   align-self: flex-start;
+  max-width: 94%;
 }
 
 .chat-bubble {
-  padding: 10px 14px;
+  padding: 11px 15px;
   border-radius: 18px;
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   line-height: 1.5;
   display: flex;
   flex-direction: column;
+  word-break: break-word;
 }
 
 .chat-msg--user .chat-bubble {
@@ -147,7 +150,47 @@
   background: #fff;
   color: var(--gray-800);
   border-bottom-left-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+}
+
+/* Estilos de formato enriquecido dentro de la burbuja */
+.chat-bubble .chat-line {
+  margin-bottom: 2px;
+}
+.chat-bubble .chat-line:last-child {
+  margin-bottom: 0;
+}
+
+.chat-bubble .chat-spacer {
+  height: 8px;
+}
+
+.chat-bubble .chat-heading {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin: 6px 0 3px;
+  color: #4f46e5;
+}
+
+.chat-bubble .chat-list {
+  margin: 4px 0 6px 18px;
+  padding: 0;
+}
+
+.chat-bubble .chat-list li {
+  margin-bottom: 4px;
+  line-height: 1.45;
+}
+.chat-bubble .chat-list li:last-child {
+  margin-bottom: 0;
+}
+
+.chat-bubble .chat-code {
+  background: rgba(0,0,0,0.06);
+  padding: 2px 5px;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.82rem;
 }
 
 /* Área de input sin clave */
@@ -225,7 +268,7 @@
   border: 1.5px solid var(--gray-200);
   border-radius: 20px;
   padding: 10px 14px;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   line-height: 1.4;
   font-family: inherit;
   color: var(--gray-800);
@@ -235,8 +278,19 @@
   min-height: 40px;
   max-height: 120px;
   overflow-y: auto;
+  resize: none;
+  box-sizing: border-box;
 }
 .ai-chat-input:focus { border-color: #7c3aed; background: #fff; }
+
+.ai-chat-input::placeholder {
+  font-size: 0.82rem;
+  color: var(--gray-400);
+  opacity: 0.9;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
 
 .ai-chat-send {
   width: 40px;
