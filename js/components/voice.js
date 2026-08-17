@@ -197,6 +197,7 @@ function initCollapsibleSections() {
 }
 
 // ============================================================
+// ============================================================
 // FASE 2: GAMIFICACIÓN, RACHA, ILUSTRACIÓN DINÁMICA E HIDRATACIÓN
 // ============================================================
 
@@ -210,15 +211,27 @@ const DAILY_TIPS = [
   'Las grasas saludables (aguacate, frutos secos) protegen tu salud cardiovascular.'
 ];
 
+function getNutriDB() {
+  if (typeof DB !== 'undefined') return DB;
+  if (typeof window !== 'undefined' && window.DB) return window.DB;
+  return null;
+}
+
+function getLocalIsoDate(d = new Date()) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 function getDailyStreak() {
-  const logs = (window.DB && window.DB.state && window.DB.state.food_logs) ? window.DB.state.food_logs : [];
+  const db = getNutriDB();
+  const logs = (db && db.state && db.state.food_logs) ? db.state.food_logs : [];
   if (!logs.length) return { count: 0, recordedToday: false };
 
   const dates = new Set(logs.map(l => l.date));
   const today = new Date();
-  const format = d => d.toISOString().split('T')[0];
-
-  const todayStr = format(today);
+  const todayStr = getLocalIsoDate(today);
   const recordedToday = dates.has(todayStr);
 
   let streak = 0;
@@ -228,7 +241,7 @@ function getDailyStreak() {
     curr.setDate(curr.getDate() - 1);
   }
 
-  while (dates.has(format(curr))) {
+  while (dates.has(getLocalIsoDate(curr))) {
     streak++;
     curr.setDate(curr.getDate() - 1);
   }
@@ -301,15 +314,14 @@ function updateHeaderGamification() {
     }
   }
 
-  // 2. Racha Diaria (Streak)
+  // 2. Racha Diaria (Streak con fueguito siempre visible)
   if (streakEl) {
     const { count, recordedToday } = getDailyStreak();
     if (count > 0) {
       streakEl.textContent = `🔥 ${count} ${count === 1 ? 'día' : 'días'} de racha`;
-      if (recordedToday) streakEl.classList.add('streak-badge--active');
-      else streakEl.classList.remove('streak-badge--active');
+      streakEl.classList.add('streak-badge--active');
     } else {
-      streakEl.textContent = '🌱 ¡Inicia tu racha hoy!';
+      streakEl.textContent = '🔥 ¡Inicia tu racha hoy!';
       streakEl.classList.remove('streak-badge--active');
     }
   }
@@ -326,8 +338,9 @@ function updateHeaderGamification() {
 // HIDRATACIÓN LÍQUIDA INTERACTIVA (Vaso / Ola animada)
 // ──────────────────────────────────────────────
 function getTodayHydrationTotal() {
-  if (!window.DB) return 0;
-  const logs = window.DB.getTodayLogs().filter(l => l.type === 'liquid');
+  const db = getNutriDB();
+  if (!db) return 0;
+  const logs = db.getTodayLogs().filter(l => l.type === 'liquid');
   return logs.reduce((sum, l) => sum + (l.quantity_g || 250), 0);
 }
 
@@ -337,7 +350,7 @@ function enhanceHydrationView() {
     const title = sec.querySelector('.section-title');
     if (!title || !title.textContent.includes('Hidratación')) return;
 
-    // Eliminar tarjetas redundantes de bebidas de abajo
+    // Ocultar tarjetas redundantes de bebidas de abajo
     const redundantRow = sec.querySelector('.cards-row');
     if (redundantRow) {
       redundantRow.style.display = 'none';
@@ -421,8 +434,11 @@ document.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
     const amount = parseInt(quickBtn.dataset.ml, 10) || 250;
-    if (window.DB) {
-      window.DB.addFoodLog({ type: 'liquid', reference_id: 'liq_003', quantity_g: amount });
+    const db = getNutriDB();
+    if (db) {
+      const liquidsList = db.liquids || (db.state && db.state.liquids) || [];
+      const waterLiq = liquidsList.find(l => l.type === 'water') || liquidsList[0] || { id: 'liq_003' };
+      db.addFoodLog({ type: 'liquid', reference_id: waterLiq.id, quantity_g: amount });
       if (typeof showToast === 'function') showToast(`💧 +${amount} ml de agua registrados`);
       enhanceHydrationView();
       updateHeaderGamification();
@@ -435,11 +451,12 @@ document.addEventListener('click', (e) => {
   if (undoBtn) {
     e.preventDefault();
     e.stopPropagation();
-    if (window.DB) {
-      const todayLogs = window.DB.getTodayLogs().filter(l => l.type === 'liquid');
+    const db = getNutriDB();
+    if (db) {
+      const todayLogs = db.getTodayLogs().filter(l => l.type === 'liquid');
       if (todayLogs.length > 0) {
         const lastLog = todayLogs[todayLogs.length - 1];
-        window.DB.removeFoodLog(lastLog.id);
+        db.removeFoodLog(lastLog.id);
         if (typeof showToast === 'function') showToast('↺ Último registro de agua eliminado');
         enhanceHydrationView();
         updateHeaderGamification();

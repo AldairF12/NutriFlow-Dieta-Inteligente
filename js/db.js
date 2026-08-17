@@ -438,3 +438,8 @@ const DB = {
       });
   }
 };
+
+if (typeof window !== 'undefined') {
+  window.DB = DB;
+  window.appState = appState;
+}
