@@ -45,8 +45,7 @@ function initVoiceRegistration() {
       if (input && area) {
         // Combinamos lo que ya hay con lo nuevo si es final
         if (finalTranscript) {
-          input.value = finalTranscript; 
-          recognition.stop(); // Detener automáticamente al tener un resultado final
+          input.value = finalTranscript;
         } else {
           input.value = interimTranscript;
         }
