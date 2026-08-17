@@ -17,7 +17,7 @@ function initVoiceRegistration() {
   if (SpeechRecognition) {
     recognition = new SpeechRecognition();
     recognition.lang = 'es-ES';
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
@@ -43,11 +43,12 @@ function initVoiceRegistration() {
       const area = document.getElementById('rs-voice-transcript-area');
 
       if (input && area) {
+        const base = input.dataset.baseText || '';
         // Combinamos lo que ya hay con lo nuevo si es final
         if (finalTranscript) {
-          input.value = finalTranscript;
+          input.value = (base + finalTranscript + interimTranscript).trim();
         } else {
-          input.value = interimTranscript;
+          input.value = (base + finalTranscript).trim();
         }
         area.hidden = false;
       }
