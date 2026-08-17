@@ -215,36 +215,43 @@ function initAIChat() {
       _chatSpeechRecognition.onresult = (event) => {
         let finalTranscript = '';
         let interimTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
+        for (let i = 0; i < event.results.length; ++i) {
+          const transcript = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript;
+            finalTranscript += transcript;
           } else {
-            interimTranscript += event.results[i][0].transcript;
+            interimTranscript += transcript;
           }
         }
-        if (finalTranscript || interimTranscript) {
-          input.value = (input.dataset.originalText || '') + finalTranscript + interimTranscript;
-          input.dispatchEvent(new Event('input')); // auto-resize
-        }
-        if (finalTranscript) {
-          input.dataset.originalText = (input.dataset.originalText || '') + finalTranscript;
-        }
+        const baseText = input.dataset.baseText || '';
+        input.value = baseText + finalTranscript + interimTranscript;
+        input.dispatchEvent(new Event('input')); // auto-resize
       };
 
       _chatSpeechRecognition.onend = () => {
-        isRecording = false;
+        if (isRecording) {
+          if (input && input.value) {
+            input.dataset.baseText = input.value.trim() + ' ';
+          }
+          try {
+            _chatSpeechRecognition.start();
+            return;
+          } catch(e) {}
+        }
         micBtn.style.color = 'var(--gray-500)';
         micBtn.classList.remove('recording-pulse');
         micBtn.innerHTML = '🎙️';
         input.placeholder = originalPlaceholder;
-        delete input.dataset.originalText;
+        delete input.dataset.baseText;
       };
 
       micBtn.addEventListener('click', () => {
         if (isRecording) {
+          isRecording = false;
           _chatSpeechRecognition.stop();
         } else {
-          input.dataset.originalText = input.value ? input.value + ' ' : '';
+          isRecording = true;
+          input.dataset.baseText = input.value ? input.value.trim() + ' ' : '';
           try { _chatSpeechRecognition.start(); } catch (e) {}
         }
       });
