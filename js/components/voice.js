@@ -243,20 +243,22 @@ function updateHeaderGamification() {
   const tipText = document.getElementById('daily-tip-text');
   const greetingEl = document.getElementById('greeting-text');
 
-  // 1. Ilustración vectorial y saludo según la hora del día
+  // 1. Ilustración vectorial animada y grande (76px) según la hora del día
   if (artContainer) {
     if (hour >= 5 && hour < 12) {
       if (greetingEl) greetingEl.textContent = '¡Buenos días! 🌅';
       artContainer.innerHTML = `
-        <svg width="54" height="54" viewBox="0 0 54 54" fill="none">
-          <circle cx="27" cy="27" r="24" fill="url(#mSunGrad)" fill-opacity="0.25"/>
-          <circle cx="27" cy="22" r="9" fill="#fde047"/>
-          <path d="M17 32 h18 a2 2 0 0 1 2 2 v4 a6 6 0 0 1 -6 6 h-10 a6 6 0 0 1 -6 -6 v-4 a2 2 0 0 1 2 -2 Z" fill="#ffffff"/>
-          <path d="M35 34 h2 a3 3 0 0 1 3 3 v1 a3 3 0 0 1 -3 3 h-2" stroke="#ffffff" stroke-width="2" stroke-linecap="round"/>
-          <path d="M22 28 c0 -3 2 -4 2 -7" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="2 3"/>
-          <path d="M28 28 c0 -3 2 -4 2 -7" stroke="#ffffff" stroke-width="1.8" stroke-linecap="round" stroke-dasharray="2 3"/>
+        <svg width="74" height="74" viewBox="0 0 74 74" fill="none">
+          <circle cx="37" cy="37" r="32" fill="url(#mSunGrad)" fill-opacity="0.3" style="animation: sunPulse 3s ease-in-out infinite;"/>
+          <circle cx="37" cy="30" r="13" fill="#fde047"/>
+          <!-- Taza de café con vapor animado -->
+          <path d="M24 44 h26 a3 3 0 0 1 3 3 v5 a8 8 0 0 1 -8 8 h-14 a8 8 0 0 1 -8 -8 v-5 a3 3 0 0 1 3 -3 Z" fill="#ffffff"/>
+          <path d="M49 46 h4 a4 4 0 0 1 4 4 v2 a4 4 0 0 1 -4 4 h-4" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M31 38 c0 -4 3 -6 3 -10" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="3 3" style="animation: steamRise 2s ease-in-out infinite;"/>
+          <path d="M39 38 c0 -4 3 -6 3 -10" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="3 3" style="animation: steamRise 2s ease-in-out infinite 0.7s;"/>
+          <path d="M46 38 c0 -4 3 -6 3 -10" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="3 3" style="animation: steamRise 2s ease-in-out infinite 1.3s;"/>
           <defs>
-            <radialGradient id="mSunGrad" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(27 27) scale(24)">
+            <radialGradient id="mSunGrad" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(37 37) scale(32)">
               <stop stop-color="#fef08a"/><stop offset="1" stop-color="#f59e0b" stop-opacity="0"/>
             </radialGradient>
           </defs>
@@ -264,13 +266,16 @@ function updateHeaderGamification() {
     } else if (hour >= 12 && hour < 19) {
       if (greetingEl) greetingEl.textContent = '¡Buenas tardes! ☀️';
       artContainer.innerHTML = `
-        <svg width="54" height="54" viewBox="0 0 54 54" fill="none">
-          <circle cx="27" cy="27" r="24" fill="url(#tSunGrad)" fill-opacity="0.25"/>
-          <circle cx="27" cy="27" r="10" fill="#f59e0b"/>
-          <path d="M27 9 v3 M27 42 v3 M9 27 h3 M42 27 h3 M14 14 l2.5 2.5 M37.5 37.5 l2.5 2.5 M14 40 l2.5 -2.5 M37.5 16.5 l2.5 -2.5" stroke="#fde047" stroke-width="2.5" stroke-linecap="round"/>
-          <path d="M30 22 c3 -4 7 -3 7 -3 c0 4 -3 7 -7 7 Z" fill="#4ade80"/>
+        <svg width="74" height="74" viewBox="0 0 74 74" fill="none">
+          <circle cx="37" cy="37" r="32" fill="url(#tSunGrad)" fill-opacity="0.3"/>
+          <g style="transform-origin: 37px 37px; animation: sunSpinSlow 20s linear infinite;">
+            <circle cx="37" cy="37" r="14" fill="#f59e0b"/>
+            <path d="M37 12 v4 M37 58 v4 M12 37 h4 M58 37 h4 M19 19 l3 3 M52 52 l3 3 M19 55 l3 -3 M52 19 l3 -3" stroke="#fde047" stroke-width="3" stroke-linecap="round"/>
+          </g>
+          <!-- Hoja verde de energía -->
+          <path d="M42 30 c4 -5 9 -4 9 -4 c0 5 -4 9 -9 9 Z" fill="#4ade80" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));"/>
           <defs>
-            <radialGradient id="tSunGrad" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(27 27) scale(24)">
+            <radialGradient id="tSunGrad" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(37 37) scale(32)">
               <stop stop-color="#fdba74"/><stop offset="1" stop-color="#ea580c" stop-opacity="0"/>
             </radialGradient>
           </defs>
@@ -278,14 +283,17 @@ function updateHeaderGamification() {
     } else {
       if (greetingEl) greetingEl.textContent = '¡Buenas noches! 🌙';
       artContainer.innerHTML = `
-        <svg width="54" height="54" viewBox="0 0 54 54" fill="none">
-          <circle cx="27" cy="27" r="24" fill="url(#nMoonGrad)" fill-opacity="0.3"/>
-          <path d="M33 16 A13 13 0 1 1 20 37 A11 11 0 0 0 33 16 Z" fill="#fef08a"/>
-          <path d="M38 18 l1 2 l2 1 l-2 1 l-1 2 l-1 -2 l-2 -1 l2 -1 Z" fill="#ffffff"/>
-          <path d="M16 19 l0.7 1.5 l1.5 0.7 l-1.5 0.7 l-0.7 1.5 l-0.7 -1.5 l-1.5 -0.7 l1.5 -0.7 Z" fill="#ffffff" opacity="0.8"/>
-          <path d="M36 36 l0.7 1.5 l1.5 0.7 l-1.5 0.7 l-0.7 1.5 l-0.7 -1.5 l-1.5 -0.7 l1.5 -0.7 Z" fill="#ffffff" opacity="0.8"/>
+        <svg width="74" height="74" viewBox="0 0 74 74" fill="none">
+          <circle cx="37" cy="37" r="32" fill="url(#nMoonGrad)" fill-opacity="0.35"/>
+          <g style="transform-origin: 37px 37px; animation: moonSway 4s ease-in-out infinite;">
+            <path d="M44 22 A18 18 0 1 1 27 51 A15 15 0 0 0 44 22 Z" fill="#fef08a"/>
+          </g>
+          <!-- Estrellas brillantes con parpadeo -->
+          <path d="M52 24 l1.5 3 l3 1.5 l-3 1.5 l-1.5 3 l-1.5 -3 l-3 -1.5 l3 -1.5 Z" fill="#ffffff" style="animation: starTwinkle 2.2s infinite;"/>
+          <path d="M22 25 l1 2 l2 1 l-2 1 l-1 2 l-1 -2 l-2 -1 l2 -1 Z" fill="#ffffff" style="animation: starTwinkle 2.2s infinite 0.8s;"/>
+          <path d="M49 50 l1 2 l2 1 l-2 1 l-1 2 l-1 -2 l-2 -1 l2 -1 Z" fill="#ffffff" style="animation: starTwinkle 2.2s infinite 1.4s;"/>
           <defs>
-            <radialGradient id="nMoonGrad" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(27 27) scale(24)">
+            <radialGradient id="nMoonGrad" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(37 37) scale(32)">
               <stop stop-color="#818cf8"/><stop offset="1" stop-color="#312e81" stop-opacity="0"/>
             </radialGradient>
           </defs>
@@ -328,6 +336,12 @@ function enhanceHydrationView() {
   hydSections.forEach(sec => {
     const title = sec.querySelector('.section-title');
     if (!title || !title.textContent.includes('Hidratación')) return;
+
+    // Eliminar tarjetas redundantes de bebidas de abajo
+    const redundantRow = sec.querySelector('.cards-row');
+    if (redundantRow) {
+      redundantRow.style.display = 'none';
+    }
 
     let animCard = sec.querySelector('.hydration-card-animated');
     const totalMl = getTodayHydrationTotal();
@@ -378,53 +392,15 @@ function enhanceHydrationView() {
             <span class="btn-water-amount">+100 ml</span>
             <span class="btn-water-lbl">Trago</span>
           </button>
-          <button class="btn-water-reset" id="btn-water-undo" title="Deshacer último registro de líquido">
+          <button class="btn-water-reset" id="btn-water-undo" title="Deshacer último registro de agua">
             ↺
           </button>
         </div>
       `;
 
-      // Insertar la tarjeta animada justo después del título/subtítulo
       const sub = sec.querySelector('.section-subtitle') || title;
       sub.insertAdjacentElement('afterend', animCard);
-
-      // Listeners para botones rápidos de agua
-      animCard.querySelectorAll('.btn-water-quick').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const amount = parseInt(btn.dataset.ml, 10) || 250;
-          if (window.DB) {
-            window.DB.addFoodLog({ type: 'liquid', reference_id: 'liq_003', quantity_g: amount });
-            if (typeof showToast === 'function') showToast(`💧 +${amount} ml de agua registrados`);
-            enhanceHydrationView();
-            updateHeaderGamification();
-            if (typeof renderDailyMacros === 'function') renderDailyMacros();
-          }
-        });
-      });
-
-      // Botón de deshacer último registro de líquido
-      const undoBtn = animCard.querySelector('#btn-water-undo');
-      if (undoBtn) {
-        undoBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (window.DB) {
-            const todayLogs = window.DB.getTodayLogs().filter(l => l.type === 'liquid');
-            if (todayLogs.length > 0) {
-              const lastLog = todayLogs[todayLogs.length - 1];
-              window.DB.removeFoodLog(lastLog.id);
-              if (typeof showToast === 'function') showToast('↺ Último registro de agua eliminado');
-              enhanceHydrationView();
-              updateHeaderGamification();
-              if (typeof renderDailyMacros === 'function') renderDailyMacros();
-            } else {
-              if (typeof showToast === 'function') showToast('No hay registros de agua hoy');
-            }
-          }
-        });
-      }
     } else {
-      // Actualizar valores existentes
       const fill = animCard.querySelector('.water-wave-fill');
       const curMl = animCard.querySelector('.water-current-ml');
       const tarMl = animCard.querySelector('.water-target-ml');
@@ -437,6 +413,43 @@ function enhanceHydrationView() {
     }
   });
 }
+
+// Delegación de eventos global para clicks de hidratación
+document.addEventListener('click', (e) => {
+  const quickBtn = e.target.closest('.btn-water-quick');
+  if (quickBtn) {
+    e.preventDefault();
+    e.stopPropagation();
+    const amount = parseInt(quickBtn.dataset.ml, 10) || 250;
+    if (window.DB) {
+      window.DB.addFoodLog({ type: 'liquid', reference_id: 'liq_003', quantity_g: amount });
+      if (typeof showToast === 'function') showToast(`💧 +${amount} ml de agua registrados`);
+      enhanceHydrationView();
+      updateHeaderGamification();
+      if (typeof renderDailyMacros === 'function') renderDailyMacros();
+    }
+    return;
+  }
+
+  const undoBtn = e.target.closest('#btn-water-undo');
+  if (undoBtn) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (window.DB) {
+      const todayLogs = window.DB.getTodayLogs().filter(l => l.type === 'liquid');
+      if (todayLogs.length > 0) {
+        const lastLog = todayLogs[todayLogs.length - 1];
+        window.DB.removeFoodLog(lastLog.id);
+        if (typeof showToast === 'function') showToast('↺ Último registro de agua eliminado');
+        enhanceHydrationView();
+        updateHeaderGamification();
+        if (typeof renderDailyMacros === 'function') renderDailyMacros();
+      } else {
+        if (typeof showToast === 'function') showToast('No hay registros de agua hoy');
+      }
+    }
+  }
+});
 
 function initPhase2() {
   initCollapsibleSections();

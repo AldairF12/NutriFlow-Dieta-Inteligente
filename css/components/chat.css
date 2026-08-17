@@ -613,7 +613,12 @@
    FASE 2: GAMIFICACIÓN, RACHA, ILUSTRACIÓN DINÁMICA E HIDRATACIÓN
    ============================================================ */
 
-/* 1. Encabezado principal dinámico */
+/* 1. Encabezado principal con contraste alto y degradado rico */
+.screen-header {
+  background: linear-gradient(140deg, #0d9488 0%, #0891b2 45%, #6366f1 100%) !important;
+  box-shadow: 0 8px 32px rgba(13, 148, 136, 0.28), 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
 .header-main-row {
   display: flex;
   align-items: center;
@@ -625,49 +630,84 @@
   flex: 1;
 }
 
+.greeting {
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3) !important;
+}
+.current-date {
+  color: rgba(255, 255, 255, 0.92) !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Ilustración vectorial animada y grande (76px x 76px) */
 .header-dynamic-art {
-  width: 58px;
-  height: 58px;
+  width: 76px !important;
+  height: 76px !important;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: artFloat 3.5s ease-in-out infinite alternate;
+  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.22));
 }
 
-@keyframes artFloat {
-  0%   { transform: translateY(0) scale(1); }
-  100% { transform: translateY(-4px) scale(1.04); }
+@keyframes steamRise {
+  0%   { transform: translateY(0) scaleX(1); opacity: 0; }
+  50%  { opacity: 0.85; }
+  100% { transform: translateY(-8px) scaleX(1.3); opacity: 0; }
 }
 
+@keyframes sunPulse {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.08); }
+}
+
+@keyframes sunSpinSlow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes starTwinkle {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50%      { opacity: 1; transform: scale(1.25); }
+}
+
+@keyframes moonSway {
+  0%   { transform: rotate(-4deg); }
+  50%  { transform: rotate(4deg); }
+  100% { transform: rotate(-4deg); }
+}
+
+/* 2. Badges de Estado y Racha perfectamente alineados */
 .header-badges-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-  flex-wrap: wrap;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-top: 12px !important;
+  flex-wrap: wrap !important;
 }
 
-/* 2. Badge de Racha Diaria (Streak) */
-.streak-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px 12px;
-  background: rgba(255, 255, 255, 0.22);
-  border-radius: var(--r-full, 99px);
-  font-size: 0.74rem;
-  font-weight: 700;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  letter-spacing: -0.2px;
+.header-badges-row .slot-badge,
+.header-badges-row .streak-badge {
+  margin: 0 !important;
+  height: 32px !important;
+  box-sizing: border-box !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 14px !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  border-radius: 99px !important;
+  background: rgba(0, 0, 0, 0.22) !important;
+  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25) !important;
 }
 
-.streak-badge--active {
-  background: linear-gradient(135deg, #f59e0b, #ef4444);
-  box-shadow: 0 3px 12px rgba(239, 68, 68, 0.4);
-  border-color: rgba(255, 255, 255, 0.6);
+.header-badges-row .streak-badge--active {
+  background: linear-gradient(135deg, #f59e0b, #ef4444) !important;
+  border-color: rgba(255, 255, 255, 0.6) !important;
+  box-shadow: 0 3px 12px rgba(239, 68, 68, 0.45) !important;
   animation: streakGlow 2s infinite alternate;
 }
 
@@ -676,43 +716,62 @@
   100% { box-shadow: 0 4px 16px rgba(239, 68, 68, 0.65); transform: scale(1.02); }
 }
 
-/* 3. Caja de Tip / Frase del Día */
+/* 3. Caja de Tip / Frase del Día con alto contraste */
 .daily-tip-box {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-top: 10px;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.16);
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  transition: opacity 0.3s ease;
+  padding: 9px 13px;
+  background: rgba(0, 0, 0, 0.24) !important;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .daily-tip-icon {
-  font-size: 0.95rem;
+  font-size: 1rem;
   flex-shrink: 0;
 }
 
 .daily-tip-text {
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   line-height: 1.35;
-  color: rgba(255, 255, 255, 0.94);
+  color: #ffffff !important;
   font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
 }
 
-/* 4. Tarjeta de Hidratación Líquida Animada */
+/* 4. Chips de Macros con alto contraste */
+.macro-chip {
+  background: rgba(0, 0, 0, 0.24) !important;
+  border: 1px solid rgba(255, 255, 255, 0.28) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+}
+
+.macro-chip-val {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25) !important;
+}
+
+.macro-chip-lbl {
+  color: rgba(255, 255, 255, 0.88) !important;
+  font-weight: 600 !important;
+}
+
+/* 5. Tarjeta de Hidratación Líquida Animada */
 .hydration-card-animated {
   background: #ffffff;
   border-radius: 20px;
-  padding: 16px 18px;
+  padding: 18px 18px 16px;
   box-shadow: 0 4px 18px rgba(56, 189, 248, 0.12), 0 1px 3px rgba(0,0,0,0.04);
   border: 1.5px solid rgba(56, 189, 248, 0.22);
   display: flex;
   flex-direction: column;
   gap: 14px;
   margin-top: 6px;
-  overflow: hidden;
+  overflow: visible;
   position: relative;
 }
 
@@ -724,14 +783,14 @@
 
 /* Vaso de agua estilizado con ola animada */
 .water-glass-wrap {
-  width: 58px;
-  height: 82px;
+  width: 62px;
+  height: 86px;
   background: #f0f9ff;
   border: 2.5px solid #38bdf8;
-  border-radius: 6px 6px 16px 16px;
+  border-radius: 6px 6px 18px 18px;
   position: relative;
   overflow: hidden;
-  box-shadow: inset 0 2px 6px rgba(56, 189, 248, 0.2);
+  box-shadow: inset 0 2px 6px rgba(56, 189, 248, 0.25), 0 2px 8px rgba(56, 189, 248, 0.15);
   flex-shrink: 0;
 }
 
@@ -752,14 +811,14 @@
   width: 200%;
   height: 12px;
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120' preserveAspectRatio='none'%3E%3Cpath d='M0,0 C150,90 350,-40 500,40 C650,120 900,10 1200,40 L1200,120 L0,120 Z' fill='%2338bdf8'/%3E%3C/svg%3E") repeat-x;
-  background-size: 58px 12px;
+  background-size: 62px 12px;
   animation: waveScroll 2.2s linear infinite;
   opacity: 0.85;
 }
 
 @keyframes waveScroll {
   from { transform: translateX(0); }
-  to   { transform: translateX(-58px); }
+  to   { transform: translateX(-62px); }
 }
 
 .water-stats-panel {
@@ -782,21 +841,21 @@
 }
 
 .water-current-ml {
-  font-size: 1.35rem;
+  font-size: 1.45rem;
   font-weight: 800;
   color: #0f172a;
   letter-spacing: -0.5px;
 }
 
 .water-target-ml {
-  font-size: 0.78rem;
+  font-size: 0.80rem;
   font-weight: 600;
   color: #64748b;
 }
 
 .water-progress-bar-wrap {
   width: 100%;
-  height: 6px;
+  height: 7px;
   background: #e2e8f0;
   border-radius: 99px;
   margin-top: 6px;
@@ -813,49 +872,48 @@
 /* Botones de Registro Rápido de Hidratación */
 .quick-water-buttons {
   display: flex;
-  gap: 6px;
+  gap: 7px;
   overflow-x: auto;
-  padding-bottom: 2px;
+  padding: 6px 2px 4px;
   scrollbar-width: none;
 }
 .quick-water-buttons::-webkit-scrollbar { display: none; }
 
 .btn-water-quick {
   flex: 1;
-  min-width: 68px;
+  min-width: 66px;
   background: #f0f9ff;
-  border: 1px solid #bae6fd;
-  border-radius: 12px;
-  padding: 7px 6px;
+  border: 1.5px solid #bae6fd;
+  border-radius: 14px;
+  padding: 8px 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 2px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
   -webkit-tap-highlight-color: transparent;
 }
 .btn-water-quick:hover {
   background: #e0f2fe;
   border-color: #7dd3fc;
-  transform: translateY(-1px);
 }
 .btn-water-quick:active {
-  transform: scale(0.95);
+  transform: scale(0.94);
   background: #bae6fd;
 }
 
-.btn-water-icon { font-size: 1.1rem; line-height: 1; }
-.btn-water-amount { font-size: 0.72rem; font-weight: 700; color: #0284c7; }
+.btn-water-icon { font-size: 1.15rem; line-height: 1; }
+.btn-water-amount { font-size: 0.74rem; font-weight: 700; color: #0284c7; }
 .btn-water-lbl { font-size: 0.62rem; color: #64748b; }
 
 .btn-water-reset {
   background: transparent;
-  border: 1px dashed #cbd5e1;
+  border: 1.5px dashed #cbd5e1;
   color: #94a3b8;
-  border-radius: 12px;
-  padding: 7px 8px;
-  font-size: 0.72rem;
+  border-radius: 14px;
+  padding: 8px 10px;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
   display: flex;
@@ -867,5 +925,8 @@
   background: #f1f5f9;
   color: #ef4444;
   border-color: #fca5a5;
+}
+.btn-water-reset:active {
+  transform: scale(0.92);
 }
 
