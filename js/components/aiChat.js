@@ -193,59 +193,27 @@ function initAIChat() {
   // Dictado por voz
   const micBtn = document.getElementById('ai-chat-mic');
   if (micBtn && input) {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      _chatSpeechRecognition = new SpeechRecognition();
-      _chatSpeechRecognition.lang = 'es-ES';
-      _chatSpeechRecognition.interimResults = false;
-      _chatSpeechRecognition.maxAlternatives = 1;
-      
-      let isRecording = false;
-      let originalPlaceholder = '';
+    let originalPlaceholder = '';
 
-      _chatSpeechRecognition.onstart = () => {
-        isRecording = true;
-        micBtn.style.color = '#ef4444'; // rojo
+    _chatSpeechRecognition = initVoiceDictation({
+      button: micBtn,
+      input: input,
+      onStart: () => {
+        micBtn.style.color = '#ef4444';
         micBtn.classList.add('recording-pulse');
-        micBtn.innerHTML = '⏹️'; // Cuadrado de stop
+        micBtn.innerHTML = '⏹️';
         originalPlaceholder = input.placeholder;
         input.placeholder = 'Escuchando...';
-      };
-
-      _chatSpeechRecognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        const base = input.dataset.baseText || '';
-        input.value = (base + transcript).trim();
-        input.dispatchEvent(new Event('input')); // auto-resize
-      };
-
-      _chatSpeechRecognition.onend = () => {
-        isRecording = false;
+      },
+      onEnd: () => {
         micBtn.style.color = 'var(--gray-500)';
         micBtn.classList.remove('recording-pulse');
         micBtn.innerHTML = '🎙️';
-        input.placeholder = originalPlaceholder;
-      };
+        if (originalPlaceholder) input.placeholder = originalPlaceholder;
+      }
+    });
 
-      _chatSpeechRecognition.onerror = () => {
-        isRecording = false;
-        micBtn.style.color = 'var(--gray-500)';
-        micBtn.classList.remove('recording-pulse');
-        micBtn.innerHTML = '🎙️';
-        input.placeholder = originalPlaceholder;
-      };
-
-      micBtn.addEventListener('click', () => {
-        if (isRecording) {
-          isRecording = false;
-          _chatSpeechRecognition.stop();
-        } else {
-          isRecording = true;
-          input.dataset.baseText = input.value ? input.value.trim() + ' ' : '';
-          try { _chatSpeechRecognition.start(); } catch (e) {}
-        }
-      });
-    } else {
+    if (!_chatSpeechRecognition.supported) {
       micBtn.style.display = 'none';
     }
   }
