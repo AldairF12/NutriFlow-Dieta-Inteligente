@@ -216,12 +216,12 @@ function initAIChat() {
         let finalTranscript = '';
         let interimTranscript = '';
         for (let i = 0; i < event.results.length; ++i) {
-          const transcript = event.results[i][0].transcript;
           if (event.results[i].isFinal) {
-            finalTranscript += transcript;
-          } else {
-            interimTranscript += transcript;
+            finalTranscript += event.results[i][0].transcript.trim() + ' ';
           }
+        }
+        if (event.results.length > 0 && !event.results[event.results.length - 1].isFinal) {
+          interimTranscript = event.results[event.results.length - 1][0].transcript;
         }
         const baseText = input.dataset.baseText || '';
         input.value = baseText + finalTranscript + interimTranscript;
@@ -229,15 +229,16 @@ function initAIChat() {
       };
 
       _chatSpeechRecognition.onend = () => {
-        if (isRecording) {
-          if (input && input.value) {
-            input.dataset.baseText = input.value.trim() + ' ';
-          }
-          try {
-            _chatSpeechRecognition.start();
-            return;
-          } catch(e) {}
-        }
+        isRecording = false;
+        micBtn.style.color = 'var(--gray-500)';
+        micBtn.classList.remove('recording-pulse');
+        micBtn.innerHTML = '🎙️';
+        input.placeholder = originalPlaceholder;
+        delete input.dataset.baseText;
+      };
+
+      _chatSpeechRecognition.onerror = () => {
+        isRecording = false;
         micBtn.style.color = 'var(--gray-500)';
         micBtn.classList.remove('recording-pulse');
         micBtn.innerHTML = '🎙️';

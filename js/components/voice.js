@@ -21,11 +21,8 @@ function initVoiceRegistration() {
     recognition.continuous = true;
     recognition.maxAlternatives = 1;
 
-    let shouldAutoRestart = false;
-
     recognition.onstart = () => {
       isRecording = true;
-      shouldAutoRestart = true;
       micBtn.classList.add('recording');
       const hint = document.getElementById('rs-voice-hint');
       if (hint) hint.textContent = 'Escuchando... (Toca para detener)';
@@ -34,8 +31,7 @@ function initVoiceRegistration() {
       if (recordingTimeout) clearTimeout(recordingTimeout);
       recordingTimeout = setTimeout(() => {
         if (isRecording) {
-          shouldAutoRestart = false; // Ya no reiniciar
-          recognition.stop();
+          stopVoiceRecording();
           if (typeof showToast === 'function') showToast('El micrófono se apagó por límite de tiempo (60s)');
         }
       }, 60000);
@@ -46,12 +42,14 @@ function initVoiceRegistration() {
       let interimTranscript = '';
       
       for (let i = 0; i < event.results.length; ++i) {
-        const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          finalTranscript += transcript;
-        } else {
-          interimTranscript += transcript;
+          finalTranscript += event.results[i][0].transcript.trim() + ' ';
         }
+      }
+      
+      // En Android y Web Speech, el texto provisional actual es únicamente el último item no finalizado
+      if (event.results.length > 0 && !event.results[event.results.length - 1].isFinal) {
+        interimTranscript = event.results[event.results.length - 1][0].transcript;
       }
       
       const input = document.getElementById('rs-voice-input');
@@ -65,38 +63,22 @@ function initVoiceRegistration() {
     };
 
     recognition.onerror = (event) => {
-      // Ignorar errores de "no speech" para que pueda reiniciar sin cortar
-      if (event.error === 'no-speech') return;
-      
       if (recordingTimeout) clearTimeout(recordingTimeout);
       console.error('SpeechRecognition error:', event.error);
       const status = document.getElementById('rs-voice-status');
-      if (status) status.textContent = `Error: ${event.error}`;
-      shouldAutoRestart = false;
+      if (status && event.error !== 'no-speech') status.textContent = `Error: ${event.error}`;
       stopVoiceRecording();
     };
 
     recognition.onend = () => {
-      if (shouldAutoRestart && isRecording) {
-        const input = document.getElementById('rs-voice-input');
-        if (input && input.value) {
-          input.dataset.baseText = input.value.trim() + ' ';
-        }
-        try {
-          recognition.start();
-          return;
-        } catch(e) {
-          console.warn('No se pudo reiniciar reconocimiento', e);
-        }
-      }
-      
       if (recordingTimeout) clearTimeout(recordingTimeout);
       stopVoiceRecording();
       const hint = document.getElementById('rs-voice-hint');
-      if (hint && !document.getElementById('rs-voice-input').value) {
-        hint.textContent = 'Pulsa el micrófono para dictar...';
+      const input = document.getElementById('rs-voice-input');
+      if (hint && input && input.value) {
+        hint.textContent = 'Dictado pausado. Toca el micrófono para continuar o procesa abajo.';
       } else if (hint) {
-        hint.textContent = 'Dictado finalizado. Puedes editar el texto antes de procesar.';
+        hint.textContent = 'Pulsa el micrófono para dictar...';
       }
     };
   } else {
