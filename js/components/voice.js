@@ -21,27 +21,31 @@ function initVoiceRegistration() {
     recognition.continuous = true;
     recognition.maxAlternatives = 1;
 
+    let shouldAutoRestart = false;
+
     recognition.onstart = () => {
       isRecording = true;
+      shouldAutoRestart = true;
       micBtn.classList.add('recording');
       const hint = document.getElementById('rs-voice-hint');
       if (hint) hint.textContent = 'Escuchando... (Toca para detener)';
       
-      // Límite de 30 segundos por seguridad
+      // Límite de 60 segundos
       if (recordingTimeout) clearTimeout(recordingTimeout);
       recordingTimeout = setTimeout(() => {
         if (isRecording) {
+          shouldAutoRestart = false; // Ya no reiniciar
           recognition.stop();
-          if (typeof showToast === 'function') showToast('El micrófono se apagó por límite de tiempo (30s)');
+          if (typeof showToast === 'function') showToast('El micrófono se apagó por límite de tiempo (60s)');
         }
-      }, 30000);
+      }, 60000);
     };
 
     recognition.onresult = (event) => {
       let finalTranscript = '';
       let interimTranscript = '';
       
-      for (let i = 0; i < event.results.length; ++i) {
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
         if (event.results[i].isFinal) {
           finalTranscript += event.results[i][0].transcript;
         } else {
@@ -53,21 +57,39 @@ function initVoiceRegistration() {
       const area = document.getElementById('rs-voice-transcript-area');
       
       if (input && area) {
-        // En modo continuo, mostramos todo el texto final + el texto intermedio actual
-        input.value = finalTranscript + interimTranscript;
-        area.hidden = false;
+        if (finalTranscript || interimTranscript) {
+           input.value = (input.dataset.originalText || '') + finalTranscript + interimTranscript;
+           area.hidden = false;
+        }
+        if (finalTranscript) {
+           input.dataset.originalText = (input.dataset.originalText || '') + finalTranscript;
+        }
       }
     };
 
     recognition.onerror = (event) => {
+      // Ignorar errores de "no speech" para que pueda reiniciar
+      if (event.error === 'no-speech') return;
+      
       if (recordingTimeout) clearTimeout(recordingTimeout);
       console.error('SpeechRecognition error:', event.error);
       const status = document.getElementById('rs-voice-status');
       if (status) status.textContent = `Error: ${event.error}`;
+      shouldAutoRestart = false;
       stopVoiceRecording();
     };
 
     recognition.onend = () => {
+      if (shouldAutoRestart && isRecording) {
+        // Reinicio automático si el navegador lo cortó por silencio
+        try {
+          recognition.start();
+          return; // Salir sin cambiar la UI
+        } catch(e) {
+          console.warn('No se pudo reiniciar reconocimiento', e);
+        }
+      }
+      
       if (recordingTimeout) clearTimeout(recordingTimeout);
       stopVoiceRecording();
       const hint = document.getElementById('rs-voice-hint');
@@ -87,35 +109,39 @@ function initVoiceRegistration() {
     if (hint) hint.textContent = 'Tu navegador no soporta registro por voz.';
   }
 }
+function stopVoiceRecording() {
+  if (!recognition) return;
+  isRecording = false;
+  // Ya no queremos que reinicie
+  if (recognition) recognition.stop();
+  const micBtn = document.getElementById('btn-rs-voice-mic');
+  if (micBtn) micBtn.classList.remove('recording');
+  const input = document.getElementById('rs-voice-input');
+  if (input) delete input.dataset.originalText;
+}
+
 function toggleVoiceRecording() {
   if (!recognition) return;
   if (isRecording) {
-    recognition.stop();
+    stopVoiceRecording();
     return;
   }
   
-  // Reset estado
   const input = document.getElementById('rs-voice-input');
   const status = document.getElementById('rs-voice-status');
   const area = document.getElementById('rs-voice-transcript-area');
-  if (input) input.value = '';
+  
+  if (input) {
+    // Si ya hay texto, dejamos un espacio para continuar dictando
+    input.dataset.originalText = input.value ? input.value + ' ' : '';
+  }
   if (status) status.textContent = '';
-  if (area) area.hidden = true;
+  if (area && input && !input.value) area.hidden = true;
   
   try {
     recognition.start();
   } catch(e) {
     console.warn("Error al iniciar dictado", e);
-  }
-}
-function stopVoiceRecording() {
-  isRecording = false;
-  const micBtn = document.getElementById('btn-rs-voice-mic');
-  if (micBtn) micBtn.classList.remove('recording');
-  
-  const hint = document.getElementById('rs-voice-hint');
-  if (hint && hint.textContent === 'Escuchando...') {
-    hint.textContent = 'Puedes editar el texto abajo y luego procesarlo.';
   }
 }
 function resetRSVoiceView() {
