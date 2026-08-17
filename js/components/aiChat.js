@@ -197,8 +197,8 @@ function initAIChat() {
     if (SpeechRecognition) {
       _chatSpeechRecognition = new SpeechRecognition();
       _chatSpeechRecognition.lang = 'es-ES';
-      _chatSpeechRecognition.continuous = true;
-      _chatSpeechRecognition.interimResults = true;
+      _chatSpeechRecognition.interimResults = false;
+      _chatSpeechRecognition.maxAlternatives = 1;
       
       let isRecording = false;
       let originalPlaceholder = '';
@@ -212,18 +212,10 @@ function initAIChat() {
         input.placeholder = 'Escuchando...';
       };
 
-      let _chatFinalTranscript = '';
-
       _chatSpeechRecognition.onresult = (event) => {
-        let interimTranscript = '';
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            _chatFinalTranscript += event.results[i][0].transcript;
-          } else {
-            interimTranscript += event.results[i][0].transcript;
-          }
-        }
-        input.value = _chatFinalTranscript + interimTranscript;
+        const transcript = event.results[0][0].transcript;
+        const base = input.dataset.baseText || '';
+        input.value = (base + transcript).trim();
         input.dispatchEvent(new Event('input')); // auto-resize
       };
 
@@ -249,7 +241,7 @@ function initAIChat() {
           _chatSpeechRecognition.stop();
         } else {
           isRecording = true;
-          _chatFinalTranscript = input.value ? input.value.trim() + ' ' : '';
+          input.dataset.baseText = input.value ? input.value.trim() + ' ' : '';
           try { _chatSpeechRecognition.start(); } catch (e) {}
         }
       });

@@ -1,7 +1,5 @@
 let recognition = null;
 let isRecording = false;
-let recordingTimeout = null;
-let _voiceFinalTranscript = '';
 
 function initVoiceRegistration() {
   const micBtn = document.getElementById('btn-rs-voice-mic');
@@ -19,64 +17,37 @@ function initVoiceRegistration() {
   if (SpeechRecognition) {
     recognition = new SpeechRecognition();
     recognition.lang = 'es-ES';
-    recognition.interimResults = true;
-    recognition.continuous = true;
+    recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
     recognition.onstart = () => {
       isRecording = true;
       micBtn.classList.add('recording');
       const hint = document.getElementById('rs-voice-hint');
-      if (hint) hint.textContent = 'Escuchando... (Toca para detener)';
-      
-      // Límite de 60 segundos
-      if (recordingTimeout) clearTimeout(recordingTimeout);
-      recordingTimeout = setTimeout(() => {
-        if (isRecording) {
-          stopVoiceRecording();
-          if (typeof showToast === 'function') showToast('El micrófono se apagó por límite de tiempo (60s)');
-        }
-      }, 60000);
+      if (hint) hint.textContent = 'Escuchando...';
     };
 
     recognition.onresult = (event) => {
-      let interimTranscript = '';
-      
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          _voiceFinalTranscript += event.results[i][0].transcript;
-        } else {
-          interimTranscript += event.results[i][0].transcript;
-        }
-      }
-      
+      const transcript = event.results[0][0].transcript;
       const input = document.getElementById('rs-voice-input');
       const area = document.getElementById('rs-voice-transcript-area');
       
       if (input && area) {
-        input.value = _voiceFinalTranscript + interimTranscript;
+        const base = input.dataset.baseText || '';
+        input.value = (base + transcript).trim();
         area.hidden = false;
       }
     };
 
     recognition.onerror = (event) => {
-      if (recordingTimeout) clearTimeout(recordingTimeout);
       console.error('SpeechRecognition error:', event.error);
       const status = document.getElementById('rs-voice-status');
-      if (status && event.error !== 'no-speech') status.textContent = `Error: ${event.error}`;
+      if (status) status.textContent = `Error: ${event.error}`;
       stopVoiceRecording();
     };
 
     recognition.onend = () => {
-      if (recordingTimeout) clearTimeout(recordingTimeout);
       stopVoiceRecording();
-      const hint = document.getElementById('rs-voice-hint');
-      const input = document.getElementById('rs-voice-input');
-      if (hint && input && input.value) {
-        hint.textContent = 'Dictado pausado. Toca el micrófono para continuar o procesa abajo.';
-      } else if (hint) {
-        hint.textContent = 'Pulsa el micrófono para dictar...';
-      }
     };
   } else {
     // No soportado
@@ -88,12 +59,22 @@ function initVoiceRegistration() {
     if (hint) hint.textContent = 'Tu navegador no soporta registro por voz.';
   }
 }
+
 function stopVoiceRecording() {
-  if (!recognition) return;
   isRecording = false;
-  if (recognition) recognition.stop();
+  if (recognition) {
+    try { recognition.stop(); } catch(e) {}
+  }
   const micBtn = document.getElementById('btn-rs-voice-mic');
   if (micBtn) micBtn.classList.remove('recording');
+  
+  const hint = document.getElementById('rs-voice-hint');
+  const input = document.getElementById('rs-voice-input');
+  if (hint && input && input.value) {
+    hint.textContent = 'Puedes editar el texto abajo y luego procesarlo.';
+  } else if (hint) {
+    hint.textContent = 'Toca el micrófono para dictar...';
+  }
 }
 
 function toggleVoiceRecording() {
@@ -107,8 +88,9 @@ function toggleVoiceRecording() {
   const status = document.getElementById('rs-voice-status');
   const area = document.getElementById('rs-voice-transcript-area');
   
-  _voiceFinalTranscript = input && input.value ? input.value.trim() + ' ' : '';
-  
+  if (input) {
+    input.dataset.baseText = input.value ? input.value.trim() + ' ' : '';
+  }
   if (status) status.textContent = '';
   if (area && input && !input.value) area.hidden = true;
   
@@ -118,8 +100,8 @@ function toggleVoiceRecording() {
     console.warn("Error al iniciar dictado", e);
   }
 }
+
 function resetRSVoiceView() {
-  _voiceFinalTranscript = '';
   const hint = document.getElementById('rs-voice-hint');
   const input = document.getElementById('rs-voice-input');
   const area = document.getElementById('rs-voice-transcript-area');
