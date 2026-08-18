@@ -328,32 +328,33 @@
     <section id="screen-dashboard" class="screen" aria-label="Dashboard nutricional">
       <header class="screen-header dashboard-header">
         <div class="dashboard-header-top">
-          <div>
+          <div class="dashboard-header-left">
             <h1 class="screen-title">Dashboard</h1>
-            <div class="dash-date-row">
-              <p id="dash-date" class="screen-subtitle"></p>
-              <button id="btn-dash-today" class="btn-dash-today" title="Volver a la fecha actual" style="display: none;">
-                ↺ Volver a Hoy
-              </button>
-            </div>
+            <p id="dash-date" class="screen-subtitle"></p>
           </div>
-          <button id="btn-dash-refresh-ai" class="btn-dash-ai" title="Generar insight con IA" aria-label="Actualizar insight IA">
-            &#10024; Insight IA
+          <button id="btn-dash-today" class="btn-dash-today-pill" title="Volver a la fecha de hoy" aria-label="Volver a hoy">
+            <span class="btn-today-icon">&#8634;</span>
+            <span class="btn-today-lbl">Volver a Hoy</span>
           </button>
         </div>
       </header>
       <div class="dashboard-body">
-        <!-- Calendario Panorámico Semanal / Mensual -->
+        <!-- Calendario Panor?mico Semanal / Mensual -->
         <div class="dash-calendar-card" id="dash-calendar"></div>
 
         <div class="dash-calories-ring" id="dash-calories-ring"></div>
         <div class="dash-macros-bars" id="dash-macros-bars"></div>
         <div class="dash-ai-card" id="dash-ai-card">
           <div class="dash-ai-card-header">
-            <span class="dash-ai-icon">&#129302;</span>
-            <span class="dash-ai-title">Resumen inteligente</span>
+            <div class="dash-ai-title-wrap">
+              <span class="dash-ai-icon">&#129302;</span>
+              <span class="dash-ai-title">Resumen inteligente</span>
+            </div>
+            <button id="btn-dash-refresh-ai" class="btn-dash-ai-action" title="Generar resumen inteligente con IA" aria-label="Generar insight con IA">
+              &#10024; Generar Insight
+            </button>
           </div>
-          <p id="dash-ai-text" class="dash-ai-text">Presiona "&#10024; Insight IA" para obtener un resumen personalizado de tu dia.</p>
+          <p id="dash-ai-text" class="dash-ai-text">Presiona "&#10024; Generar Insight" para obtener un análisis inteligente de tu progreso.</p>
           <div id="dash-ai-loading" class="dash-ai-loading" hidden>
             <span class="ai-typing-dot"></span>
             <span class="ai-typing-dot"></span>

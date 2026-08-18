@@ -66,6 +66,7 @@ function renderDashboardScreen() {
   const btnToday = document.getElementById('btn-dash-today');
   if (btnToday) {
     btnToday.classList.toggle('visible', !isToday);
+    btnToday.style.display = isToday ? 'none' : 'inline-flex';
     btnToday.onclick = () => {
       _dashSelectedDate = todayStr;
       const t = new Date();
@@ -111,7 +112,7 @@ function renderCachedAISummary(dateStr) {
     }
   } catch(e) {}
 
-  textEl.textContent = 'Presiona "\u2728 Generar Insight" para obtener un an\u00E1lisis inteligente de tu d\u00EDa.';
+  textEl.textContent = 'Presiona "\u2728 Generar Insight" para obtener un an\u00E1lisis inteligente de tu progreso.';
 }
 
 async function handleGenerateDailyInsight(dateStr) {
@@ -132,7 +133,7 @@ async function handleGenerateDailyInsight(dateStr) {
   }
 
   if (loadingEl) loadingEl.hidden = false;
-  if (textEl) textEl.textContent = 'NutriBot est\u00E1 analizando tu d\u00EDa...';
+  if (textEl) textEl.textContent = 'NutriBot est\u00E1 analizando tu progreso...';
   if (btnAi) btnAi.disabled = true;
 
   try {
@@ -351,14 +352,14 @@ function createCalendarDayElement(dayNum, dateKey, goalCal, todayStr, selectedDa
 }
 
 // ??????????????????????????????????????????????
-// ANILLO DE CALOR?AS CON NUBES CUTE / MINIMALISTAS
+// ANILLO DE CALOR?AS CON RELIEVE Y NUBES CUTE
 // ??????????????????????????????????????????????
 function renderCaloriesRing(consumed, goal) {
   const container = document.getElementById('dash-calories-ring');
   if (!container) return;
 
-  const SIZE = 136;
-  const R = 52;
+  const SIZE = 142;
+  const R = 54;
   const STROKE = 11;
   const CX = SIZE / 2, CY = SIZE / 2;
   const CIRC = 2 * Math.PI * R;
@@ -368,8 +369,12 @@ function renderCaloriesRing(consumed, goal) {
   const remaining = Math.max(0, goal - consumed);
 
   const shadowColor = pct < 0.5 ? 'rgba(52, 211, 153, 0.35)' : pct < 0.85 ? 'rgba(245, 158, 11, 0.35)' : 'rgba(239, 68, 68, 0.35)';
-  const gradStart = pct < 0.85 ? '#34d399' : '#f59e0b';
-  const gradEnd = pct < 0.85 ? '#60a5fa' : '#ef4444';
+  const gradStart = pct < 0.85 ? '#10b981' : '#f59e0b';
+  const gradEnd = pct < 0.85 ? '#3b82f6' : '#ef4444';
+
+  const glowFilter = pct > 0 
+    ? `filter: drop-shadow(0 6px 14px ${shadowColor});` 
+    : `filter: drop-shadow(0 4px 10px rgba(16, 185, 129, 0.12));`;
 
   container.innerHTML = `
     <div class="dash-ring-hero-stage">
@@ -379,24 +384,33 @@ function renderCaloriesRing(consumed, goal) {
         <span class="cloud-lbl">del objetivo</span>
       </div>
 
-      <!-- Anillo Central -->
+      <!-- Anillo Central Resplandeciente con Pista Suave -->
       <div class="dash-ring-wrap">
-        <svg width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}" style="filter: drop-shadow(0 6px 12px ${shadowColor});">
+        <svg width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}" class="dash-ring-svg" style="${glowFilter}">
           <defs>
             <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
               <stop offset="0%" stop-color="${gradStart}" />
               <stop offset="100%" stop-color="${gradEnd}" />
             </linearGradient>
           </defs>
-          <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="#f3f4f6" stroke-width="${STROKE}" />
-          <circle cx="${CX}" cy="${CY}" r="${R}" fill="none"
-            stroke="url(#ringGrad)"
-            stroke-width="${STROKE}"
-            stroke-linecap="round"
-            stroke-dasharray="${dash} ${gap}"
-            stroke-dashoffset="${CIRC * 0.25}"
-            transform="rotate(-90 ${CX} ${CY})"
-            style="transition: stroke-dasharray 0.7s cubic-bezier(0.34,1.56,0.64,1);" />
+
+          <!-- Halo sutil resplandeciente -->
+          <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="rgba(16, 185, 129, 0.05)" stroke-width="${STROKE + 6}" />
+
+          <!-- Pista base suave y limpia -->
+          <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="#f1f5f9" stroke-width="${STROKE}" stroke-linecap="round" />
+
+          <!-- Arco de progreso con gradiente (inicia en la izquierda y avanza en sentido horario) -->
+          ${consumed > 0 ? `
+            <circle cx="${CX}" cy="${CY}" r="${R}" fill="none"
+              stroke="url(#ringGrad)"
+              stroke-width="${STROKE}"
+              stroke-linecap="round"
+              stroke-dasharray="${dash} ${gap}"
+              stroke-dashoffset="${CIRC * 0.25}"
+              transform="rotate(-90 ${CX} ${CY})"
+              style="transition: stroke-dasharray 0.7s cubic-bezier(0.34,1.56,0.64,1);" />
+          ` : ''}
         </svg>
         <div class="dash-ring-center">
           <span class="dash-ring-val">${consumed.toLocaleString()}</span>
