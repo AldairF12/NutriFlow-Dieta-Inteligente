@@ -1,14 +1,14 @@
 /* ============================================================
-   TARJETAS DE ALIMENTOS LIBRES EN EL DIARIO
+   DIARIO, RECETAS Y DESPENSA (FASE 3 ? TOOLBARS Y VISTAS COMPACTAS)
    ============================================================ */
 
-/* Borde izquierdo coloreado = badge visual según origen */
+/* ?? Tarjetas de alimentos libres en el Diario ?? */
 .card--planned {
-  border-left: 3.5px solid var(--mint-400); /* Verde = del plan */
+  border-left: 3.5px solid #10b981;
 }
 
 .card--extra {
-  border-left: 3.5px solid #f59e0b; /* Ámbar = alimento libre */
+  border-left: 3.5px solid #f59e0b;
 }
 
 .free-entry-badge {
@@ -24,11 +24,10 @@
   letter-spacing: 0.3px;
 }
 
-/* ── Sección de extras en el Diario ── */
 .extras-section-title {
   font-size: 0.78rem;
   font-weight: 700;
-  color: var(--gray-400);
+  color: #9ca3af;
   letter-spacing: 0.4px;
   text-transform: uppercase;
   margin: 16px 0 8px;
@@ -39,22 +38,22 @@
   background: #fff;
   border-radius: 16px;
   padding: 14px 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   border-left: 3.5px solid #f59e0b;
   display: flex;
   align-items: center;
   gap: 12px;
-  animation: cardSlideIn 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+  animation: cardSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 @keyframes cardSlideIn {
   from { opacity: 0; transform: translateY(12px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0)     scale(1); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
 .free-food-info { flex: 1; min-width: 0; }
-.free-food-name { font-size: 0.9rem; font-weight: 700; color: var(--gray-800); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.free-food-meta { font-size: 0.73rem; color: var(--gray-400); margin-top: 3px; }
+.free-food-name { font-size: 0.9rem; font-weight: 700; color: #1f2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.free-food-meta { font-size: 0.73rem; color: #6b7280; margin-top: 3px; }
 
 .free-food-actions {
   display: flex;
@@ -62,57 +61,515 @@
 }
 
 .btn-free-delete {
-  width: 32px; height: 32px;
-  border: none; border-radius: 8px;
-  background: #fee2e2; color: #dc2626;
-  cursor: pointer; font-size: 0.9rem;
-  display: flex; align-items: center; justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: #fee2e2;
+  color: #dc2626;
+  cursor: pointer;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: background 0.15s, transform 0.12s;
 }
 .btn-free-delete:hover  { background: #fecaca; }
 .btn-free-delete:active { transform: scale(0.93); }
 
-/* ── Dashboard: sección Plan vs Extra ── */
-.dash-plan-row {
+/* ??????????????????????????????????????????????
+   HEADER Y TOOLBARS (RECETAS Y DESPENSA)
+   ?????????????????????????????????????????????? */
+.screen-header-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 4px;
 }
 
-.dash-plan-stat {
-  flex: 1;
-  background: #fff;
-  border-radius: 14px;
-  padding: 14px 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+/* Bot?n de toggle de vista compacto (solo icono, sin desborde) */
+.btn-view-toggle {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+  padding: 0;
 }
 
-.dash-plan-stat-val {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: var(--gray-800);
+.btn-view-toggle:hover {
+  background: rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.btn-view-toggle:active {
+  transform: scale(0.92);
+}
+
+.btn-view-icon {
+  font-size: 1.25rem;
   line-height: 1;
 }
 
-.dash-plan-stat-lbl {
-  font-size: 0.72rem;
-  color: var(--gray-400);
-  margin-top: 4px;
+.btn-view-lbl {
+  display: none !important;
 }
 
-.dash-plan-bar-track {
-  height: 6px;
-  background: var(--gray-100);
-  border-radius: 99px;
+/* Toolbars de b?squeda */
+.recipes-toolbar,
+.pantry-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 8px;
+}
+
+.recipes-search-wrap,
+.pantry-search-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.recipes-search-icon,
+.pantry-search-icon {
+  position: absolute;
+  left: 12px;
+  font-size: 0.95rem;
+  color: #9ca3af;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.recipes-search-input,
+.pantry-search-input {
+  width: 100%;
+  padding: 10px 14px 10px 38px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  font-size: 0.88rem;
+  color: #1f2937;
+  outline: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+}
+
+.recipes-search-input:focus,
+.pantry-search-input:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.btn-pantry-filter {
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+  color: #4b5563;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+}
+
+.btn-pantry-filter:hover {
+  background: #f9fafb;
+}
+
+.btn-pantry-filter.active {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #059669;
+  font-weight: 700;
+}
+
+/* ??????????????????????????????????????????????
+   LISTA COMPACTA DE RECETAS (CON HERENCIA DE COLORES)
+   ?????????????????????????????????????????????? */
+.recipes-compact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 0 16px;
+  width: 100%;
+}
+
+.recipe-compact-item {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+}
+
+.recipe-compact-item:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+}
+
+/* Estado: Disponible (Verde) */
+.recipe-compact-item.can-cook {
+  border-left: 4px solid #10b981;
+}
+
+/* Estado: Faltan Ingredientes (Amarillo / ?mbar) */
+.recipe-compact-item.needs-buy {
+  border-left: 4px solid #f59e0b;
+  background: #fffdf5;
+}
+
+/* Estado: Ya Registrada (Verde Intenso) */
+.recipe-compact-item.registered {
+  border-left: 4px solid #059669;
+  background: #f0fdf4;
+}
+
+.recipe-compact-emoji {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.35rem;
+  flex-shrink: 0;
+}
+
+.recipe-compact-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recipe-compact-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #111827;
+  white-space: nowrap;
   overflow: hidden;
-  margin-top: 8px;
+  text-overflow: ellipsis;
 }
 
-.dash-plan-bar-fill {
-  height: 100%;
-  border-radius: 99px;
-  background: var(--mint-400);
-  transition: width 0.7s cubic-bezier(0.34,1.56,0.64,1);
+.recipe-compact-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
+.compact-chip {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  line-height: 1.2;
+}
+
+.chip-cal {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.chip-stock-ok {
+  background: #dcfce7;
+  color: #15803d;
+  font-weight: 700;
+}
+
+.chip-stock-miss {
+  background: #fef3c7;
+  color: #b45309;
+  font-weight: 700;
+}
+
+.recipe-compact-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.btn-compact-log {
+  border: none;
+  padding: 7px 12px;
+  border-radius: 10px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-compact-log.btn-can-cook {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.btn-compact-log.btn-can-cook:hover {
+  background: #059669;
+  transform: scale(1.02);
+}
+
+.btn-compact-log.btn-needs-buy {
+  background: #f59e0b;
+  color: #ffffff;
+}
+
+.btn-compact-log.btn-needs-buy:hover {
+  background: #d97706;
+  transform: scale(1.02);
+}
+
+.btn-compact-log.registered {
+  background: #059669;
+  color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.3);
+}
+
+.btn-compact-del {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: #fee2e2;
+  color: #dc2626;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: bold;
+  transition: all 0.15s ease;
+}
+
+.btn-compact-del:hover {
+  background: #fecaca;
+  transform: scale(1.08);
+}
+
+.btn-compact-del:active {
+  transform: scale(0.92);
+}
+
+/* Bot?n de eliminar en Tarjetas de Receta */
+.btn-delete-recipe {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.06);
+  border: none;
+  color: #ef4444;
+  font-size: 1rem;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: all 0.2s ease;
+  z-index: 5;
+}
+
+.btn-delete-recipe:hover {
+  opacity: 1;
+  background: #fee2e2;
+  transform: scale(1.1);
+}
+
+/* ??????????????????????????????????????????????
+   DESPENSA (LISTA Y CARDS)
+   ?????????????????????????????????????????????? */
+.pantry-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 0 16px 24px;
+}
+
+.pantry-item {
+  display: flex;
+  align-items: center;
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 12px 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.pantry-emoji-art {
+  font-size: 1.5rem;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-right: 12px;
+}
+
+.pantry-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.pantry-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pantry-category {
+  font-size: 0.74rem;
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.pantry-cal {
+  font-size: 0.68rem;
+  color: #9ca3af;
+}
+
+.pantry-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.pantry-qty {
+  font-size: 0.84rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
+  min-width: 56px;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.qty-ok {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.qty-low {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.qty-zero {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.pantry-btns {
+  display: flex;
+  gap: 4px;
+}
+
+.btn-qty {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #374151;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-qty:hover {
+  background: #10b981;
+  color: #ffffff;
+  border-color: #10b981;
+  transform: scale(1.05);
+}
+
+.btn-qty:active {
+  transform: scale(0.95);
+}
+
+/* Modo Tarjetas en Despensa */
+.pantry-list.view-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+  gap: 12px;
+  padding: 0 16px 24px;
+}
+
+.pantry-list.view-cards .pantry-item {
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 16px 10px;
+}
+
+.pantry-list.view-cards .pantry-emoji-art {
+  margin: 0 0 8px 0;
+  width: 48px;
+  height: 48px;
+  font-size: 1.8rem;
+}
+
+.pantry-list.view-cards .pantry-info {
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.pantry-list.view-cards .pantry-name {
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.pantry-list.view-cards .pantry-controls {
+  flex-direction: column;
+  width: 100%;
+  gap: 8px;
+}
+
+.pantry-list.view-cards .pantry-btns {
+  justify-content: center;
+  width: 100%;
+}

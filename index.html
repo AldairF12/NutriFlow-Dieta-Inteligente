@@ -89,16 +89,37 @@
 
     <section id="screen-recipes" class="screen" aria-label="Catalogo de recetas">
       <header class="screen-header-simple">
-        <h1 class="screen-title">Recetas</h1>
-        <p class="screen-subtitle">Tu catalogo de comidas saludables</p>
+        <div class="screen-header-row">
+          <div>
+            <h1 class="screen-title">Recetas</h1>
+            <p class="screen-subtitle">Tu catálogo de comidas saludables</p>
+          </div>
+          <button id="btn-recipes-view" class="btn-view-toggle" title="Alternar vista tarjetas/lista" aria-label="Alternar vista de recetas">
+            <span class="btn-view-icon">&#128196;</span>
+          </button>
+        </div>
       </header>
+      <div class="recipes-toolbar">
+        <div class="recipes-search-wrap">
+          <span class="recipes-search-icon">&#128269;</span>
+          <input id="recipes-search" type="search" class="recipes-search-input" placeholder="Buscar receta o ingrediente..."
+            autocomplete="off" aria-label="Buscar receta" />
+        </div>
+      </div>
       <div id="recipes-list" role="list" aria-label="Lista de recetas por tipo de comida"></div>
     </section>
 
     <section id="screen-pantry" class="screen" aria-label="Gestion de despensa">
       <header class="screen-header-simple">
-        <h1 class="screen-title">Despensa</h1>
-        <p class="screen-subtitle">Controla tus ingredientes disponibles</p>
+        <div class="screen-header-row">
+          <div>
+            <h1 class="screen-title">Despensa</h1>
+            <p class="screen-subtitle">Controla tus ingredientes disponibles</p>
+          </div>
+          <button id="btn-pantry-view" class="btn-view-toggle" title="Alternar vista tarjetas/lista" aria-label="Alternar vista de despensa">
+            <span class="btn-view-icon">&#128444;&#65039;</span>
+          </button>
+        </div>
       </header>
       <div class="pantry-toolbar">
         <div class="pantry-search-wrap">
@@ -309,7 +330,12 @@
         <div class="dashboard-header-top">
           <div>
             <h1 class="screen-title">Dashboard</h1>
-            <p id="dash-date" class="screen-subtitle"></p>
+            <div class="dash-date-row">
+              <p id="dash-date" class="screen-subtitle"></p>
+              <button id="btn-dash-today" class="btn-dash-today" title="Volver a la fecha actual" style="display: none;">
+                ↺ Volver a Hoy
+              </button>
+            </div>
           </div>
           <button id="btn-dash-refresh-ai" class="btn-dash-ai" title="Generar insight con IA" aria-label="Actualizar insight IA">
             &#10024; Insight IA
@@ -317,6 +343,9 @@
         </div>
       </header>
       <div class="dashboard-body">
+        <!-- Calendario Panorámico Semanal / Mensual -->
+        <div class="dash-calendar-card" id="dash-calendar"></div>
+
         <div class="dash-calories-ring" id="dash-calories-ring"></div>
         <div class="dash-macros-bars" id="dash-macros-bars"></div>
         <div class="dash-ai-card" id="dash-ai-card">
@@ -332,7 +361,7 @@
           </div>
         </div>
         <div class="dash-timeline" id="dash-timeline">
-          <h2 class="dash-section-title">&#128203; Comidas de hoy</h2>
+          <h2 class="dash-section-title" id="dash-timeline-title">&#128203; Comidas del d&#237;a</h2>
           <div id="dash-timeline-list" class="dash-timeline-list"></div>
         </div>
       </div>
