@@ -1,5 +1,5 @@
 // ============================================================
-// ai.js — Módulo de integración con Gemini API
+// ai.js \u2014 M\u00f3dulo de integraci\u00f3n con Gemini API
 // Depende de: db.js, calc.js
 // ============================================================
 
@@ -8,9 +8,9 @@ const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models
 
 const AI = {
 
-  // ──────────────────────────────────────────────
-  // CONFIGURACIÓN
-  // ──────────────────────────────────────────────
+  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // CONFIGURACI\u00d3N
+  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
   getKey() {
     return (DB.userPreferences.gemini_api_key || '').trim();
@@ -20,9 +20,9 @@ const AI = {
     return this.getKey().length > 10;
   },
 
-  // ──────────────────────────────────────────────
+  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   // LLAMADA BASE A LA API
-  // ──────────────────────────────────────────────
+  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
   async _call(prompt) {
     const key = this.getKey();
@@ -49,14 +49,14 @@ const AI = {
     return data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
   },
 
-  // ──────────────────────────────────────────────
-  // INFORMACIÓN NUTRICIONAL DE UN ALIMENTO
-  // ──────────────────────────────────────────────
+  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // INFORMACI\u00d3N NUTRICIONAL DE UN ALIMENTO
+  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
   /**
-   * Busca primero en la BD local. Si no está, consulta a Gemini,
+   * Busca primero en la BD local. Si no est\u00e1, consulta a Gemini,
    * guarda el resultado y lo devuelve.
-   * @param {string} foodName — nombre del alimento a buscar
+   * @param {string} foodName \u2014 nombre del alimento a buscar
    * @returns {{ item, fromCache: boolean }}
    */
   async fetchNutritionInfo(foodName) {
@@ -71,52 +71,52 @@ const AI = {
     if (localIngredient) return { item: localIngredient, fromCache: true };
 
     // 3. Consultar Gemini
-    const prompt = `Devuelve SOLO un objeto JSON válido (sin markdown, sin texto adicional, sin bloques de código) con la información nutricional de "${foodName}" por cada 100 gramos. Usa exactamente este esquema:
+    const prompt = `Devuelve SOLO un objeto JSON v\u00e1lido (sin markdown, sin texto adicional, sin bloques de c\u00f3digo) con la informaci\u00f3n nutricional de "${foodName}" por cada 100 gramos. Usa exactamente este esquema:
 {
-  "name": "nombre oficial del alimento en español",
-  "category": "una de: Proteína, Carbohidrato, Verdura, Fruta, Grasa, Lácteo, Snack, Bebida, Otro",
-  "calories_per_100g": número entero,
-  "protein_per_100g": número decimal con un decimal,
-  "carbs_per_100g": número decimal con un decimal,
-  "fat_per_100g": número decimal con un decimal,
-  "typical_serving_g": número entero (porción típica en gramos)
+  "name": "nombre oficial del alimento en espa\u00f1ol",
+  "category": "una de: Prote\u00edna, Carbohidrato, Verdura, Fruta, Grasa, L\u00e1cteo, Snack, Bebida, Otro",
+  "calories_per_100g": n\u00famero entero,
+  "protein_per_100g": n\u00famero decimal con un decimal,
+  "carbs_per_100g": n\u00famero decimal con un decimal,
+  "fat_per_100g": n\u00famero decimal con un decimal,
+  "typical_serving_g": n\u00famero entero (porci\u00f3n t\u00edpica en gramos)
 }`;
 
     const raw = await this._call(prompt);
 
-    console.log("============== 🤖 RESPUESTA CRUDA DE GEMINI ==============");
+    console.log("============== \u{1f916} RESPUESTA CRUDA DE GEMINI ==============");
     console.log(raw);
     console.log("==========================================================");
 
-    // Limpiar la respuesta por si Gemini añade markdown
+    // Limpiar la respuesta por si Gemini a\u00f1ade markdown
     const cleaned = raw.replace(/```json|```/g, '').trim();
     let parsed;
     try {
       parsed = JSON.parse(cleaned);
     } catch {
-      throw new Error('Gemini devolvió un formato inesperado. Intenta con otro nombre.');
+      throw new Error('Gemini devolvi\u00f3 un formato inesperado. Intenta con otro nombre.');
     }
 
     // 4. Devolver objeto temporal (no se guarda en DB hasta que el usuario confirme)
     return { item: { ...parsed, _isTemp: true, source: 'gemini' }, fromCache: false };
   },
 
-  // ──────────────────────────────────────────────
+  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   // REGISTRO POR VOZ
-  // ──────────────────────────────────────────────
+  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
   /**
    * Extrae el nombre del alimento y la cantidad en gramos de un texto natural.
-   * @param {string} transcript - Ej. "me comí doscientos gramos de pollo asado"
+   * @param {string} transcript - Ej. "me com\u00ed doscientos gramos de pollo asado"
    * @returns {Promise<{food_name: string, quantity_g: number}>}
    */
   async parseVoiceInput(transcript) {
     const prompt = `Extrae el alimento y la cantidad en gramos del siguiente texto. 
-Devuelve SOLO un objeto JSON válido (NUNCA un array, sin texto adicional) con esta estructura exacta. Si hay varios alimentos, únelos en un solo nombre (ej. "huevos con pan"):
+Devuelve SOLO un objeto JSON v\u00e1lido (NUNCA un array, sin texto adicional) con esta estructura exacta. Si hay varios alimentos, \u00fanelos en un solo nombre (ej. "huevos con pan"):
 {
-  "food_name": "nombre del alimento o combinación (MANTÉN modificadores importantes como 'sin azúcar', 'frito', 'light', etc.)",
-  "quantity_g": numero entero en gramos (SI el usuario NO especifica una cantidad exacta ni un peso, devuelve null. NO intentes adivinar ni estimar la porción aquí),
-  "meal_type": "Desayuno" | "Almuerzo" | "Cena" | "Merienda" | "Snack" (Infiere por el contexto como "cené", "almorcé". Usa "Snack" si no es claro)
+  "food_name": "nombre del alimento o combinaci\u00f3n (MANT\u00c9N modificadores importantes como 'sin az\u00facar', 'frito', 'light', etc.)",
+  "quantity_g": numero entero en gramos (SI el usuario NO especifica una cantidad exacta ni un peso, devuelve null. NO intentes adivinar ni estimar la porci\u00f3n aqu\u00ed),
+  "meal_type": "Desayuno" | "Almuerzo" | "Cena" | "Merienda" | "Snack" (Infiere por el contexto como "cen\u00e9", "almorc\u00e9". Usa "Snack" si no es claro)
 }
 
 Texto del usuario: "${transcript}"`;
@@ -124,7 +124,7 @@ Texto del usuario: "${transcript}"`;
     const raw = await this._call(prompt);
     const cleaned = raw.replace(/```json|```/g, '').trim();
 
-    console.log("============== 🤖 RESPUESTA CRUDA DE GEMINI ==============");
+    console.log("============== \u{1f916} RESPUESTA CRUDA DE GEMINI ==============");
     console.log(raw);
     console.log("==========================================================");
     
@@ -138,7 +138,7 @@ Texto del usuario: "${transcript}"`;
             meal_type: result[0].meal_type || 'Snack'
           };
         } else {
-          throw new Error('Array vacío');
+          throw new Error('Array vac\u00edo');
         }
       }
       return result;
@@ -147,9 +147,9 @@ Texto del usuario: "${transcript}"`;
     }
   },
 
-  // ──────────────────────────────────────────────
+  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   // ASISTENTE NUTRICIONAL (CHAT)
-  // ──────────────────────────────────────────────
+  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
   /**
    * Pregunta al asistente usando la memoria conversacional y el modo de contexto.
@@ -221,85 +221,101 @@ CONTEXTO ACTUAL DEL USUARIO HOY (${new Date().toLocaleDateString('es-ES')}):
 - Adherencia al plan: ${adherencia}%
 `;
     } else {
-      contextBlock = `\nCONTEXTO: El usuario no ha proporcionado contexto de su progreso para esta pregunta, respóndela de manera general.\n`;
+      contextBlock = `\nCONTEXTO: El usuario no ha proporcionado contexto de su progreso para esta pregunta, resp\u00f3ndela de manera general.\n`;
     }
 
     // Formatear historial
-    // Solo tomar los últimos 6 mensajes para no sobrecargar el token limit
+    // Solo tomar los \u00faltimos 6 mensajes para no sobrecargar el token limit
     const recentHistory = chatHistory.slice(-6).map(msg => {
       const name = msg.role === 'user' ? 'Usuario' : 'NutriBot';
       return `${name}: ${msg.text}`;
     }).join('\n\n');
 
-    const prompt = `Eres NutriBot, un asistente nutricional experto, amigable y práctico. Responde SIEMPRE en español. 
+    const prompt = `Eres NutriBot, un asistente nutricional experto, amigable y pr\u00e1ctico. Responde SIEMPRE en espa\u00f1ol. 
 
-REGLAS DE INTERACCIÓN:
+REGLAS DE INTERACCI\u00d3N:
 - Usa emojis de forma equilibrada para hacer la charla amena, sin saturar.
-- NO saludes en cada mensaje ("Hola", "Qué tal"). Ve directo al punto para mantener la fluidez de la conversación.
-- Limita tus respuestas a máximo 180 palabras para que sean rápidas de leer.
+- NO saludes en cada mensaje ("Hola", "Qu\u00e9 tal"). Ve directo al punto para mantener la fluidez de la conversaci\u00f3n.
+- Limita tus respuestas a m\u00e1ximo 180 palabras para que sean r\u00e1pidas de leer.
 - Puedes usar markdown para negritas (**texto**) y listas (* o -).
 
 ${contextBlock}
-HISTORIAL DE CONVERSACIÓN RECIENTE:
+HISTORIAL DE CONVERSACI\u00d3N RECIENTE:
 ${recentHistory || 'No hay mensajes previos.'}
 
 NUEVO MENSAJE DEL USUARIO: ${userMessage}
 
-Responde directamente al nuevo mensaje del usuario tomando en cuenta el historial para dar continuidad a la conversación.`;
+Responde directamente al nuevo mensaje del usuario tomando en cuenta el historial para dar continuidad a la conversaci\u00f3n.`;
 
     return await this._call(prompt);
   },
 
-  // ──────────────────────────────────────────────
+  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
   // INSIGHT DIARIO PARA EL DASHBOARD
-  // ──────────────────────────────────────────────
+  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
   /**
-   * Genera un resumen motivador del día para el Dashboard.
+   * Genera un resumen motivador del d\u00eda para el Dashboard.
    * @returns {string}
    */
-  async getDailySummary() {
-    const consumed = getDailyMacroSummary();
-    const goals = DB.userPreferences.goals || { calories: 2000, protein: 150, carbs: 220, fat: 65 };
-    const { plan, extra } = getPlanVsExtraSummary();
+    async getDailySummary(dateStr) {
+    const todayIso = (typeof getDashTodayIso === 'function') ? getDashTodayIso() : new Date().toISOString().slice(0, 10);
+    const targetDate = dateStr || todayIso;
+    const isToday = (targetDate === todayIso);
 
-    const todayLogs = DB.getTodayLogs();
-    const todayMeals = todayLogs
+    const consumed = (typeof getDailyMacroSummary === 'function') ? getDailyMacroSummary(targetDate) : { calories: 0, protein: 0, carbs: 0, fat: 0 };
+    const prefs = (window.DB && window.DB.userPreferences) ? window.DB.userPreferences : {};
+    const goals = prefs.goals || { calories: 2000, protein: 150, carbs: 220, fat: 65 };
+    const { plan, extra } = (typeof getPlanVsExtraSummary === 'function') ? getPlanVsExtraSummary(targetDate) : { plan: { calories: 0, entries: 0 }, extra: { calories: 0, entries: 0 } };
+
+    const logs = (window.DB && typeof window.DB.getLogsByDate === 'function')
+      ? window.DB.getLogsByDate(targetDate)
+      : (window.DB && typeof window.DB.getTodayLogs === 'function') ? window.DB.getTodayLogs() : [];
+
+    const meals = logs
       .filter(l => l.type === 'meal')
-      .map(l => DB.getRecipeById(l.reference_id)?.name)
+      .map(l => window.DB.getRecipeById(l.reference_id)?.name)
       .filter(Boolean);
 
-    const todayExtras = todayLogs
+    const extras = logs
       .filter(l => l.type === 'food_item')
-      .map(l => {
-        const fi = DB.getFoodItemById(l.reference_id);
-        return fi ? fi.name : null;
-      })
+      .map(l => window.DB.getFoodItemById(l.reference_id)?.name)
       .filter(Boolean);
 
-    if (todayMeals.length === 0 && consumed.calories === 0) {
-      return 'Empieza tu dia! Registra tu primera comida para ver tu progreso aqui.';
+    if (meals.length === 0 && extras.length === 0 && consumed.calories === 0) {
+      return isToday 
+        ? '¡Empieza tu día! Registra tus comidas o agua para generar un análisis inteligente.'
+        : 'No hay registros de comidas o hidratación en esta fecha histórica.';
     }
 
-    const calPct = Math.round((consumed.calories / goals.calories) * 100);
-    const protPct = Math.round((consumed.protein / goals.protein) * 100);
-    const hour = new Date().getHours();
+    const calPct = Math.round((consumed.calories / (goals.calories || 2000)) * 100);
+    const protPct = Math.round((consumed.protein / (goals.protein || 150)) * 100);
     const totalConsumed = plan.calories + extra.calories;
-    const adherencia = totalConsumed > 0 ? Math.round((plan.calories / totalConsumed) * 100) : 0;
+    const adherencia = totalConsumed > 0 ? Math.round((plan.calories / totalConsumed) * 100) : 100;
 
-    const prompt = `Eres un asistente nutricional. Genera UN SOLO parrafo de maximo 80 palabras en español, motivador y especifico, que interprete el progreso del usuario. No repitas los numeros exactos que ya ve en pantalla; agrega valor con una recomendacion concreta segun la hora y su adherencia al plan.
+    const prompt = `Eres un asistente nutricional empático y experto. Genera UN SOLO párrafo de máximo 75 palabras en español, motivador y conciso, que evalúe el día (${targetDate}) del usuario. No repitas mecánicamente los números que ya ve en pantalla; enfócate en su balance de proteína y adherencia, y da un consejo práctico y positivo.
 
-Hora: ${hour}:00h
-Calorias: ${consumed.calories}/${goals.calories} (${calPct}%)
-Proteina: ${consumed.protein}g/${goals.protein}g (${protPct}%)
+Fecha: ${targetDate} (${isToday ? 'Hoy' : 'Día Histórico'})
+Calorías: ${consumed.calories}/${goals.calories} (${calPct}%)
+Proteína: ${consumed.protein}g/${goals.protein}g (${protPct}%)
 Del plan: ${plan.calories} kcal (${plan.entries} comidas)
 Extras: ${extra.calories} kcal (${extra.entries} registros)
 Adherencia al plan: ${adherencia}%
-Comidas del plan: ${todayMeals.join(', ') || 'ninguna aun'}
-Extras registrados: ${todayExtras.join(', ') || 'ninguno'}
+Comidas: ${meals.join(', ') || 'ninguna'}
+Extras: ${extras.join(', ') || 'ninguno'}
 
-Parrafo:`;
+Párrafo:`;
 
-    return await this._call(prompt);
+    const summaryText = await this._call(prompt);
+    
+    // Persistir el resumen generado por fecha en localStorage
+    try {
+      localStorage.setItem('nutriflow_ai_summary_' + targetDate, JSON.stringify({
+        text: summaryText,
+        timestamp: Date.now()
+      }));
+    } catch(e) {}
+
+    return summaryText;
   }
 };

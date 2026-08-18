@@ -14,21 +14,22 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-height: 52px;
+}
+
+.dashboard-header-left {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .dashboard-header .screen-title {
   color: #fff;
   font-size: 1.5rem;
   font-weight: 800;
-  margin: 0 0 4px;
+  margin: 0 0 2px;
   letter-spacing: -0.02em;
-}
-
-.dash-date-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  line-height: 1.15;
 }
 
 .dashboard-header .screen-subtitle {
@@ -37,78 +38,75 @@
   margin: 0;
   font-weight: 500;
   text-transform: capitalize;
-}
-
-/* Bot?n Insight IA en cabecera */
-.btn-dash-ai {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: rgba(255, 255, 255, 0.22);
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  color: #ffffff;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 0.84rem;
-  font-weight: 700;
-  cursor: pointer;
-  backdrop-filter: blur(10px);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.btn-dash-ai:hover {
-  background: rgba(255, 255, 255, 0.35);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
-}
-
-.btn-dash-ai:active {
-  transform: scale(0.96);
-}
-
-/* Bot?n Volver a Hoy */
-.btn-dash-today {
+/* Bot?n Volver a Hoy en cabecera: estilo p?ldora/c?rculo compacto */
+.btn-dash-today-pill {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  background: rgba(255, 255, 255, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  color: #fff;
-  padding: 3px 10px;
-  border-radius: 12px;
-  font-size: 0.75rem;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.26);
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 14px;
+  font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
   backdrop-filter: blur(8px);
-  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.85);
+  transition: opacity 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+              background 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-.btn-dash-today:hover {
+.btn-dash-today-pill.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
+.btn-dash-today-pill:hover {
   background: rgba(255, 255, 255, 0.4);
+  transform: scale(1.05);
 }
 
-/* ??????????????????????????????????????????????
-   CUERPO Y TARJETAS DEL DASHBOARD
-   ?????????????????????????????????????????????? */
+.btn-dash-today-pill:active {
+  transform: scale(0.94);
+}
+
+.btn-today-icon {
+  font-size: 0.95rem;
+  line-height: 1;
+}
+
 .dashboard-body {
-  padding: 16px 16px 32px;
+  padding: 16px 16px 24px;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
+/* ??????????????????????????????????????????????
+   TARJETAS DEL DASHBOARD
+   ?????????????????????????????????????????????? */
 .dash-calendar-card,
 .dash-calories-ring,
 .dash-macros-bars,
-.dash-plan-vs-extra-section,
 .dash-ai-card,
-.dash-timeline-section {
+.dash-timeline {
   background: #ffffff;
   border-radius: 20px;
-  padding: 18px 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+  padding: 18px 18px 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.03);
   border: 1px solid rgba(0, 0, 0, 0.04);
 }
 
@@ -142,21 +140,21 @@
 .dash-cal-mode-pills {
   display: flex;
   background: #f3f4f6;
-  border-radius: 12px;
   padding: 3px;
+  border-radius: 12px;
   gap: 2px;
 }
 
 .cal-mode-btn {
   border: none;
   background: transparent;
-  padding: 5px 14px;
+  padding: 5px 12px;
   border-radius: 9px;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-weight: 600;
   color: #6b7280;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .cal-mode-btn.active {
@@ -170,32 +168,37 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 6px 12px;
+  margin-bottom: 14px;
+  background: #f9fafb;
+  padding: 8px 12px;
+  border-radius: 14px;
 }
 
 .dash-cal-nav-btn {
-  background: #f3f4f6;
-  border: none;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  color: #4b5563;
   width: 32px;
   height: 32px;
-  border-radius: 50%;
+  border-radius: 10px;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  color: #4b5563;
-  font-size: 0.85rem;
-  transition: all 0.2s ease;
+  font-size: 0.75rem;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .dash-cal-nav-btn:hover {
-  background: #e5e7eb;
-  color: #111827;
+  background: #10b981;
+  color: #ffffff;
+  border-color: #10b981;
   transform: scale(1.05);
 }
 
 .dash-cal-nav-btn:active {
-  transform: scale(0.95);
+  transform: scale(0.92);
 }
 
 .dash-cal-nav-lbl {
@@ -207,6 +210,7 @@
 
 .dash-cal-grid-wrap {
   margin-bottom: 12px;
+  overflow: hidden;
 }
 
 .dash-cal-weekdays {
@@ -223,6 +227,27 @@
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 6px;
+  transition: transform 0.24s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.24s ease;
+  will-change: transform, opacity;
+}
+
+/* Animaciones de deslizamiento horizontal suave */
+.dash-cal-grid.cal-slide-right {
+  animation: calSlideRight 0.26s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+.dash-cal-grid.cal-slide-left {
+  animation: calSlideLeft 0.26s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+}
+
+@keyframes calSlideRight {
+  from { opacity: 0.2; transform: translateX(18px); }
+  to   { opacity: 1;   transform: translateX(0); }
+}
+
+@keyframes calSlideLeft {
+  from { opacity: 0.2; transform: translateX(-18px); }
+  to   { opacity: 1;   transform: translateX(0); }
 }
 
 .cal-day {
@@ -289,35 +314,15 @@
 }
 
 .cal-dot {
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
   transition: all 0.2s ease;
 }
 
-.dot-green {
-  background: #10b981;
-  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
-}
-
-.dot-yellow {
-  background: #f59e0b;
-  box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
-}
-
-.dot-none {
-  background: #e5e7eb;
-}
-
-/* Modo Semana */
-.grid-week-mode {
-  gap: 8px;
-}
-
-.grid-week-mode .cal-day {
-  min-height: 64px;
-  padding: 6px 2px;
-}
+.dot-green  { background: #10b981; box-shadow: 0 0 6px rgba(16, 185, 129, 0.5); }
+.dot-yellow { background: #f59e0b; box-shadow: 0 0 6px rgba(245, 158, 11, 0.4); }
+.dot-none   { background: #e5e7eb; }
 
 .cal-week-kcal {
   font-size: 0.65rem;
@@ -326,7 +331,6 @@
   margin-top: 3px;
 }
 
-/* Leyenda */
 .dash-cal-legend {
   display: flex;
   align-items: center;
@@ -346,16 +350,27 @@
 }
 
 /* ??????????????????????????????????????????????
-   ANILLO DE CALOR?AS
+   ANILLO DE CALOR?AS CON NUBES CUTE / MINIMALISTAS
    ?????????????????????????????????????????????? */
+.dash-ring-hero-stage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 2px 8px;
+  width: 100%;
+  position: relative;
+}
+
 .dash-ring-wrap {
   position: relative;
-  width: 140px;
-  height: 140px;
-  margin: 0 auto 16px;
+  width: 136px;
+  height: 136px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+  z-index: 2;
 }
 
 .dash-ring-center {
@@ -368,48 +383,110 @@
 }
 
 .dash-ring-val {
-  font-size: 1.5rem;
+  font-size: 1.48rem;
   font-weight: 800;
   color: #111827;
   line-height: 1;
 }
 
 .dash-ring-unit {
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.72rem;
+  font-weight: 700;
   color: #6b7280;
   margin-top: 1px;
 }
 
 .dash-ring-goal {
-  font-size: 0.72rem;
+  font-size: 0.68rem;
   color: #9ca3af;
 }
 
-.dash-ring-labels {
-  display: flex;
-  justify-content: space-around;
-  padding: 12px 0;
-  background: #f9fafb;
-  border-radius: 14px;
-}
-
-.dash-ring-label-item {
+/* Nubes Cute Minimalistas con Puffs Org?nicos */
+.dash-cloud-cute {
+  position: relative;
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 14px 12px 12px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
+  text-align: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  flex: 1;
+  min-width: 0;
+  will-change: transform;
+  z-index: 1;
 }
 
-.dash-ring-pct {
-  font-size: 1.15rem;
+/* Burbujitas superiores que forman la silueta de nube */
+.dash-cloud-cute::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 22%;
+  width: 24px;
+  height: 24px;
+  background: inherit;
+  border-radius: 50%;
+  border-top: inherit;
+  border-left: inherit;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.dash-cloud-cute::after {
+  content: '';
+  position: absolute;
+  top: -12px;
+  right: 22%;
+  width: 28px;
+  height: 28px;
+  background: inherit;
+  border-radius: 50%;
+  border-top: inherit;
+  border-right: inherit;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.cloud-left {
+  animation: floatCloudLeft 3.4s ease-in-out infinite;
+  border: 1.5px solid #a7f3d0;
+  background: linear-gradient(180deg, #ffffff 30%, #f0fdf4 100%);
+}
+
+.cloud-right {
+  animation: floatCloudRight 3.8s ease-in-out infinite 0.4s;
+  border: 1.5px solid #fde68a;
+  background: linear-gradient(180deg, #ffffff 30%, #fffbeb 100%);
+}
+
+@keyframes floatCloudLeft {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+@keyframes floatCloudRight {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
+
+.cloud-val {
+  font-size: 1.25rem;
   font-weight: 800;
-  color: #111827;
+  color: #0f172a;
+  line-height: 1.1;
+  letter-spacing: -0.5px;
+  white-space: nowrap;
 }
 
-.dash-ring-lbl {
-  font-size: 0.72rem;
-  color: #6b7280;
-  font-weight: 500;
+.cloud-lbl {
+  font-size: 0.68rem;
+  color: #64748b;
+  font-weight: 600;
+  margin-top: 3px;
+  white-space: nowrap;
 }
 
 /* ??????????????????????????????????????????????
@@ -419,14 +496,11 @@
   font-size: 1.05rem;
   font-weight: 700;
   color: #1f2937;
-  margin: 0 0 16px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  margin: 0 0 14px;
 }
 
 .dash-macro-bar-row {
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .dash-macro-bar-row:last-child {
@@ -437,17 +511,18 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
-  font-size: 0.84rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #374151;
+  margin-bottom: 5px;
 }
 
 .dash-macro-bar-icon {
   margin-right: 6px;
+  font-size: 0.95rem;
 }
 
 .dash-macro-bar-label {
-  font-weight: 600;
-  color: #374151;
   flex: 1;
 }
 
@@ -457,255 +532,264 @@
 }
 
 .dash-macro-bar-goal {
-  font-size: 0.75rem;
-  font-weight: 400;
   color: #9ca3af;
+  font-weight: 500;
 }
 
 .dash-macro-bar-track {
+  width: 100%;
   height: 8px;
   background: #f3f4f6;
-  border-radius: 8px;
+  border-radius: 99px;
   overflow: hidden;
-  position: relative;
 }
 
 .dash-macro-bar-fill {
   height: 100%;
-  border-radius: 8px;
+  border-radius: 99px;
   transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.dash-macro-bar-pct {
-  display: none;
 }
 
 /* ??????????????????????????????????????????????
    PLAN VS EXTRAS
    ?????????????????????????????????????????????? */
-.dash-section-title {
-  font-size: 1.05rem;
+.plan-extra-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.plan-extra-title {
+  font-size: 0.95rem;
   font-weight: 700;
   color: #1f2937;
-  margin: 0 0 12px;
+}
+
+.plan-extra-badge {
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 8px;
+}
+
+.adherence-high { background: #dcfce7; color: #15803d; }
+.adherence-low  { background: #fef3c7; color: #b45309; }
+
+.plan-extra-bar {
   display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.dash-pve-cards {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.dash-pve-card {
-  background: #f9fafb;
-  border-radius: 16px;
-  padding: 14px;
-  border: 1px solid rgba(0, 0, 0, 0.04);
-  display: flex;
-  flex-direction: column;
-}
-
-.dash-pve-icon {
-  font-size: 1.2rem;
-  margin-bottom: 6px;
-}
-
-.dash-pve-val {
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: #111827;
-}
-
-.dash-pve-unit {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: #6b7280;
-}
-
-.dash-pve-lbl {
-  font-size: 0.72rem;
-  color: #6b7280;
-  margin: 2px 0 10px;
-}
-
-.dash-pve-bar-track {
-  height: 6px;
-  background: #e5e7eb;
-  border-radius: 6px;
+  height: 10px;
+  background: #f3f4f6;
+  border-radius: 99px;
   overflow: hidden;
-  margin-bottom: 6px;
+  margin-bottom: 10px;
 }
 
-.dash-pve-bar-fill {
-  height: 100%;
-  border-radius: 6px;
-  transition: width 0.5s ease;
-}
-
-.dash-pve-bar--plan {
+.plan-extra-fill-plan {
   background: #10b981;
+  transition: width 0.6s ease;
 }
 
-.dash-pve-bar--extra {
+.plan-extra-fill-extra {
   background: #f59e0b;
+  transition: width 0.6s ease;
 }
 
-.dash-pve-pct {
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: #9ca3af;
+.plan-extra-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.76rem;
+  color: #6b7280;
 }
 
-.dash-pve-compliance {
-  background: #f9fafb;
-  border-radius: 14px;
-  padding: 12px 14px;
+.plan-extra-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 5px;
 }
 
-.dash-pve-compliance-lbl {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #374151;
-  white-space: nowrap;
+.plan-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
 }
 
-.dash-pve-compliance-bar-track {
-  flex: 1;
-  height: 8px;
-  background: #e5e7eb;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.dash-pve-compliance-bar {
-  height: 100%;
-  background: linear-gradient(90deg, #10b981, #059669);
-  border-radius: 8px;
-  transition: width 0.5s ease;
-}
-
-.dash-pve-compliance-pct {
-  font-size: 0.85rem;
-  font-weight: 800;
-}
+.dot-plan  { background: #10b981; }
+.dot-extra { background: #f59e0b; }
 
 /* ??????????????????????????????????????????????
-   AI INSIGHT CARD
+   TARJETA ASISTENTE IA EN DASHBOARD (CON BOT?N INTEGRADO)
    ?????????????????????????????????????????????? */
-.dash-ai-card {
-  background: linear-gradient(135deg, #f0fdf4 0%, #ede9fe 100%);
-  border: 1px solid rgba(16, 185, 129, 0.15);
-}
-
 .dash-ai-card-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.dash-ai-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .dash-ai-icon {
-  font-size: 1.3rem;
+  font-size: 1.25rem;
 }
 
 .dash-ai-title {
   font-size: 0.95rem;
   font-weight: 700;
-  color: #1e1b4b;
+  color: #1f2937;
+}
+
+.btn-dash-ai-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  color: #4338ca;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.btn-dash-ai-action:hover {
+  background: #e0e7ff;
+  border-color: #c7d2fe;
+  transform: translateY(-1px);
+}
+
+.btn-dash-ai-action:active {
+  transform: scale(0.95);
+}
+
+.btn-dash-ai-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .dash-ai-text {
-  font-size: 0.85rem;
+  font-size: 0.88rem;
   color: #374151;
-  line-height: 1.5;
+  line-height: 1.55;
   margin: 0;
 }
 
+.dash-ai-loading {
+  display: flex;
+  gap: 4px;
+  padding: 8px 0;
+}
+
+.ai-typing-dot {
+  width: 6px;
+  height: 6px;
+  background: #6366f1;
+  border-radius: 50%;
+  animation: typingDot 1.4s infinite ease-in-out both;
+}
+
+.ai-typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.ai-typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typingDot {
+  0%, 80%, 100% { transform: scale(0); }
+  40% { transform: scale(1); }
+}
+
 /* ??????????????????????????????????????????????
-   TIMELINE DE COMIDAS
+   TIMELINE DE COMIDAS DEL D?A
    ?????????????????????????????????????????????? */
+.dash-section-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 14px;
+}
+
 .dash-timeline-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
 
 .dash-timeline-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 12px;
   padding: 10px 12px;
   background: #f9fafb;
   border-radius: 14px;
-  transition: all 0.2s ease;
+  border: 1px solid #f3f4f6;
+  transition: all 0.15s ease;
 }
 
 .dash-timeline-item:hover {
   background: #f3f4f6;
 }
 
-.dash-tl-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-top: 5px;
+.dash-timeline-item.item-planned {
+  border-left: 3.5px solid #10b981;
+}
+
+.dash-timeline-item.item-extra {
+  border-left: 3.5px solid #f59e0b;
+}
+
+.dash-timeline-icon {
+  font-size: 1.3rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
   flex-shrink: 0;
 }
 
-.dash-tl-dot.meal-dot {
-  background: #10b981;
-  box-shadow: 0 0 6px rgba(16, 185, 129, 0.5);
-}
-
-.dash-tl-dot.extra-dot {
-  background: #f59e0b;
-  box-shadow: 0 0 6px rgba(245, 158, 11, 0.5);
-}
-
-.dash-tl-dot.liquid-dot {
-  background: #3b82f6;
-  box-shadow: 0 0 6px rgba(59, 130, 246, 0.5);
-}
-
-.dash-tl-content {
+.dash-timeline-info {
   flex: 1;
+  min-width: 0;
 }
 
-.dash-tl-name {
+.dash-timeline-name {
   font-size: 0.88rem;
   font-weight: 700;
   color: #1f2937;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.dash-tl-extra-badge {
-  font-size: 0.65rem;
-  font-weight: 700;
-  padding: 1px 6px;
-  border-radius: 6px;
-  background: #fef3c7;
-  color: #d97706;
-  text-transform: uppercase;
-}
-
-.dash-tl-meta {
-  font-size: 0.75rem;
+.dash-timeline-time {
+  font-size: 0.72rem;
   color: #6b7280;
   margin-top: 2px;
 }
 
-.dash-timeline-empty {
-  text-align: center;
-  padding: 24px 16px;
-  color: #9ca3af;
-  font-size: 0.85rem;
+.badge-plan {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.badge-extra {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.dash-timeline-cal {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #374151;
+  flex-shrink: 0;
 }

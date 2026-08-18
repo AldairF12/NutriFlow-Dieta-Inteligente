@@ -1,6 +1,6 @@
 // ============================================================
-// GESTIÓN UNIVERSAL DE HISTORIAL Y BOTÓN ATRÁS EN ANDROID (PWA History)
-// Observa cualquier modal/sheet que se abra y gestiona el botón Atrás
+// GESTI\u00d3N UNIVERSAL DE HISTORIAL Y BOT\u00d3N ATR\u00c1S EN ANDROID (PWA History)
+// Observa cualquier modal/sheet que se abra y gestiona el bot\u00f3n Atr\u00e1s
 // ============================================================
 window.ModalHistory = {
   _stack: [],
@@ -96,11 +96,11 @@ window.ModalHistory = {
 })();
 
 // ============================================================
-// MEJORA DE UI: SECCIONES COLAPSABLES ("UÑAS" / ACORDEONES)
+// MEJORA DE UI: SECCIONES COLAPSABLES ("U\u00d1AS" / ACORDEONES)
 // ============================================================
 function initCollapsibleSections() {
   const enhance = () => {
-    // 1. Próximas comidas
+    // 1. Pr\u00f3ximas comidas
     document.querySelectorAll('.upcoming-section').forEach(sec => {
       if (sec.dataset.collapsibleInit) return;
       sec.dataset.collapsibleInit = 'true';
@@ -112,8 +112,8 @@ function initCollapsibleSections() {
         if (!header.querySelector('.section-toggle-btn')) {
           const btn = document.createElement('button');
           btn.className = 'section-toggle-btn';
-          btn.innerHTML = '<span class="toggle-icon">▾</span>';
-          btn.setAttribute('aria-label', 'Colapsar sección');
+          btn.innerHTML = '<span class="toggle-icon">\u25be</span>';
+          btn.setAttribute('aria-label', 'Colapsar secci\u00f3n');
           header.appendChild(btn);
         }
         
@@ -162,8 +162,8 @@ function initCollapsibleSections() {
 
           const btn = document.createElement('button');
           btn.className = 'section-toggle-btn';
-          btn.innerHTML = '<span class="toggle-icon">▾</span>';
-          btn.setAttribute('aria-label', 'Colapsar sección');
+          btn.innerHTML = '<span class="toggle-icon">\u25be</span>';
+          btn.setAttribute('aria-label', 'Colapsar secci\u00f3n');
           title.appendChild(btn);
         }
 
@@ -198,14 +198,14 @@ function initCollapsibleSections() {
 
 // ============================================================
 // ============================================================
-// FASE 2: GAMIFICACIÓN, RACHA, ILUSTRACIÓN DINÁMICA E HIDRATACIÓN
+// FASE 2: GAMIFICACI\u00d3N, RACHA, ILUSTRACI\u00d3N DIN\u00c1MICA E HIDRATACI\u00d3N
 // ============================================================
 
 const DAILY_TIPS = [
-  'La hidratación constante mejora tu concentración, energía y digestión.',
-  'Prioriza proteínas en cada comida para mantener saciedad y masa muscular.',
-  'La constancia vence a la perfección: cada elección saludable cuenta.',
-  'Añadir fibra y vegetales a tu plato estabiliza tu glucosa y apetito.',
+  'La hidrataci\u00f3n constante mejora tu concentraci\u00f3n, energ\u00eda y digesti\u00f3n.',
+  'Prioriza prote\u00ednas en cada comida para mantener saciedad y masa muscular.',
+  'La constancia vence a la perfecci\u00f3n: cada elecci\u00f3n saludable cuenta.',
+  'A\u00f1adir fibra y vegetales a tu plato estabiliza tu glucosa y apetito.',
   'Dormir entre 7 y 8 horas es tan vital para tu metabolismo como tu dieta.',
   'Beber un vaso de agua al despertar activa tu sistema digestivo.',
   'Las grasas saludables (aguacate, frutos secos) protegen tu salud cardiovascular.'
@@ -256,15 +256,15 @@ function updateHeaderGamification() {
   const tipText = document.getElementById('daily-tip-text');
   const greetingEl = document.getElementById('greeting-text');
 
-  // 1. Ilustración vectorial animada y grande (76px) según la hora del día
+  // 1. Ilustraci\u00f3n vectorial animada y grande (76px) seg\u00fan la hora del d\u00eda
   if (artContainer) {
     if (hour >= 5 && hour < 12) {
-      if (greetingEl) greetingEl.textContent = '¡Buenos días! 🌅';
+      if (greetingEl) greetingEl.textContent = '\u00a1Buenos d\u00edas! \u{1f305}';
       artContainer.innerHTML = `
         <svg width="74" height="74" viewBox="0 0 74 74" fill="none">
           <circle cx="37" cy="37" r="32" fill="url(#mSunGrad)" fill-opacity="0.3" style="animation: sunPulse 3s ease-in-out infinite;"/>
           <circle cx="37" cy="30" r="13" fill="#fde047"/>
-          <!-- Taza de café con vapor animado -->
+          <!-- Taza de caf\u00e9 con vapor animado -->
           <path d="M24 44 h26 a3 3 0 0 1 3 3 v5 a8 8 0 0 1 -8 8 h-14 a8 8 0 0 1 -8 -8 v-5 a3 3 0 0 1 3 -3 Z" fill="#ffffff"/>
           <path d="M49 46 h4 a4 4 0 0 1 4 4 v2 a4 4 0 0 1 -4 4 h-4" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
           <path d="M31 38 c0 -4 3 -6 3 -10" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="3 3" style="animation: steamRise 2s ease-in-out infinite;"/>
@@ -277,7 +277,7 @@ function updateHeaderGamification() {
           </defs>
         </svg>`;
     } else if (hour >= 12 && hour < 19) {
-      if (greetingEl) greetingEl.textContent = '¡Buenas tardes! ☀️';
+      if (greetingEl) greetingEl.textContent = '\u00a1Buenas tardes! \u2600\ufe0f';
       artContainer.innerHTML = `
         <svg width="74" height="74" viewBox="0 0 74 74" fill="none">
           <circle cx="37" cy="37" r="32" fill="url(#tSunGrad)" fill-opacity="0.3"/>
@@ -285,7 +285,7 @@ function updateHeaderGamification() {
             <circle cx="37" cy="37" r="14" fill="#f59e0b"/>
             <path d="M37 12 v4 M37 58 v4 M12 37 h4 M58 37 h4 M19 19 l3 3 M52 52 l3 3 M19 55 l3 -3 M52 19 l3 -3" stroke="#fde047" stroke-width="3" stroke-linecap="round"/>
           </g>
-          <!-- Hoja verde de energía -->
+          <!-- Hoja verde de energ\u00eda -->
           <path d="M42 30 c4 -5 9 -4 9 -4 c0 5 -4 9 -9 9 Z" fill="#4ade80" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));"/>
           <defs>
             <radialGradient id="tSunGrad" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(37 37) scale(32)">
@@ -294,7 +294,7 @@ function updateHeaderGamification() {
           </defs>
         </svg>`;
     } else {
-      if (greetingEl) greetingEl.textContent = '¡Buenas noches! 🌙';
+      if (greetingEl) greetingEl.textContent = '\u00a1Buenas noches! \u{1f319}';
       artContainer.innerHTML = `
         <svg width="74" height="74" viewBox="0 0 74 74" fill="none">
           <circle cx="37" cy="37" r="32" fill="url(#nMoonGrad)" fill-opacity="0.35"/>
@@ -318,15 +318,15 @@ function updateHeaderGamification() {
   if (streakEl) {
     const { count, recordedToday } = getDailyStreak();
     if (count > 0) {
-      streakEl.textContent = `🔥 ${count} ${count === 1 ? 'día' : 'días'} de racha`;
+      streakEl.textContent = `\u{1f525} ${count} ${count === 1 ? 'd\u00eda' : 'd\u00edas'} de racha`;
       streakEl.classList.add('streak-badge--active');
     } else {
-      streakEl.textContent = '🔥 ¡Inicia tu racha hoy!';
+      streakEl.textContent = '\u{1f525} \u00a1Inicia tu racha hoy!';
       streakEl.classList.remove('streak-badge--active');
     }
   }
 
-  // 3. Frase / Tip del día rotativo
+  // 3. Frase / Tip del d\u00eda rotativo
   if (tipText) {
     const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
     const tipIndex = dayOfYear % DAILY_TIPS.length;
@@ -334,9 +334,9 @@ function updateHeaderGamification() {
   }
 }
 
-// ──────────────────────────────────────────────
-// HIDRATACIÓN LÍQUIDA INTERACTIVA (Vaso / Ola animada)
-// ──────────────────────────────────────────────
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// HIDRATACI\u00d3N L\u00cdQUIDA INTERACTIVA (Vaso / Ola animada)
+// \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 function getTodayHydrationTotal() {
   const db = getNutriDB();
   if (!db) return 0;
@@ -348,7 +348,7 @@ function enhanceHydrationView() {
   const hydSections = document.querySelectorAll('.content-section');
   hydSections.forEach(sec => {
     const title = sec.querySelector('.section-title');
-    if (!title || !title.textContent.includes('Hidratación')) return;
+    if (!title || !title.textContent.includes('Hidrataci\u00f3n')) return;
 
     // Ocultar tarjetas redundantes de bebidas de abajo
     const redundantRow = sec.querySelector('.cards-row');
@@ -373,7 +373,12 @@ function enhanceHydrationView() {
             </div>
           </div>
           <div class="water-stats-panel">
-            <div class="water-stats-title">Meta de Hidratación</div>
+            <div class="water-stats-header-row">
+              <div class="water-stats-title">Meta de Hidrataci\u00f3n</div>
+              <button class="btn-water-undo-pill" id="btn-water-undo" title="Deshacer \u00faltimo registro de agua" aria-label="Deshacer \u00faltimo registro de agua">
+                <span class="undo-icon">\u21BA</span> Deshacer
+              </button>
+            </div>
             <div class="water-vol-display">
               <span class="water-current-ml">${totalMl.toLocaleString()}</span>
               <span class="water-target-ml">/ ${targetMl.toLocaleString()} ml (${pct}%)</span>
@@ -386,27 +391,24 @@ function enhanceHydrationView() {
 
         <div class="quick-water-buttons">
           <button class="btn-water-quick" data-ml="250" aria-label="Agregar vaso de 250ml">
-            <span class="btn-water-icon">🥛</span>
+            <span class="btn-water-icon">\u{1F95B}</span>
             <span class="btn-water-amount">+250 ml</span>
             <span class="btn-water-lbl">Vaso</span>
           </button>
           <button class="btn-water-quick" data-ml="500" aria-label="Agregar botella de 500ml">
-            <span class="btn-water-icon">🍶</span>
+            <span class="btn-water-icon">\u{1F376}</span>
             <span class="btn-water-amount">+500 ml</span>
             <span class="btn-water-lbl">Botella</span>
           </button>
           <button class="btn-water-quick" data-ml="150" aria-label="Agregar taza de 150ml">
-            <span class="btn-water-icon">☕</span>
+            <span class="btn-water-icon">\u2615</span>
             <span class="btn-water-amount">+150 ml</span>
             <span class="btn-water-lbl">Taza</span>
           </button>
           <button class="btn-water-quick" data-ml="100" aria-label="Agregar 100ml">
-            <span class="btn-water-icon">💧</span>
+            <span class="btn-water-icon">\u{1F4A7}</span>
             <span class="btn-water-amount">+100 ml</span>
             <span class="btn-water-lbl">Trago</span>
-          </button>
-          <button class="btn-water-reset" id="btn-water-undo" title="Deshacer último registro de agua">
-            ↺
           </button>
         </div>
       `;
@@ -427,7 +429,7 @@ function enhanceHydrationView() {
   });
 }
 
-// Delegación de eventos global para clicks de hidratación
+// Delegaci\u00f3n de eventos global para clicks de hidrataci\u00f3n
 document.addEventListener('click', (e) => {
   const quickBtn = e.target.closest('.btn-water-quick');
   if (quickBtn) {
@@ -439,7 +441,7 @@ document.addEventListener('click', (e) => {
       const liquidsList = db.liquids || (db.state && db.state.liquids) || [];
       const waterLiq = liquidsList.find(l => l.type === 'water') || liquidsList[0] || { id: 'liq_003' };
       db.addFoodLog({ type: 'liquid', reference_id: waterLiq.id, quantity_g: amount });
-      if (typeof showToast === 'function') showToast(`💧 +${amount} ml de agua registrados`);
+      if (typeof showToast === 'function') showToast(`\u{1f4a7} +${amount} ml de agua registrados`);
       enhanceHydrationView();
       updateHeaderGamification();
       if (typeof renderDailyMacros === 'function') renderDailyMacros();
@@ -457,7 +459,7 @@ document.addEventListener('click', (e) => {
       if (todayLogs.length > 0) {
         const lastLog = todayLogs[todayLogs.length - 1];
         db.removeFoodLog(lastLog.id);
-        if (typeof showToast === 'function') showToast('↺ Último registro de agua eliminado');
+        if (typeof showToast === 'function') showToast('\u21ba \u00daltimo registro de agua eliminado');
         enhanceHydrationView();
         updateHeaderGamification();
         if (typeof renderDailyMacros === 'function') renderDailyMacros();
@@ -491,7 +493,7 @@ if (document.readyState === 'loading') {
 }
 
 /**
- * Helper compartido para inicializar dictado por voz en cualquier botón/input.
+ * Helper compartido para inicializar dictado por voz en cualquier bot\u00f3n/input.
  */
 function initVoiceDictation({ button, input, onStart, onEnd, onResult, onError }) {
   const btnEl = typeof button === 'string' ? document.getElementById(button) : button;
@@ -615,7 +617,7 @@ function initVoiceRegistration() {
       if (hint && input && input.value) {
         hint.textContent = 'Puedes editar el texto abajo y luego procesarlo.';
       } else if (hint) {
-        hint.textContent = 'Toca el micrófono para dictar...';
+        hint.textContent = 'Toca el micr\u00f3fono para dictar...';
       }
     }
   });
@@ -631,13 +633,13 @@ function resetRSVoiceView() {
   const area = document.getElementById('rs-voice-transcript-area');
   const status = document.getElementById('rs-voice-status');
   
-  if (hint) hint.textContent = 'Toca el micrófono y dime qué consumiste\n(Ej. "Me comí dos huevos con pan" o "Un vaso de leche")';
+  if (hint) hint.textContent = 'Toca el micr\u00f3fono y dime qu\u00e9 consumiste\n(Ej. "Me com\u00ed dos huevos con pan" o "Un vaso de leche")';
   if (input) input.value = '';
   if (area) area.hidden = true;
   if (status) status.textContent = '';
   if (_voiceDictation) _voiceDictation.stop();
   
-  // Restaurar UI de confirmación a su lugar original
+  // Restaurar UI de confirmaci\u00f3n a su lugar original
   const voiceContainer = document.querySelector('.rs-voice-container');
   if (voiceContainer) voiceContainer.style.display = 'flex';
   
@@ -657,11 +659,11 @@ async function processVoiceInput() {
   if (!text) return;
 
   if (processBtn) processBtn.disabled = true;
-  if (status) status.textContent = 'Procesando con IA... ⏳';
+  if (status) status.textContent = 'Procesando con IA... \u23f3';
 
   try {
     const parsed = await AI.parseVoiceInput(text);
-    if (!parsed || !parsed.food_name) throw new Error('No se detectó alimento');
+    if (!parsed || !parsed.food_name) throw new Error('No se detect\u00f3 alimento');
     
     if (status) status.textContent = `Analizando: ${parsed.food_name}...`;
 
@@ -669,7 +671,7 @@ async function processVoiceInput() {
     const { item } = await AI.fetchNutritionInfo(parsed.food_name);
     let bestMatch = item;
     
-    if (status) status.textContent = '¡Listo!';
+    if (status) status.textContent = '\u00a1Listo!';
     
     // Pasar al confirmador de gramaje
     // Pasar al confirmador de gramaje
@@ -686,7 +688,7 @@ async function processVoiceInput() {
     if (voiceContainer && gramConfirm) {
       voiceContainer.appendChild(gramConfirm);
       gramConfirm.hidden = false;
-      // Ya NO ocultamos voiceContainer para que el usuario pueda ver/editar su transcripción
+      // Ya NO ocultamos voiceContainer para que el usuario pueda ver/editar su transcripci\u00f3n
       // si voiceContainer) voiceContainer.style.display = 'none';
       
       const nameEl = document.getElementById('rs-gram-item-name');

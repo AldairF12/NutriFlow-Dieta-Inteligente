@@ -1,5 +1,5 @@
 // ============================================================
-// dashboardView.js ? Estad?sticas, Calendario Hist?rico y Timeline
+// dashboardView.js ? Estad?sticas, Calendario Panor?mico y Timeline
 // ============================================================
 
 let _dashSelectedDate = null;
@@ -7,6 +7,7 @@ let _dashCalMode = 'week'; // 'week' por defecto para dar m?s espacio a los gr?f
 let _dashCalYear = new Date().getFullYear();
 let _dashCalMonth = new Date().getMonth();
 let _dashCalWeekStart = null;
+let _calSlideDirection = null; // 'left' | 'right' | null
 
 function getDashTodayIso() {
   const d = new Date();
@@ -61,9 +62,10 @@ function renderDashboardScreen() {
     dateEl.textContent = isToday ? `${dateFormatted} (Hoy)` : `${dateFormatted} (Hist\u00F3rico)`;
   }
 
+  // Bot?n Volver a Hoy en cabecera
   const btnToday = document.getElementById('btn-dash-today');
   if (btnToday) {
-    btnToday.style.display = isToday ? 'none' : 'inline-flex';
+    btnToday.classList.toggle('visible', !isToday);
     btnToday.onclick = () => {
       _dashSelectedDate = todayStr;
       const t = new Date();
@@ -74,11 +76,75 @@ function renderDashboardScreen() {
     };
   }
 
+  // Cargar resumen inteligente persistido o mostrar estado inicial
+  renderCachedAISummary(selectedDate);
+
+  // Conectar bot?n de generar insight con IA
+  const btnAi = document.getElementById('btn-dash-refresh-ai');
+  if (btnAi) {
+    btnAi.onclick = async () => {
+      await handleGenerateDailyInsight(selectedDate);
+    };
+  }
+
   renderDashboardCalendar();
   renderCaloriesRing(consumed.calories, goals.calories || 2000);
   renderMacroBars(consumed, goals);
   renderPlanVsExtra(selectedDate);
   renderDashTimeline(selectedDate);
+}
+
+function renderCachedAISummary(dateStr) {
+  const textEl = document.getElementById('dash-ai-text');
+  const loadingEl = document.getElementById('dash-ai-loading');
+  if (!textEl) return;
+  if (loadingEl) loadingEl.hidden = true;
+
+  try {
+    const raw = localStorage.getItem('nutriflow_ai_summary_' + dateStr);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.text) {
+        textEl.innerHTML = typeof parseMarkdown === 'function' ? parseMarkdown(parsed.text) : parsed.text;
+        return;
+      }
+    }
+  } catch(e) {}
+
+  textEl.textContent = 'Presiona "\u2728 Generar Insight" para obtener un an\u00E1lisis inteligente de tu d\u00EDa.';
+}
+
+async function handleGenerateDailyInsight(dateStr) {
+  const textEl = document.getElementById('dash-ai-text');
+  const loadingEl = document.getElementById('dash-ai-loading');
+  const btnAi = document.getElementById('btn-dash-refresh-ai');
+
+  if (!window.AI || typeof window.AI.getDailySummary !== 'function') {
+    if (typeof showToast === 'function') showToast('\u26A0\uFE0F M\u00F3dulo de IA no disponible');
+    return;
+  }
+
+  if (!window.AI.isConfigured()) {
+    if (typeof showToast === 'function') showToast('\u26A0\uFE0F Configura tu API Key en Perfil');
+    const profileTab = document.querySelector('[data-screen="profile"]');
+    if (profileTab) profileTab.click();
+    return;
+  }
+
+  if (loadingEl) loadingEl.hidden = false;
+  if (textEl) textEl.textContent = 'NutriBot est\u00E1 analizando tu d\u00EDa...';
+  if (btnAi) btnAi.disabled = true;
+
+  try {
+    const insight = await window.AI.getDailySummary(dateStr);
+    if (textEl) textEl.innerHTML = typeof parseMarkdown === 'function' ? parseMarkdown(insight) : insight;
+    if (typeof showToast === 'function') showToast('\u2728 Resumen IA generado');
+  } catch (err) {
+    if (textEl) textEl.textContent = 'No se pudo generar el insight: ' + (err.message || 'Error desconocido');
+  } finally {
+    if (loadingEl) loadingEl.hidden = true;
+    if (btnAi) btnAi.disabled = false;
+  }
 }
 
 function renderDashboardCalendar() {
@@ -140,12 +206,14 @@ function renderDashboardCalendar() {
   if (btnMonth) {
     btnMonth.onclick = () => {
       _dashCalMode = 'month';
+      _calSlideDirection = null;
       renderDashboardCalendar();
     };
   }
   if (btnWeek) {
     btnWeek.onclick = () => {
       _dashCalMode = 'week';
+      _calSlideDirection = null;
       const parts = getDashSelectedDate().split('-').map(Number);
       _dashCalWeekStart = getMondayOfDate(new Date(parts[0], parts[1] - 1, parts[2]));
       renderDashboardCalendar();
@@ -157,6 +225,7 @@ function renderDashboardCalendar() {
 
   if (btnPrev) {
     btnPrev.onclick = () => {
+      _calSlideDirection = 'left';
       if (_dashCalMode === 'month') {
         _dashCalMonth--;
         if (_dashCalMonth < 0) { _dashCalMonth = 11; _dashCalYear--; }
@@ -169,6 +238,7 @@ function renderDashboardCalendar() {
 
   if (btnNext) {
     btnNext.onclick = () => {
+      _calSlideDirection = 'right';
       if (_dashCalMode === 'month') {
         _dashCalMonth++;
         if (_dashCalMonth > 11) { _dashCalMonth = 0; _dashCalYear++; }
@@ -186,6 +256,13 @@ function fillCalendarGrid() {
   const grid = document.getElementById('dash-cal-grid');
   if (!grid) return;
   grid.innerHTML = '';
+
+  if (_calSlideDirection === 'right') {
+    grid.classList.add('cal-slide-right');
+  } else if (_calSlideDirection === 'left') {
+    grid.classList.add('cal-slide-left');
+  }
+  _calSlideDirection = null;
 
   const goals = (window.DB && window.DB.userPreferences && window.DB.userPreferences.goals)
     ? window.DB.userPreferences.goals
@@ -273,56 +350,65 @@ function createCalendarDayElement(dayNum, dateKey, goalCal, todayStr, selectedDa
   return btn;
 }
 
+// ??????????????????????????????????????????????
+// ANILLO DE CALOR?AS CON NUBES CUTE / MINIMALISTAS
+// ??????????????????????????????????????????????
 function renderCaloriesRing(consumed, goal) {
   const container = document.getElementById('dash-calories-ring');
   if (!container) return;
 
-  const SIZE = 140;
-  const R = 54;
-  const STROKE = 12;
+  const SIZE = 136;
+  const R = 52;
+  const STROKE = 11;
   const CX = SIZE / 2, CY = SIZE / 2;
   const CIRC = 2 * Math.PI * R;
   const pct = Math.min(1, consumed / (goal || 1));
   const dash = pct * CIRC;
   const gap = CIRC - dash;
+  const remaining = Math.max(0, goal - consumed);
 
   const shadowColor = pct < 0.5 ? 'rgba(52, 211, 153, 0.35)' : pct < 0.85 ? 'rgba(245, 158, 11, 0.35)' : 'rgba(239, 68, 68, 0.35)';
   const gradStart = pct < 0.85 ? '#34d399' : '#f59e0b';
   const gradEnd = pct < 0.85 ? '#60a5fa' : '#ef4444';
 
   container.innerHTML = `
-    <div class="dash-ring-wrap">
-      <svg width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}" style="filter: drop-shadow(0 6px 12px ${shadowColor});">
-        <defs>
-          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stop-color="${gradStart}" />
-            <stop offset="100%" stop-color="${gradEnd}" />
-          </linearGradient>
-        </defs>
-        <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="#f3f4f6" stroke-width="${STROKE}" />
-        <circle cx="${CX}" cy="${CY}" r="${R}" fill="none"
-          stroke="url(#ringGrad)"
-          stroke-width="${STROKE}"
-          stroke-linecap="round"
-          stroke-dasharray="${dash} ${gap}"
-          stroke-dashoffset="${CIRC * 0.25}"
-          transform="rotate(-90 ${CX} ${CY})"
-          style="transition: stroke-dasharray 0.7s cubic-bezier(0.34,1.56,0.64,1);" />
-      </svg>
-      <div class="dash-ring-center">
-        <span class="dash-ring-val">${consumed.toLocaleString()}</span>
-        <span class="dash-ring-unit">kcal</span>
-        <span class="dash-ring-goal">/ ${goal.toLocaleString()}</span>
+    <div class="dash-ring-hero-stage">
+      <!-- Nube Cute Izquierda: Porcentaje -->
+      <div class="dash-cloud-cute cloud-left">
+        <span class="cloud-val">${Math.round(pct * 100)}%</span>
+        <span class="cloud-lbl">del objetivo</span>
       </div>
-    </div>
-    <div class="dash-ring-labels">
-      <div class="dash-ring-label-item">
-        <span class="dash-ring-pct">${Math.round(pct * 100)}%</span>
-        <span class="dash-ring-lbl">del objetivo</span>
+
+      <!-- Anillo Central -->
+      <div class="dash-ring-wrap">
+        <svg width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}" style="filter: drop-shadow(0 6px 12px ${shadowColor});">
+          <defs>
+            <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="${gradStart}" />
+              <stop offset="100%" stop-color="${gradEnd}" />
+            </linearGradient>
+          </defs>
+          <circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="#f3f4f6" stroke-width="${STROKE}" />
+          <circle cx="${CX}" cy="${CY}" r="${R}" fill="none"
+            stroke="url(#ringGrad)"
+            stroke-width="${STROKE}"
+            stroke-linecap="round"
+            stroke-dasharray="${dash} ${gap}"
+            stroke-dashoffset="${CIRC * 0.25}"
+            transform="rotate(-90 ${CX} ${CY})"
+            style="transition: stroke-dasharray 0.7s cubic-bezier(0.34,1.56,0.64,1);" />
+        </svg>
+        <div class="dash-ring-center">
+          <span class="dash-ring-val">${consumed.toLocaleString()}</span>
+          <span class="dash-ring-unit">kcal</span>
+          <span class="dash-ring-goal">/ ${goal.toLocaleString()}</span>
+        </div>
       </div>
-      <div class="dash-ring-label-item">
-        <span class="dash-ring-pct">${Math.max(0, goal - consumed).toLocaleString()}</span>
-        <span class="dash-ring-lbl">kcal restantes</span>
+
+      <!-- Nube Cute Derecha: Restantes -->
+      <div class="dash-cloud-cute cloud-right">
+        <span class="cloud-val">${remaining.toLocaleString()}</span>
+        <span class="cloud-lbl">kcal restantes</span>
       </div>
     </div>
   `;
@@ -350,9 +436,8 @@ function renderMacroBars(consumed, goals) {
             <span class="dash-macro-bar-val">${m.consumed}${m.unit} <span class="dash-macro-bar-goal">/ ${m.goal}${m.unit}</span></span>
           </div>
           <div class="dash-macro-bar-track">
-            <div class="dash-macro-bar-fill" style="width:${pct}%; background:${m.color}; box-shadow: 0 0 8px ${m.color}88;"></div>
+            <div class="dash-macro-bar-fill" style="width: ${pct}%; background: ${m.color};"></div>
           </div>
-          <span class="dash-macro-bar-pct">${pct}%</span>
         </div>
       `;
     }).join('')}
@@ -360,136 +445,104 @@ function renderMacroBars(consumed, goals) {
 }
 
 function renderPlanVsExtra(dateStr) {
-  let section = document.getElementById('dash-plan-vs-extra');
-  if (!section) {
-    const aiCard = document.getElementById('dash-ai-card');
-    if (!aiCard) return;
-    section = document.createElement('div');
-    section.id = 'dash-plan-vs-extra';
-    section.className = 'dash-plan-vs-extra-section';
-    aiCard.parentNode.insertBefore(section, aiCard);
+  const container = document.getElementById('dash-plan-vs-extra');
+  const summary = getPlanVsExtraSummary(dateStr);
+  const totalCal = summary.plan.calories + summary.extra.calories;
+  const planPct = totalCal > 0 ? Math.round((summary.plan.calories / totalCal) * 100) : 100;
+
+  if (container) {
+    container.innerHTML = `
+      <div class="plan-extra-header">
+        <span class="plan-extra-title">\u{1F4CB} Plan vs Extras</span>
+        <span class="plan-extra-badge ${planPct >= 80 ? 'adherence-high' : 'adherence-low'}">
+          ${totalCal > 0 ? `${planPct}% adherencia` : 'Sin registros'}
+        </span>
+      </div>
+      <div class="plan-extra-bar">
+        <div class="plan-extra-fill-plan" style="width: ${planPct}%;" title="Plan: ${summary.plan.calories} kcal"></div>
+        <div class="plan-extra-fill-extra" style="width: ${100 - planPct}%;" title="Extras: ${summary.extra.calories} kcal"></div>
+      </div>
+      <div class="plan-extra-stats">
+        <div class="plan-extra-item">
+          <span class="plan-dot dot-plan"></span>
+          <span>Plan: <strong>${summary.plan.calories} kcal</strong> (${summary.plan.entries} comidas)</span>
+        </div>
+        <div class="plan-extra-item">
+          <span class="plan-dot dot-extra"></span>
+          <span>Extras: <strong>${summary.extra.calories} kcal</strong> (${summary.extra.entries} comidas)</span>
+        </div>
+      </div>
+    `;
   }
-
-  const { plan, extra } = getPlanVsExtraSummary(dateStr);
-  const goals = (window.DB && window.DB.userPreferences && window.DB.userPreferences.goals)
-    ? window.DB.userPreferences.goals
-    : { calories: 2000 };
-  const totalCalGoal = goals.calories || 2000;
-
-  const planPct = Math.min(100, Math.round((plan.calories / totalCalGoal) * 100));
-  const extraPct = Math.min(100, Math.round((extra.calories / totalCalGoal) * 100));
-
-  const totalConsumed = plan.calories + extra.calories;
-  const planCompliance = totalConsumed > 0
-    ? Math.round((plan.calories / totalConsumed) * 100)
-    : 0;
-
-  section.innerHTML = `
-    <h2 class="dash-section-title">\u{1F4CA} Plan vs Extras</h2>
-    <div class="dash-pve-cards">
-      <div class="dash-pve-card dash-pve-card--plan">
-        <div class="dash-pve-icon">\u{1F4CB}</div>
-        <div class="dash-pve-val">${plan.calories} <span class="dash-pve-unit">kcal</span></div>
-        <div class="dash-pve-lbl">Del plan \u2022 ${plan.entries} comida${plan.entries !== 1 ? 's' : ''}</div>
-        <div class="dash-pve-bar-track">
-          <div class="dash-pve-bar-fill dash-pve-bar--plan" style="width:${planPct}%"></div>
-        </div>
-        <div class="dash-pve-pct">${planPct}% del objetivo</div>
-      </div>
-      <div class="dash-pve-card dash-pve-card--extra">
-        <div class="dash-pve-icon">\u2795</div>
-        <div class="dash-pve-val">${extra.calories} <span class="dash-pve-unit">kcal</span></div>
-        <div class="dash-pve-lbl">Extras \u2022 ${extra.entries} registro${extra.entries !== 1 ? 's' : ''}</div>
-        <div class="dash-pve-bar-track">
-          <div class="dash-pve-bar-fill dash-pve-bar--extra" style="width:${extraPct}%"></div>
-        </div>
-        <div class="dash-pve-pct">${extraPct}% del objetivo</div>
-      </div>
-    </div>
-    ${totalConsumed > 0 ? `
-    <div class="dash-pve-compliance">
-      <span class="dash-pve-compliance-lbl">Adherencia al plan</span>
-      <div class="dash-pve-compliance-bar-track">
-        <div class="dash-pve-compliance-bar" style="width:${planCompliance}%"></div>
-      </div>
-      <span class="dash-pve-compliance-pct" style="color:${planCompliance >= 70 ? '#10b981' : planCompliance >= 40 ? '#f59e0b' : '#ef4444'}">${planCompliance}%</span>
-    </div>` : ''}
-  `;
 }
 
 function renderDashTimeline(dateStr) {
   const container = document.getElementById('dash-timeline-list');
-  const titleEl = document.getElementById('dash-timeline-title');
+  const title = document.getElementById('dash-timeline-title');
   if (!container) return;
 
-  const targetDate = dateStr || getDashSelectedDate();
-  const isToday = (targetDate === getDashTodayIso());
-
-  if (titleEl) {
-    titleEl.innerHTML = isToday ? '\u{1F4CB} Comidas de hoy' : `\u{1F4CB} Comidas del d\u00EDa (${targetDate})`;
-  }
-
   const logs = (window.DB && typeof window.DB.getLogsByDate === 'function')
-    ? window.DB.getLogsByDate(targetDate)
+    ? window.DB.getLogsByDate(dateStr)
     : [];
 
-  const mealLogs     = logs.filter(l => l.type === 'meal');
-  const liqLogs      = logs.filter(l => l.type === 'liquid');
-  const foodItemLogs = logs.filter(l => l.type === 'food_item');
-
-  if (mealLogs.length === 0 && liqLogs.length === 0 && foodItemLogs.length === 0) {
-    container.innerHTML = `<div class="dash-timeline-empty">${isToday ? 'Nada registrado a\u00FAn hoy. \u00A1Comienza registrando tus comidas! \u{1F33F}' : 'No se registraron comidas en esta fecha. \u{1F33F}'}</div>`;
-    return;
+  if (title) {
+    title.textContent = `\u{1F4CB} Comidas del d\u00EDa (${logs.length})`;
   }
 
   container.innerHTML = '';
 
-  mealLogs.forEach(log => {
-    const recipe = window.DB.getRecipeById(log.reference_id);
-    if (!recipe) return;
-    const macros = calcRecipeMacros(recipe.id);
-    const isPlanned = log.planned === true;
-    const item = document.createElement('div');
-    item.className = 'dash-timeline-item';
-    item.innerHTML = `
-      <div class="dash-tl-dot ${isPlanned ? 'meal-dot' : 'extra-dot'}"></div>
-      <div class="dash-tl-content">
-        <div class="dash-tl-name">${recipe.name}${!isPlanned ? ' <span class="dash-tl-extra-badge">extra</span>' : ''}</div>
-        <div class="dash-tl-meta">${getMealTypeEmoji(recipe.meal_type)} ${recipe.meal_type} \u2022 ${macros.calories} kcal \u2022 ${macros.protein}g prot</div>
+  if (logs.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding: 24px 0;">
+        <div class="empty-icon">\u{1F37D}\uFE0F</div>
+        <p>No hay comidas registradas para esta fecha.</p>
       </div>
     `;
-    container.appendChild(item);
-  });
+    return;
+  }
 
-  foodItemLogs.forEach(log => {
-    const fi = window.DB.getFoodItemById(log.reference_id);
-    if (!fi) return;
-    const qty  = log.quantity_g || 100;
-    const kcal = Math.round((fi.calories_per_100g || 0) * qty / 100);
-    const item = document.createElement('div');
-    item.className = 'dash-timeline-item';
-    item.innerHTML = `
-      <div class="dash-tl-dot extra-dot"></div>
-      <div class="dash-tl-content">
-        <div class="dash-tl-name">${fi.name} <span class="dash-tl-extra-badge">libre</span></div>
-        <div class="dash-tl-meta">\u{1F957} ${qty}g \u2022 ${kcal} kcal \u2022 ${Math.round((fi.protein_per_100g||0)*qty/100)}g prot</div>
-      </div>
-    `;
-    container.appendChild(item);
-  });
+  logs.forEach(log => {
+    let name = 'Alimento';
+    let typeEmoji = '\u{1F373}';
+    let calories = 0;
+    const isPlanned = (log.type === 'meal' && log.planned !== false) || log.planned === true;
 
-  liqLogs.forEach(log => {
-    const liquidsList = window.DB.liquids || (window.DB.state && window.DB.state.liquids) || [];
-    const liq = liquidsList.find(l => l.id === log.reference_id);
-    const qty = log.quantity_g || 250;
+    if (log.type === 'meal') {
+      const recipe = window.DB.getRecipeById(log.reference_id);
+      if (recipe) {
+        name = recipe.name;
+        typeEmoji = typeof getMealTypeEmoji === 'function' ? getMealTypeEmoji(recipe.meal_type) : '\u{1F373}';
+        calories = calcRecipeMacros(recipe.id).calories;
+      }
+    } else if (log.type === 'food_item') {
+      const fi = window.DB.getFoodItemById(log.reference_id);
+      if (fi) {
+        name = fi.name;
+        typeEmoji = '\u{1F957}';
+        const factor = (log.quantity_g || 100) / 100;
+        calories = Math.round((fi.calories_per_100g || 0) * factor);
+      }
+    } else if (log.type === 'liquid') {
+      const liquidsList = window.DB.liquids || (window.DB.state && window.DB.state.liquids) || [];
+      const liq = liquidsList.find(l => l.id === log.reference_id);
+      name = liq ? liq.name : 'Agua / Bebida';
+      typeEmoji = liq && liq.icon ? liq.icon : '\u{1F4A7}';
+      calories = 0;
+    }
+
+    const timeStr = log.timestamp
+      ? new Date(log.timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+      : '--:--';
+
     const item = document.createElement('div');
-    item.className = 'dash-timeline-item';
+    item.className = `dash-timeline-item ${isPlanned ? 'item-planned' : 'item-extra'}`;
     item.innerHTML = `
-      <div class="dash-tl-dot liquid-dot"></div>
-      <div class="dash-tl-content">
-        <div class="dash-tl-name">${liq ? liq.name : 'Agua / L\u00EDquido'}</div>
-        <div class="dash-tl-meta">${liq ? liq.icon : '\u{1F4A7}'} Hidrataci\u00F3n \u2022 +${qty} ml</div>
+      <div class="dash-timeline-icon">${typeEmoji}</div>
+      <div class="dash-timeline-info">
+        <div class="dash-timeline-name">${name}</div>
+        <div class="dash-timeline-time">${timeStr} \u2022 <span class="badge-${isPlanned ? 'plan' : 'extra'}">${isPlanned ? 'Del plan' : 'Extra'}</span></div>
       </div>
+      <div class="dash-timeline-cal">${calories > 0 ? `${calories} kcal` : `${log.quantity_g || 250} ml`}</div>
     `;
     container.appendChild(item);
   });

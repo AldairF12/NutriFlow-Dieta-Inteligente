@@ -1,4 +1,4 @@
-let _chatMessages = []; // historial local de la sesión
+let _chatMessages = []; // historial local de la sesi\u00f3n
 let _currentContextMode = 'general';
 let _chatSpeechRecognition = null;
 
@@ -25,9 +25,9 @@ function openAIChat() {
       loadChatHistory();
     }
     
-    // Mensaje de bienvenida si el historial está vacío (incluso tras cargar)
+    // Mensaje de bienvenida si el historial est\u00e1 vac\u00edo (incluso tras cargar)
     if (_chatMessages.length === 0) {
-      appendChatMessage('bot', '¡Hola! 👋 Soy NutriBot.\n\nPuedo ayudarte con tus dudas nutricionales, sugerirte qué comer según tu progreso, o responder preguntas generales.');
+      appendChatMessage('bot', '\u00a1Hola! \u{1f44b} Soy NutriBot.\n\nPuedo ayudarte con tus dudas nutricionales, sugerirte qu\u00e9 comer seg\u00fan tu progreso, o responder preguntas generales.');
     }
   }
 }
@@ -79,11 +79,11 @@ function copyChatMessage(id) {
   const msg = _chatMessages.find(m => m.id === id);
   if (msg && msg.text) {
     navigator.clipboard.writeText(msg.text).then(() => {
-      showToast('📋 Copiado al portapapeles');
+      showToast('\u{1f4cb} Copiado al portapapeles');
       const btn = document.querySelector(`.chat-copy-btn[data-id="${id}"]`);
       if (btn) {
-        btn.textContent = '✓';
-        setTimeout(() => { btn.textContent = '📋'; }, 1500);
+        btn.textContent = '\u2713';
+        setTimeout(() => { btn.textContent = '\u{1f4cb}'; }, 1500);
       }
     }).catch(() => {
       showToast('No se pudo copiar el texto');
@@ -103,8 +103,8 @@ function parseChatMarkdown(text) {
     const line = lines[i];
     const trimmed = line.trim();
 
-    // Elemento de lista con viñetas (- item o * item)
-    const ulMatch = line.match(/^\s*[-*•]\s+(.*)$/);
+    // Elemento de lista con vi\u00f1etas (- item o * item)
+    const ulMatch = line.match(/^\s*[-*\u2022]\s+(.*)$/);
     // Elemento de lista numerada (1. item)
     const olMatch = line.match(/^\s*\d+[\.\)]\s+(.*)$/);
 
@@ -144,7 +144,7 @@ function parseChatMarkdown(text) {
       inOl = false;
     }
 
-    // Línea en blanco -> Espacio vertical entre párrafos
+    // L\u00ednea en blanco -> Espacio vertical entre p\u00e1rrafos
     if (trimmed === '') {
       result.push('<div class="chat-spacer"></div>');
       continue;
@@ -164,7 +164,7 @@ function parseChatMarkdown(text) {
       continue;
     }
 
-    // Línea de texto normal
+    // L\u00ednea de texto normal
     result.push(`<div class="chat-line">${formatChatInline(line)}</div>`);
   }
 
@@ -183,10 +183,10 @@ function formatChatInline(str) {
     // Cursiva (*texto* o _texto_)
     .replace(/\*([^\*]+?)\*/g, '<em>$1</em>')
     .replace(/_([^_]+?)_/g, '<em>$1</em>')
-    // Código inline (`código`)
+    // C\u00f3digo inline (`c\u00f3digo`)
     .replace(/`([^`]+?)`/g, '<code class="chat-code">$1</code>')
-    // Resaltado de macros y calorías
-    .replace(/\b(\d+(?:\.\d+)?\s*(?:kcal|calorías|calorias|g\s*(?:de\s*)?(?:prote[ií]na|carbohidratos|carbos|grasas?|fibra)))\b/gi, '<span class="chat-macro-highlight">$1</span>');
+    // Resaltado de macros y calor\u00edas
+    .replace(/\b(\d+(?:\.\d+)?\s*(?:kcal|calor\u00edas|calorias|g\s*(?:de\s*)?(?:prote[i\u00ed]na|carbohidratos|carbos|grasas?|fibra)))\b/gi, '<span class="chat-macro-highlight">$1</span>');
 }
 
 function appendChatMessage(role, text, isLoad = false, msgId = null, isPinned = false) {
@@ -202,8 +202,8 @@ function appendChatMessage(role, text, isLoad = false, msgId = null, isPinned = 
   let actionsHtml = '';
   if (role === 'bot') {
     actionsHtml = `<div class="chat-msg-actions">
-      <button class="chat-action-btn chat-copy-btn" data-id="${id}" onclick="copyChatMessage('${id}')" title="Copiar respuesta">📋</button>
-      <button class="chat-action-btn chat-pin-btn ${isPinned ? 'pinned' : ''}" data-id="${id}" onclick="togglePinMessage('${id}')" title="Fijar mensaje">📌</button>
+      <button class="chat-action-btn chat-copy-btn" data-id="${id}" onclick="copyChatMessage('${id}')" title="Copiar respuesta">\u{1f4cb}</button>
+      <button class="chat-action-btn chat-pin-btn ${isPinned ? 'pinned' : ''}" data-id="${id}" onclick="togglePinMessage('${id}')" title="Fijar mensaje">\u{1f4cc}</button>
     </div>`;
   }
 
@@ -239,16 +239,16 @@ function removeChatTyping() {
 }
 const QUICK_PROMPTS = {
   general: [
-    { icon: '💡', text: 'Ideas de cena ligera y proteica' },
-    { icon: '🥑', text: 'Grasas saludables para mi dieta' },
-    { icon: '💧', text: '¿Cuánta agua debo tomar al día?' },
-    { icon: '⚙️', text: '¿Cómo calcular mis metas calóricas?' }
+    { icon: '\u{1f4a1}', text: 'Ideas de cena ligera y proteica' },
+    { icon: '\u{1f951}', text: 'Grasas saludables para mi dieta' },
+    { icon: '\u{1f4a7}', text: '\u00bfCu\u00e1nta agua debo tomar al d\u00eda?' },
+    { icon: '\u2699\ufe0f', text: '\u00bfC\u00f3mo calcular mis metas cal\u00f3ricas?' }
   ],
   progress: [
-    { icon: '📊', text: '¿Cómo voy con mis proteínas hoy?' },
-    { icon: '🍦', text: '¿Me paso de calorías si como un postre?' },
-    { icon: '⚖️', text: '¿Qué me falta para cumplir mi meta?' },
-    { icon: '🍎', text: 'Sugerencia para mi próxima comida' }
+    { icon: '\u{1f4ca}', text: '\u00bfC\u00f3mo voy con mis prote\u00ednas hoy?' },
+    { icon: '\u{1f366}', text: '\u00bfMe paso de calor\u00edas si como un postre?' },
+    { icon: '\u2696\ufe0f', text: '\u00bfQu\u00e9 me falta para cumplir mi meta?' },
+    { icon: '\u{1f34e}', text: 'Sugerencia para mi pr\u00f3xima comida' }
   ]
 };
 
@@ -293,9 +293,9 @@ function initAIChat() {
         renderQuickPrompts(_currentContextMode);
         if (input) {
           if (_currentContextMode === 'progress') {
-            input.placeholder = "Ej: ¿Puedo comer un helado hoy?";
+            input.placeholder = "Ej: \u00bfPuedo comer un helado hoy?";
           } else {
-            input.placeholder = "Pregunta algo sobre nutrición...";
+            input.placeholder = "Pregunta algo sobre nutrici\u00f3n...";
           }
         }
       });
@@ -348,7 +348,7 @@ function initAIChat() {
     };
 
     input.addEventListener('input', adjustInputHeight);
-    // Enter ahora añade un salto de línea normal en el textarea sin enviar
+    // Enter ahora a\u00f1ade un salto de l\u00ednea normal en el textarea sin enviar
     input.addEventListener('keydown', () => {
       setTimeout(adjustInputHeight, 10);
     });
@@ -365,14 +365,14 @@ function initAIChat() {
       onStart: () => {
         micBtn.style.color = '#ef4444';
         micBtn.classList.add('recording-pulse');
-        micBtn.innerHTML = '⏹️';
+        micBtn.innerHTML = '\u23f9\ufe0f';
         originalPlaceholder = input.placeholder;
         input.placeholder = 'Escuchando...';
       },
       onEnd: () => {
         micBtn.style.color = 'var(--gray-500)';
         micBtn.classList.remove('recording-pulse');
-        micBtn.innerHTML = '🎙️';
+        micBtn.innerHTML = '\u{1f399}\ufe0f';
         if (originalPlaceholder) input.placeholder = originalPlaceholder;
       }
     });
@@ -386,7 +386,7 @@ function initAIChat() {
     goProfile.addEventListener('click', () => {
       closeAIChat();
       document.querySelector('[data-screen="profile"]').click();
-      // Abrir automáticamente la card de IA
+      // Abrir autom\u00e1ticamente la card de IA
       setTimeout(() => {
         const aiCard = document.getElementById('scard-ai');
         if (aiCard && !aiCard.open) {
@@ -396,14 +396,14 @@ function initAIChat() {
     });
   }
 
-  // Gestos táctiles (Swipe down) para cerrar el chat
+  // Gestos t\u00e1ctiles (Swipe down) para cerrar el chat
   if (modal) {
     let startY = 0;
     let isDragging = false;
 
     modal.addEventListener('touchstart', (e) => {
       const target = e.target;
-      // No arrastrar el modal si se interactúa con el input, botones o textarea
+      // No arrastrar el modal si se interact\u00faa con el input, botones o textarea
       if (target.closest('.ai-chat-input-area') || target.closest('button') || target.closest('textarea') || target.closest('input')) {
         isDragging = false;
         return;
@@ -443,12 +443,12 @@ async function sendChatMessage() {
   const msg   = input.value.trim();
   if (!msg) return;
 
-  // Detener micrófono si estaba grabando
+  // Detener micr\u00f3fono si estaba grabando
   if (_chatSpeechRecognition) {
     try { _chatSpeechRecognition.stop(); } catch(e) {}
   }
 
-  // Ocultar teclado en móvil para dejar espacio libre de lectura
+  // Ocultar teclado en m\u00f3vil para dejar espacio libre de lectura
   input.blur();
   input.value = '';
   input.style.height = '40px';
@@ -466,9 +466,9 @@ async function sendChatMessage() {
   } catch (err) {
     removeChatTyping();
     if (err.message === 'NO_KEY') {
-      appendChatMessage('bot', '⚠️ No encontré tu API Key. Ve a Perfil → Asistente IA para configurarla.');
+      appendChatMessage('bot', '\u26a0\ufe0f No encontr\u00e9 tu API Key. Ve a Perfil \u2192 Asistente IA para configurarla.');
     } else {
-      appendChatMessage('bot', `❌ Error: ${err.message}`);
+      appendChatMessage('bot', `\u274c Error: ${err.message}`);
     }
   } finally {
     input.disabled = false;
@@ -481,25 +481,25 @@ function initDashboardAIBtn() {
   if (!btn) return;
   btn.addEventListener('click', async () => {
     if (!AI.isConfigured()) {
-      showToast('⚠️ Configura tu API Key en Perfil → Asistente IA');
+      showToast('\u26a0\ufe0f Configura tu API Key en Perfil \u2192 Asistente IA');
       return;
     }
     const textEl    = document.getElementById('dash-ai-text');
     const loadingEl = document.getElementById('dash-ai-loading');
     btn.disabled = true;
-    btn.textContent = '⏳ Generando…';
+    btn.textContent = '\u23f3 Generando\u2026';
     if (loadingEl) loadingEl.hidden = false;
     if (textEl)    textEl.style.opacity = '0.4';
     try {
       const summary = await AI.getDailySummary();
       if (textEl) { textEl.textContent = summary; textEl.style.opacity = '1'; }
     } catch (err) {
-      showToast('❌ Error al conectar con Gemini');
+      showToast('\u274c Error al conectar con Gemini');
       if (textEl) textEl.style.opacity = '1';
     } finally {
       if (loadingEl) loadingEl.hidden = true;
       btn.disabled = false;
-      btn.textContent = '✨ Insight IA';
+      btn.textContent = '\u2728 Insight IA';
     }
   });
 }

@@ -120,7 +120,7 @@ button { font-family: var(--font); cursor: pointer; border: none; background: no
 
 .screen {
   display: none; flex-direction: column; flex: 1;
-  padding-bottom: calc(var(--nav-h) + 12px);
+  padding-bottom: calc(var(--nav-h) + 96px);
   animation: screenIn 0.28s cubic-bezier(0.25,0.46,0.45,0.94);
 }
 .screen.active { display: flex; }
@@ -908,7 +908,8 @@ select.liquid-input { width: 80px; background-image: none; cursor: pointer; }
 }
 .recipe-modal.open { transform:translateX(-50%) translateY(0); }
 
-.modal-handle { width:36px; height:4px; background:var(--gray-200); border-radius:var(--r-full); margin:10px auto 0; }
+.modal-handle { width:36px; height:4px; background:var(--gray-200); border-radius:var(--r-full); margin:10px auto 0; touch-action:none; cursor:grab; }
+.modal-header { touch-action:none; user-select:none; }
 
 .modal-header {
   background:var(--g-header); padding:18px 20px 22px; position:relative;
