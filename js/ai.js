@@ -13,7 +13,7 @@ const AI = {
   // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
 
   getKey() {
-    return (DB.userPreferences.gemini_api_key || '').trim();
+    return (DB.userPreferences.geminiApiKey || '').trim();
   },
 
   isConfigured() {
