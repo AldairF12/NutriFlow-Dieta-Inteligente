@@ -1,7 +1,7 @@
 @import url('core/base.css');
 @import url('components/chat.css');
+@import url('components/register-sheet.css');
+@import url('components/voice.css');
 @import url('views/dashboard.css');
 @import url('views/profile.css');
-@import url('views/register-sheet.css');
 @import url('views/diary.css');
-@import url('views/voice.css');

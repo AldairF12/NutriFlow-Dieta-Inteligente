@@ -158,6 +158,24 @@ function renderPantryScreen() {
       handleQtyChange(50);
     });
 
+    const infoEl = el.querySelector('.pantry-info');
+    const qtySpan = el.querySelector('.pantry-qty');
+    const openPop = () => {
+      if (typeof openIngredientPopover === 'function') {
+        openIngredientPopover(ing.id, ing.name, qty, null);
+      }
+    };
+    if (infoEl) {
+      infoEl.style.cursor = 'pointer';
+      infoEl.title = 'Toca para ajustar stock';
+      infoEl.addEventListener('click', openPop);
+    }
+    if (qtySpan) {
+      qtySpan.style.cursor = 'pointer';
+      qtySpan.title = 'Toca para ajustar stock';
+      qtySpan.addEventListener('click', openPop);
+    }
+
     container.appendChild(el);
   });
 

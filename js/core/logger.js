@@ -58,7 +58,7 @@ window.Logger = {
     this.logs.push(`[${timestamp}] [${level.toUpperCase()}] ${msg}`);
 
     if (this.logs.length > this.maxLogs) {
-      this.logs.shift(); // Eliminar el más antiguo
+      this.logs.shift(); // Eliminar el m\u00e1s antiguo
     }
 
     this.saveToStorage();
@@ -87,7 +87,7 @@ window.Logger = {
 
   exportLogs() {
     if (this.logs.length === 0) {
-      alert("No hay logs registrados aún.");
+      alert("No hay logs registrados a\u00fan.");
       return;
     }
     const blob = new Blob([this.logs.join('\n')], { type: 'text/plain' });
@@ -102,5 +102,5 @@ window.Logger = {
   }
 };
 
-// Iniciar automáticamente
+// Iniciar autom\u00e1ticamente
 window.Logger.init();

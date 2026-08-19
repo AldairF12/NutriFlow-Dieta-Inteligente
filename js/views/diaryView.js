@@ -359,12 +359,23 @@ function openRecipeDetail(recipe) {
       const avail   = pantry ? pantry.quantity_available : 0;
       const ok      = avail >= ri.quantity;
       const li = document.createElement('li');
-      li.className = `ingredient-item ${ok ? '' : 'ingredient-missing'}`;
+      li.className = `ingredient-item ${ok ? 'ingredient-available' : 'ingredient-missing'}`;
+      li.style.cursor = 'pointer';
+      li.title = ok 
+        ? `${ing ? ing.name : 'Ingrediente'}: Tienes ${avail}g (Necesitas ${ri.quantity}g) ? Toca para ajustar stock`
+        : `${ing ? ing.name : 'Ingrediente'}: Faltan ${ri.quantity - avail}g ? Toca para comprar o sumar stock`;
+      
       li.innerHTML = `
         <span class="ing-name">${ing ? ing.name : 'Desconocido'}</span>
         <span class="ing-qty">${ri.quantity}g</span>
-        <span class="ing-stock ${ok ? 'ok' : 'low'}">${ok ? '\u2713' : `${avail}g`}</span>
+        <span class="ing-stock ${ok ? 'ok' : 'low'}">${ok ? `${avail}g \u2713` : `${avail}g +`}</span>
       `;
+      li.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (typeof openIngredientPopover === 'function') {
+          openIngredientPopover(ing ? ing.id : ri.ingredient_id, ing ? ing.name : 'Ingrediente', ri.quantity, recipe);
+        }
+      });
       ingList.appendChild(li);
     });
   }
@@ -541,7 +552,125 @@ if (document.readyState === 'loading') {
   initModalGestures();
 }
 
-function initIngredientPopover() {}
+// ??????????????????????????????????????????????
+// POPOVER FLOTANTE PARA AJUSTAR / COMPRAR STOCK DE INGREDIENTE
+// ??????????????????????????????????????????????
+let _popoverIngId    = null;
+let _popoverRecipe   = null;
+let _popoverQty      = 0;
+let _popoverNeeded   = 0;
+
+function openIngredientPopover(ingId, ingName, needed, recipe) {
+  _popoverIngId  = ingId;
+  _popoverRecipe = recipe;
+  _popoverNeeded = needed || 0;
+
+  const pantry = (window.DB && typeof window.DB.getPantryItem === 'function')
+    ? window.DB.getPantryItem(ingId)
+    : null;
+  _popoverQty = pantry ? pantry.quantity_available : 0;
+
+  const nameEl = document.getElementById('popover-ing-name');
+  const neededEl = document.getElementById('popover-ing-needed');
+  const displayEl = document.getElementById('popover-qty-display');
+
+  if (nameEl) nameEl.textContent = ingName || 'Ingrediente';
+  if (neededEl) {
+    if (needed > 0) {
+      neededEl.textContent = `Necesitas: ${needed}g ? Tienes: ${_popoverQty}g`;
+    } else {
+      neededEl.textContent = `Stock actual: ${_popoverQty}g`;
+    }
+  }
+  if (displayEl) displayEl.textContent = `${_popoverQty}g`;
+
+  const overlay = document.getElementById('ingredient-popover-overlay');
+  const popover = document.getElementById('ingredient-popover');
+  if (overlay) overlay.classList.add('open');
+  if (popover) popover.classList.add('open');
+  document.body.classList.add('modal-open');
+}
+
+function closeIngredientPopover() {
+  const overlay = document.getElementById('ingredient-popover-overlay');
+  const popover = document.getElementById('ingredient-popover');
+  if (overlay) overlay.classList.remove('open');
+  if (popover) popover.classList.remove('open');
+  
+  // Si no hay otro modal abierto, quitamos modal-open del body
+  const recipeModal = document.getElementById('recipe-modal');
+  const shoppingModal = document.getElementById('shopping-modal');
+  const hasOtherModal = (recipeModal && recipeModal.classList.contains('open')) ||
+                        (shoppingModal && shoppingModal.classList.contains('open'));
+  if (!hasOtherModal) {
+    document.body.classList.remove('modal-open');
+  }
+
+  _popoverIngId = null;
+  _popoverRecipe = null;
+  _popoverNeeded = 0;
+}
+
+function initIngredientPopover() {
+  const closeBtn = document.getElementById('popover-close');
+  const overlay = document.getElementById('ingredient-popover-overlay');
+  const minusBtn = document.getElementById('popover-minus');
+  const plusBtn = document.getElementById('popover-plus');
+  const saveBtn = document.getElementById('popover-save');
+
+  if (closeBtn) closeBtn.onclick = () => closeIngredientPopover();
+  if (overlay) overlay.onclick = () => closeIngredientPopover();
+
+  if (minusBtn) {
+    minusBtn.onclick = () => {
+      _popoverQty = _popoverQty % 50 === 0 ? Math.max(0, _popoverQty - 50) : Math.floor(_popoverQty / 50) * 50;
+      const displayEl = document.getElementById('popover-qty-display');
+      if (displayEl) displayEl.textContent = `${_popoverQty}g`;
+    };
+  }
+
+  if (plusBtn) {
+    plusBtn.onclick = () => {
+      _popoverQty = _popoverQty % 50 === 0 ? _popoverQty + 50 : Math.ceil(_popoverQty / 50) * 50;
+      const displayEl = document.getElementById('popover-qty-display');
+      if (displayEl) displayEl.textContent = `${_popoverQty}g`;
+    };
+  }
+
+  if (saveBtn) {
+    saveBtn.onclick = () => {
+      if (_popoverIngId === null) return;
+      const ingId = _popoverIngId;
+      const qty = _popoverQty;
+      const recipeToReopen = _popoverRecipe;
+
+      if (window.DB && typeof window.DB.updatePantryQuantity === 'function') {
+        window.DB.updatePantryQuantity(ingId, qty);
+      }
+      if (typeof showToast === 'function') showToast('? Despensa actualizada');
+      closeIngredientPopover();
+
+      if (recipeToReopen) {
+        setTimeout(() => openRecipeDetail(recipeToReopen), 100);
+      }
+      if (typeof renderPantryScreen === 'function') renderPantryScreen();
+      if (typeof renderDiaryScreen === 'function') renderDiaryScreen();
+      if (typeof renderRecipesScreen === 'function') renderRecipesScreen();
+      if (typeof updateShoppingFab === 'function') updateShoppingFab();
+
+      const shoppingModal = document.getElementById('shopping-modal');
+      if (shoppingModal && shoppingModal.classList.contains('open')) {
+        if (typeof renderShoppingList === 'function') renderShoppingList(false);
+      }
+    };
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initIngredientPopover);
+} else {
+  initIngredientPopover();
+}
 
 function renderFreeDiaryEntries(container) {
   const todayLogs = (window.DB && typeof window.DB.getTodayLogs === 'function')

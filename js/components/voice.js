@@ -674,10 +674,8 @@ async function processVoiceInput() {
     if (status) status.textContent = '\u00a1Listo!';
     
     // Pasar al confirmador de gramaje
-    // Pasar al confirmador de gramaje
-    if (typeof _selectedFoodItem !== 'undefined') {
-      _selectedFoodItem = bestMatch; // Global state for updateGramMacros
-    }
+    _selectedFoodItem = bestMatch;
+    window._selectedFoodItem = bestMatch;
     
     // Ocultar la UI de voz, mostrar el confirmador
     const voiceContainer = document.querySelector('.rs-voice-container');

@@ -1,8 +1,11 @@
+var _selectedFoodItem = null;
+window._selectedFoodItem = null;
+
 function openRegisterSheet() {
   const sheet   = document.getElementById('register-sheet');
   const overlay = document.getElementById('register-overlay');
   if (!sheet) return;
-  // Siempre empieza en el menú principal
+  // Siempre empieza en el men\u00fa principal
   switchRSView('menu');
   sheet.classList.add('open');
   overlay.classList.add('open');
@@ -110,7 +113,7 @@ function initRegisterSheet() {
     searchInput.addEventListener('input', debounce(handleFoodSearch, 280));
   }
 
-  // ── Gramaje: botones +/− y guardado ──
+  // \u2500\u2500 Gramaje: botones +/\u2212 y guardado \u2500\u2500
   const gramMinus = document.getElementById('rs-gram-minus');
   const gramPlus  = document.getElementById('rs-gram-plus');
   const gramInput = document.getElementById('rs-gram-input');
@@ -129,10 +132,10 @@ function initRegisterSheet() {
   if (gramInput) gramInput.addEventListener('input', updateGramMacros);
   if (gramSave)  gramSave.addEventListener('click', saveFreeFoodEntry);
 
-  // ── Voz: inicializar ──
+  // \u2500\u2500 Voz: inicializar \u2500\u2500
   initVoiceRegistration();
 
-  // Visibilidad del FAB según pestaña activa
+  // Visibilidad del FAB seg\u00fan pesta\u00f1a activa
   updateRegisterFabVisibility();
   document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', updateRegisterFabVisibility);
@@ -156,7 +159,7 @@ function resetRSSearchView() {
   const gramInp = document.getElementById('rs-gram-input');
   if (input)   input.value = '';
   if (gramInp) gramInp.value = '';
-  if (results) results.innerHTML = '<div class="rs-result-empty">Escribe para buscar un alimento 🔍</div>';
+  if (results) results.innerHTML = '<div class="rs-result-empty">Escribe para buscar un alimento \u{1f50d}</div>';
   if (confirm) {
     confirm.hidden = true;
     document.getElementById('rs-gram-item-name').textContent = '';
@@ -173,7 +176,7 @@ async function handleFoodSearch() {
   _selectedFoodItem = null;
 
   if (!query || query.length < 2) {
-    results.innerHTML = '<div class="rs-result-empty">Escribe para buscar un alimento 🔍</div>';
+    results.innerHTML = '<div class="rs-result-empty">Escribe para buscar un alimento \u{1f50d}</div>';
     return;
   }
 
@@ -211,13 +214,13 @@ async function handleFoodSearch() {
   }
 
   if (localMatches.length === 0 && ingMatches.length === 0) {
-    // No encontrado — botón IA
+    // No encontrado \u2014 bot\u00f3n IA
     const emptyDiv = document.createElement('div');
     emptyDiv.className = 'rs-result-empty';
     emptyDiv.innerHTML = `
-      <span>No encontrado en tu BD 🤔</span>
+      <span>No encontrado en tu BD \u{1f914}</span>
       ${AI.isConfigured()
-        ? `<button class="btn-search-ai" id="btn-search-ai-now">🤖 Buscar con IA: "${query}"</button>`
+        ? `<button class="btn-search-ai" id="btn-search-ai-now">\u{1f916} Buscar con IA: "${query}"</button>`
         : `<span style="font-size:0.75rem">Configura tu API Key en Perfil para usar IA</span>`
       }
     `;
@@ -226,21 +229,21 @@ async function handleFoodSearch() {
     document.getElementById('btn-search-ai-now')?.addEventListener('click', async (e) => {
       const btn = e.currentTarget;
       btn.disabled = true;
-      btn.textContent = '⏳ Consultando Gemini…';
+      btn.textContent = '\u23f3 Consultando Gemini\u2026';
       try {
         const { item } = await AI.fetchNutritionInfo(query);
         if (item) {
           results.innerHTML = '';
           results.appendChild(buildFoodResultItem(item, 'food_item'));
           selectFoodForGram(item);
-          showToast('✨ Información obtenida de Gemini');
+          showToast('\u2728 Informaci\u00f3n obtenida de Gemini');
         } else {
-          showToast('❌ Gemini no encontró información de ese alimento');
+          showToast('\u274c Gemini no encontr\u00f3 informaci\u00f3n de ese alimento');
         }
       } catch {
-        showToast('❌ Error al consultar Gemini');
+        showToast('\u274c Error al consultar Gemini');
         btn.disabled = false;
-        btn.textContent = `🤖 Buscar con IA: "${query}"`;
+        btn.textContent = `\u{1f916} Buscar con IA: "${query}"`;
       }
     });
   }
@@ -307,7 +310,7 @@ function saveFreeFoodEntry() {
   if (!_selectedFoodItem || !gramInput) return;
   const qty = Math.max(1, parseInt(gramInput.value) || 100);
 
-  // Si es un ingrediente o un item temporal de Gemini, lo añadimos a food_items
+  // Si es un ingrediente o un item temporal de Gemini, lo a\u00f1adimos a food_items
   let refId = _selectedFoodItem.id;
   if (_selectedFoodItem._fromIngredient || _selectedFoodItem._isTemp) {
     const saved = DB.addFoodItem({
@@ -333,7 +336,7 @@ function saveFreeFoodEntry() {
     mealCategory: mealCategory
   });
 
-  showToast(`✅ ${_selectedFoodItem.name} (${qty}g) registrado`);
+  showToast(`\u2705 ${_selectedFoodItem.name} (${qty}g) registrado`);
   closeRegisterSheet();
   renderDiaryScreen();
   renderDailyMacros();
@@ -347,12 +350,12 @@ function renderRSFavoritesView() {
   const favorites  = DB.getFavorites();
   const frequents  = DB.getFrequentItems(8);
 
-  // ── Favoritos ──
+  // \u2500\u2500 Favoritos \u2500\u2500
   const favResolved = favorites.map(fav => resolveItemLabel(fav)).filter(Boolean);
   if (favResolved.length > 0) {
     const title = document.createElement('div');
     title.className = 'rs-fav-section-title';
-    title.textContent = '⭐ Tus favoritos';
+    title.textContent = '\u2b50 Tus favoritos';
     container.appendChild(title);
 
     const chips = document.createElement('div');
@@ -367,12 +370,12 @@ function renderRSFavoritesView() {
     container.appendChild(chips);
   }
 
-  // ── Frecuentes ──
+  // \u2500\u2500 Frecuentes \u2500\u2500
   const freqResolved = frequents.map(f => resolveItemLabel(f)).filter(Boolean);
   if (freqResolved.length > 0) {
     const title2 = document.createElement('div');
     title2.className = 'rs-fav-section-title';
-    title2.textContent = '🔥 Más usados (últimos 30 días)';
+    title2.textContent = '\u{1f525} M\u00e1s usados (\u00faltimos 30 d\u00edas)';
     container.appendChild(title2);
 
     const chips2 = document.createElement('div');
@@ -388,25 +391,25 @@ function renderRSFavoritesView() {
   }
 
   if (favResolved.length === 0 && freqResolved.length === 0) {
-    container.innerHTML = '<div class="rs-result-empty">Aún no tienes favoritos ni frecuentes.<br>Regístra alimentos para que aparezcan aquí 🌱</div>';
+    container.innerHTML = '<div class="rs-result-empty">A\u00fan no tienes favoritos ni frecuentes.<br>Reg\u00edstra alimentos para que aparezcan aqu\u00ed \u{1f331}</div>';
   }
 }
 function resolveItemLabel({ type, reference_id }) {
-  const emojis = { desayuno:'🌅', almuerzo:'🍽️', cena:'🌙', merienda:'🥪', food_item:'🥗', liquid:'💧' };
+  const emojis = { desayuno:'\u{1f305}', almuerzo:'\u{1f37d}\ufe0f', cena:'\u{1f319}', merienda:'\u{1f96a}', food_item:'\u{1f957}', liquid:'\u{1f4a7}' };
   if (type === 'meal') {
     const r = DB.getRecipeById(reference_id);
     if (!r) return null;
-    return { label: r.name, emoji: emojis[r.meal_type] || '🍳', fav: { type, reference_id } };
+    return { label: r.name, emoji: emojis[r.meal_type] || '\u{1f373}', fav: { type, reference_id } };
   }
   if (type === 'food_item') {
     const fi = DB.getFoodItemById(reference_id);
     if (!fi) return null;
-    return { label: fi.name, emoji: '🥗', fav: { type, reference_id } };
+    return { label: fi.name, emoji: '\u{1f957}', fav: { type, reference_id } };
   }
   if (type === 'ingredient') {
     const ing = DB.getIngredientById(reference_id);
     if (!ing) return null;
-    return { label: ing.name, emoji: '🥕', fav: { type, reference_id } };
+    return { label: ing.name, emoji: '\u{1f955}', fav: { type, reference_id } };
   }
   return null;
 }
@@ -414,12 +417,12 @@ function quickRegisterFav({ type, reference_id }) {
   if (type === 'meal') {
     DB.addFoodLog({ type: 'meal', reference_id, planned: false });
     const r = DB.getRecipeById(reference_id);
-    showToast(`✅ ${r?.name || 'Receta'} registrada`);
+    showToast(`\u2705 ${r?.name || 'Receta'} registrada`);
   } else if (type === 'food_item') {
     const fi = DB.getFoodItemById(reference_id);
     const qty = fi?.typical_serving_g || 100;
     DB.addFoodLog({ type: 'food_item', reference_id, quantity_g: qty, planned: false });
-    showToast(`✅ ${fi?.name || 'Alimento'} (${qty}g) registrado`);
+    showToast(`\u2705 ${fi?.name || 'Alimento'} (${qty}g) registrado`);
   }
   closeRegisterSheet();
   renderDiaryScreen();
