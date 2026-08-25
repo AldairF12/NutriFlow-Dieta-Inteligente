@@ -232,21 +232,21 @@ function initLiquidForm() {
 }
 
 function deleteRecipe(recipeId) {
-  const recipesList = window.DB.recipes || (window.DB.state && window.DB.state.recipes) || [];
-  const recipe = recipesList.find(r => r.id === recipeId);
-  const name   = recipe ? recipe.name : 'esta receta';
-  if (!confirm(`\u00BFDeseas eliminar "${name}"? Esta acci\u00F3n no se puede deshacer.`)) return;
+  const recipe = window.DB.getRecipeById(recipeId);
+  const name = recipe ? recipe.name : 'esta receta';
 
-  const state = window.DB.state;
-  state.recipes = (state.recipes || []).filter(r => r.id !== recipeId);
-  state.recipe_ingredients = (state.recipe_ingredients || []).filter(ri => ri.recipe_id !== recipeId);
-  if (state.foodLogs) state.foodLogs = state.foodLogs.filter(l => l.reference_id !== recipeId);
-  if (state.food_logs) state.food_logs = state.food_logs.filter(l => l.reference_id !== recipeId);
-  persistState();
+  if (recipe && recipe.isCustom) {
+    if (!confirm(`¿Deseas eliminar definitivamente "${name}"? Esta acción no se puede deshacer.`)) return;
+    window.DB.deleteCustomRecipe(recipeId);
+    showToast('🗑️ Receta eliminada');
+  } else {
+    if (!confirm(`¿Deseas ocultar "${name}" de tu catálogo?`)) return;
+    window.DB.toggleHideRecipe(recipeId);
+    showToast('👁️ Receta ocultada');
+  }
 
   if (typeof renderRecipesScreen === 'function') renderRecipesScreen();
   if (typeof renderDiaryScreen === 'function') renderDiaryScreen();
-  showToast('\u{1F5D1}\uFE0F Receta eliminada');
 }
 
 function initImport() {

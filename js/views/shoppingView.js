@@ -2,8 +2,8 @@ let _shoppingViewCards = localStorage.getItem('nutriflow_shopping_view') === 'ca
 
 function getMissingIngredientsList() {
   const map = new Map();
-  for (const type of ['desayuno','almuerzo','merienda','cena']) {
-    const recipes = window.DB.recipes.filter(r => r.meal_type === type);
+  for (const type of ['desayuno', 'almuerzo', 'merienda', 'cena', 'snack']) {
+    const recipes = window.DB.recipes.filter(r => (r.meal_type || '').toLowerCase() === type);
     for (const recipe of recipes) {
       if (typeof recipeHasDislikedIngredients === 'function' && recipeHasDislikedIngredients(recipe.id)) continue;
       const ris = window.DB.getRecipeIngredients(recipe.id);

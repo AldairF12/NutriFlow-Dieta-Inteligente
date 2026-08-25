@@ -1,16 +1,23 @@
 // ============================================================
-// ai.js \u2014 M\u00f3dulo de integraci\u00f3n con Gemini API
+// ai.js — Módulo de integración con Gemini API
 // Depende de: db.js, calc.js
 // ============================================================
 
-//const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
-const GEMINI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent';
+const GEMINI_MODELS = [
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemini-3.7-flash',
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-flash',
+];
 
 const AI = {
 
-  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-  // CONFIGURACI\u00d3N
-  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // ────────────────────────────────────────────
+  // CONFIGURACIÓN
+  // ────────────────────────────────────────────
 
   getKey() {
     const prefs = (window.DB && window.DB.userPreferences) ? window.DB.userPreferences : {};
@@ -21,84 +28,116 @@ const AI = {
     return this.getKey().length > 10;
   },
 
-  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // ────────────────────────────────────────────
   // LLAMADA BASE A LA API
-  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // ────────────────────────────────────────────
 
   async _call(prompt) {
     const key = this.getKey();
-    if (!key) throw new Error('NO_KEY');
-
-    const res = await fetch(`${GEMINI_BASE_URL}?key=${key}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 1024,
-        }
-      })
-    });
-
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err?.error?.message || `HTTP ${res.status}`);
+    if (!key) {
+      console.warn('[NutriFlow AI] ⚠️ No hay API Key configurada.');
+      throw new Error('NO_KEY');
     }
 
-    const data = await res.json();
-    return data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    console.log('[NutriFlow AI] 🚀 Iniciando consulta a Gemini API...');
+    console.log('[NutriFlow AI] 📝 Prompt:', prompt);
+
+    let lastError = null;
+
+    for (const model of GEMINI_MODELS) {
+      try {
+        console.log(`[NutriFlow AI] 🔄 Intentando con modelo: ${model}...`);
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: {
+              temperature: 0.3,
+              maxOutputTokens: 1024,
+            }
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          console.log(`[NutriFlow AI] ✅ Respuesta exitosa con ${model}:`, text);
+          return text;
+        }
+
+        const errData = await res.json().catch(() => ({}));
+        const errMsg = errData?.error?.message || `HTTP ${res.status}`;
+        console.warn(`[NutriFlow AI] ⚠️ Error en modelo ${model} (${res.status}):`, errMsg);
+        lastError = new Error(errMsg);
+        
+        // Si el modelo no existe o fue descontinuado (404), intentamos el siguiente modelo
+        if (res.status !== 404 && !errMsg.includes('not found') && !errMsg.includes('no longer available')) {
+          throw lastError;
+        }
+      } catch (e) {
+        lastError = e;
+        if (e.message === 'NO_KEY') throw e;
+      }
+    }
+
+    console.error('[NutriFlow AI] ❌ Fallaron todos los modelos disponibles:', lastError);
+    throw lastError || new Error('No se pudo conectar con Gemini AI.');
   },
 
-  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-  // INFORMACI\u00d3N NUTRICIONAL DE UN ALIMENTO
-  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
-
   /**
-   * Busca primero en la BD local. Si no est\u00e1, consulta a Gemini,
-   * guarda el resultado y lo devuelve.
-   * @param {string} foodName \u2014 nombre del alimento a buscar
+   * Consulta a Gemini para obtener la información nutricional de un ingrediente o alimento.
+   * @param {string} foodName — nombre del alimento a buscar
+   * @param {boolean} forceAI — si es true, consulta directamente a Gemini sin caché
    * @returns {{ item, fromCache: boolean }}
    */
-  async fetchNutritionInfo(foodName) {
-    // 1. Buscar en food_items guardados (Coincidencia exacta para evitar mezclar platos con ingredientes sueltos)
-    const localFoodItem = DB.getFoodItemByExactName(foodName);
-    if (localFoodItem) return { item: localFoodItem, fromCache: true };
+  async fetchNutritionInfo(foodName, forceAI = false) {
+    if (!forceAI) {
+      // 1. Buscar en food_items guardados
+      const localFoodItem = DB.getFoodItemByExactName(foodName);
+      if (localFoodItem) {
+        console.log('[NutriFlow AI] ⚡ Encontrado en food_items local:', localFoodItem);
+        return { item: localFoodItem, fromCache: true };
+      }
 
-    // 2. Buscar entre ingredientes de recetas (Coincidencia exacta)
-    const localIngredient = DB.ingredients.find(i =>
-      i.name.toLowerCase().trim() === foodName.toLowerCase().trim()
-    );
-    if (localIngredient) return { item: localIngredient, fromCache: true };
+      // 2. Buscar entre ingredientes de recetas
+      const localIngredient = DB.ingredients.find(i =>
+        i.name.toLowerCase().trim() === foodName.toLowerCase().trim()
+      );
+      if (localIngredient) {
+        console.log('[NutriFlow AI] ⚡ Encontrado en ingredientes local:', localIngredient);
+        return { item: localIngredient, fromCache: true };
+      }
+    }
 
     // 3. Consultar Gemini
-    const prompt = `Devuelve SOLO un objeto JSON v\u00e1lido (sin markdown, sin texto adicional, sin bloques de c\u00f3digo) con la informaci\u00f3n nutricional de "${foodName}" por cada 100 gramos. Usa exactamente este esquema:
+    console.log('[NutriFlow AI] 🤖 Consultando a Gemini para:', foodName);
+    const prompt = `Devuelve SOLO un objeto JSON válido (sin markdown, sin bloques de código, sin texto extra) con la información nutricional de "${foodName}" por cada 100 gramos. Usa exactamente este formato JSON:
 {
-  "name": "nombre oficial del alimento en espa\u00f1ol",
-  "category": "una de: Prote\u00edna, Carbohidrato, Verdura, Fruta, Grasa, L\u00e1cteo, Snack, Bebida, Otro",
-  "calories_per_100g": n\u00famero entero,
-  "protein_per_100g": n\u00famero decimal con un decimal,
-  "carbs_per_100g": n\u00famero decimal con un decimal,
-  "fat_per_100g": n\u00famero decimal con un decimal,
-  "typical_serving_g": n\u00famero entero (porci\u00f3n t\u00edpica en gramos)
+  "name": "nombre oficial del alimento en español con mayúscula inicial (ej. Plátano, Harina de almendras)",
+  "category": "una de: Proteína, Cereal, Verdura, Fruta, Lácteo, Grasa, Legumbre, Especia, Otro",
+  "calories_per_100g": número entero,
+  "protein_per_100g": número decimal con un decimal,
+  "carbs_per_100g": número decimal con un decimal,
+  "fat_per_100g": número decimal con un decimal,
+  "typical_serving_g": número entero
 }`;
 
     const raw = await this._call(prompt);
 
-    console.log("============== \u{1f916} RESPUESTA CRUDA DE GEMINI ==============");
-    console.log(raw);
-    console.log("==========================================================");
-
-    // Limpiar la respuesta por si Gemini a\u00f1ade markdown
+    // Limpiar la respuesta por si Gemini añade markdown
     const cleaned = raw.replace(/```json|```/g, '').trim();
     let parsed;
     try {
       parsed = JSON.parse(cleaned);
-    } catch {
-      throw new Error('Gemini devolvi\u00f3 un formato inesperado. Intenta con otro nombre.');
+      console.log('[NutriFlow AI] 📦 Datos parseados:', parsed);
+    } catch (e) {
+      console.error('[NutriFlow AI] ❌ Error parseando JSON:', raw, e);
+      throw new Error('Gemini devolvió un formato inesperado. Intenta con otro nombre.');
     }
 
-    // 4. Devolver objeto temporal (no se guarda en DB hasta que el usuario confirme)
+    // 4. Devolver objeto temporal
     return { item: { ...parsed, _isTemp: true, source: 'gemini' }, fromCache: false };
   },
 
@@ -320,3 +359,5 @@ Párrafo:`;
     return summaryText;
   }
 };
+
+window.AI = AI;

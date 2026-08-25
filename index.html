@@ -94,9 +94,14 @@
             <h1 class="screen-title">Recetas</h1>
             <p class="screen-subtitle">Tu catálogo de comidas saludables</p>
           </div>
-          <button id="btn-recipes-view" class="btn-view-toggle" title="Alternar vista tarjetas/lista" aria-label="Alternar vista de recetas">
-            <span class="btn-view-icon">&#128196;</span>
-          </button>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <button id="btn-create-recipe" class="btn-create-recipe-pill" title="Crear nueva receta personalizada" aria-label="Crear receta">
+              <span>+ Nueva Receta</span>
+            </button>
+            <button id="btn-recipes-view" class="btn-view-toggle" title="Alternar vista tarjetas/lista" aria-label="Alternar vista de recetas">
+              <span class="btn-view-icon">&#128196;</span>
+            </button>
+          </div>
         </div>
       </header>
       <div class="recipes-toolbar">
@@ -459,6 +464,170 @@
         <button id="shopping-close" class="modal-close" aria-label="Cerrar lista de compras">&#10005;</button>
       </header>
       <div id="shopping-list-body" class="shopping-list-body"></div>
+    </div>
+
+    <!-- MODAL EDITOR DE RECETAS -->
+    <div id="recipe-editor-modal" class="recipe-editor-modal" role="dialog" aria-modal="true" aria-labelledby="recipe-editor-title">
+      <div class="modal-handle" aria-hidden="true"></div>
+      <header class="recipe-editor-header">
+        <h2 id="recipe-editor-title" class="recipe-editor-title">✨ Nueva Receta</h2>
+        <button id="recipe-editor-close" class="recipe-editor-close" aria-label="Cerrar editor">✕</button>
+      </header>
+      <div class="recipe-editor-body">
+        <div class="editor-field-group">
+          <label for="recipe-editor-name" class="editor-label">Nombre del plato</label>
+          <input type="text" id="recipe-editor-name" class="editor-input" placeholder="Ej. Bowl de Avena y Frutos Rojos" maxlength="60" autocomplete="off" />
+        </div>
+
+        <div class="editor-field-group">
+          <label class="editor-label">Tipo de comida</label>
+          <div class="recipe-meal-type-selector">
+            <button type="button" class="recipe-meal-type-pill active" data-type="desayuno">🌅 Desayuno</button>
+            <button type="button" class="recipe-meal-type-pill" data-type="almuerzo">☀️ Almuerzo</button>
+            <button type="button" class="recipe-meal-type-pill" data-type="merienda">🥪 Merienda</button>
+            <button type="button" class="recipe-meal-type-pill" data-type="cena">🌙 Cena</button>
+            <button type="button" class="recipe-meal-type-pill" data-type="snack">🥨 Snack</button>
+          </div>
+        </div>
+
+        <!-- Ingredientes de la Receta -->
+        <div class="editor-field-group">
+          <div class="editor-ingredients-header">
+            <label class="editor-label">🥗 Ingredientes</label>
+            <button type="button" id="btn-editor-add-ingredient" class="btn-editor-add-ing">+ Añadir Ingrediente</button>
+          </div>
+          <div id="recipe-editor-ingredients-list" class="recipe-editor-ingredients-list"></div>
+          <div id="recipe-editor-ingredients-empty" class="editor-ingredients-empty-hint">
+            <span>Aún no has añadido ingredientes. Presiona <strong>"+ Añadir Ingrediente"</strong> para seleccionar del catálogo.</span>
+          </div>
+        </div>
+
+        <!-- Resumen de Macros en Vivo (Diseño cápsulas bajo ingredientes) -->
+        <div class="editor-live-macros-card">
+          <div class="editor-macros-grid">
+            <div class="editor-macro-chip editor-macro-chip--cal">
+              <span id="editor-macro-cal" class="editor-macro-chip-val">0 kcal</span>
+              <span class="editor-macro-chip-lbl">CALORÍAS</span>
+            </div>
+            <div class="editor-macro-chip editor-macro-chip--prot">
+              <span id="editor-macro-prot" class="editor-macro-chip-val">0.0g</span>
+              <span class="editor-macro-chip-lbl">PROTEÍNA</span>
+            </div>
+            <div class="editor-macro-chip editor-macro-chip--carb">
+              <span id="editor-macro-carb" class="editor-macro-chip-val">0.0g</span>
+              <span class="editor-macro-chip-lbl">CARBOS</span>
+            </div>
+            <div class="editor-macro-chip editor-macro-chip--fat">
+              <span id="editor-macro-fat" class="editor-macro-chip-val">0.0g</span>
+              <span class="editor-macro-chip-lbl">GRASA</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="editor-field-group">
+          <label for="recipe-editor-instructions" class="editor-label">📝 Preparación (opcional)</label>
+          <textarea id="recipe-editor-instructions" class="editor-textarea" placeholder="Describe los pasos para preparar tu receta..." rows="3"></textarea>
+        </div>
+      </div>
+      <footer class="recipe-editor-footer">
+        <button type="button" id="recipe-editor-cancel" class="btn-editor-cancel">Cancelar</button>
+        <button type="button" id="recipe-editor-save" class="btn-editor-save">Guardar Receta</button>
+      </footer>
+    </div>
+
+    <!-- SUB-MODAL SELECTOR DE INGREDIENTES -->
+    <div id="ingredient-picker-overlay" class="ingredient-picker-overlay"></div>
+    <div id="ingredient-picker-modal" class="ingredient-picker-modal" role="dialog" aria-modal="true" aria-labelledby="picker-title">
+      <div class="modal-handle" aria-hidden="true"></div>
+      <header class="picker-header">
+        <h3 id="picker-title" class="picker-title">Seleccionar Ingrediente</h3>
+        <button id="ingredient-picker-close" class="recipe-editor-close" aria-label="Cerrar selector">✕</button>
+      </header>
+      <div class="picker-toolbar">
+        <div class="picker-search-wrap">
+          <span class="picker-search-icon">🔍</span>
+          <input type="search" id="picker-search-input" class="picker-search-input" placeholder="Buscar ingrediente..." autocomplete="off" />
+        </div>
+        <button type="button" id="btn-picker-new-custom" class="btn-picker-new-custom">+ Crear propio</button>
+      </div>
+
+      <div class="picker-body">
+        <!-- Formulario para crear ingrediente si no existe -->
+        <div id="custom-ing-form-wrap" class="custom-ing-form-wrap" style="display: none;">
+          <form id="custom-ing-form" novalidate>
+            <input type="hidden" id="custom-ing-id" value="" />
+            <div class="custom-ing-form-header">
+              <span id="custom-ing-form-title" class="custom-ing-form-title">✨ Crear Nuevo Ingrediente</span>
+              <button type="button" id="btn-close-custom-ing-form" class="btn-close-form-x" aria-label="Cerrar formulario">✕</button>
+            </div>
+
+            <div class="custom-ing-field">
+              <label for="custom-ing-name" class="custom-field-label">Nombre del alimento</label>
+              <div class="custom-ing-input-inline-wrap">
+                <input type="text" id="custom-ing-name" class="editor-input custom-ing-name-input" placeholder="Ej. Harina de almendras" required autocomplete="off" />
+                <button type="button" id="btn-custom-ing-ai" class="btn-ai-autofill-ing" disabled title="Escribe un nombre para rellenar con IA">
+                  <span>✨ Rellenar con IA</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="custom-ing-field">
+              <label class="custom-field-label">Categoría</label>
+              <div class="custom-ing-cat-selector" id="custom-ing-categories">
+                <button type="button" class="custom-ing-cat-pill active" data-cat="Proteína">🍗 Proteína</button>
+                <button type="button" class="custom-ing-cat-pill" data-cat="Cereal">🌾 Cereal</button>
+                <button type="button" class="custom-ing-cat-pill" data-cat="Verdura">🥦 Verdura</button>
+                <button type="button" class="custom-ing-cat-pill" data-cat="Fruta">🍎 Fruta</button>
+                <button type="button" class="custom-ing-cat-pill" data-cat="Lácteo">🥛 Lácteo</button>
+                <button type="button" class="custom-ing-cat-pill" data-cat="Grasa">🥑 Grasa</button>
+                <button type="button" class="custom-ing-cat-pill" data-cat="Legumbre">🫘 Legumbre</button>
+                <button type="button" class="custom-ing-cat-pill" data-cat="Especia">🌿 Especia</button>
+                <button type="button" class="custom-ing-cat-pill" data-cat="Otro">🥗 Otro</button>
+              </div>
+              <input type="hidden" id="custom-ing-category" value="Proteína" />
+            </div>
+
+            <div class="custom-ing-macros-row">
+              <div class="custom-ing-macro-col">
+                <label for="custom-ing-cal">Calorías</label>
+                <div class="custom-macro-input-wrap">
+                  <input type="number" id="custom-ing-cal" placeholder="0" min="0" step="1" />
+                  <span class="custom-macro-unit">kcal</span>
+                </div>
+              </div>
+              <div class="custom-ing-macro-col">
+                <label for="custom-ing-prot">Proteína</label>
+                <div class="custom-macro-input-wrap">
+                  <input type="number" id="custom-ing-prot" placeholder="0" min="0" step="0.1" />
+                  <span class="custom-macro-unit">g</span>
+                </div>
+              </div>
+              <div class="custom-ing-macro-col">
+                <label for="custom-ing-carb">Carbos</label>
+                <div class="custom-macro-input-wrap">
+                  <input type="number" id="custom-ing-carb" placeholder="0" min="0" step="0.1" />
+                  <span class="custom-macro-unit">g</span>
+                </div>
+              </div>
+              <div class="custom-ing-macro-col">
+                <label for="custom-ing-fat">Grasas</label>
+                <div class="custom-macro-input-wrap">
+                  <input type="number" id="custom-ing-fat" placeholder="0" min="0" step="0.1" />
+                  <span class="custom-macro-unit">g</span>
+                </div>
+              </div>
+            </div>
+            <span class="custom-ing-hint-sub">Valores por cada 100g de porción</span>
+
+            <div class="custom-ing-actions">
+              <button type="button" id="btn-cancel-custom-ing" class="btn-cancel-custom-ing">Cancelar</button>
+              <button type="submit" class="btn-save-custom-ing">Guardar y Añadir</button>
+            </div>
+          </form>
+        </div>
+
+        <div id="picker-ingredients-list" class="picker-ingredients-list"></div>
+      </div>
     </div>
 
     <button id="btn-shopping-fab" class="shopping-fab" aria-label="Abrir lista de compras">

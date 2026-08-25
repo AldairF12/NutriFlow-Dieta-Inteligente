@@ -343,7 +343,9 @@ function openRecipeDetail(recipe) {
   const fatEl  = document.getElementById('modal-fat');
   const instEl = document.getElementById('modal-instructions');
 
-  if (nameEl) nameEl.textContent = recipe.name;
+  if (nameEl) {
+    nameEl.innerHTML = recipe.name + (recipe.isCustom ? ' <span class="badge-own-recipe" style="vertical-align: middle; font-size: 0.75rem;">✨ Propia</span>' : '');
+  }
   if (typeEl) typeEl.textContent = (typeof getMealTypeEmoji === 'function' ? getMealTypeEmoji(recipe.meal_type) : '') + ' ' + (recipe.meal_type || '');
   if (calEl)  calEl.textContent  = macros.calories + ' kcal';
   if (protEl) protEl.textContent = macros.protein  + 'g';

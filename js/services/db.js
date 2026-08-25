@@ -7,6 +7,7 @@ const STORAGE_KEY = 'nutriflow_state';
 const initialState = {
   userPreferences: {
     dislikedIngredients: [],
+    hiddenRecipes: [],
     favorites: ['rec_001', 'rec_006'],
     frequentItems: ['ing_001', 'ing_014', 'ing_019'],
     geminiApiKey: '',
@@ -23,6 +24,10 @@ const initialState = {
       cena:     { start: 20, end: 23 },
     },
   },
+
+  customRecipes: [],
+  customRecipeIngredients: [],
+  customIngredients: [],
 
   pantry: [
     { ingredient_id: 'ing_001', quantity_available: 500 },
@@ -81,6 +86,9 @@ function loadState() {
       if (!parsed.userPreferences.dislikedIngredients) {
         parsed.userPreferences.dislikedIngredients = parsed.userPreferences.disliked_ingredients || [];
       }
+      if (!parsed.userPreferences.hiddenRecipes) {
+        parsed.userPreferences.hiddenRecipes = [];
+      }
       delete parsed.userPreferences.disliked_ingredients;
 
       let loadedKey = (parsed.userPreferences.geminiApiKey || parsed.userPreferences.gemini_api_key || '').trim();
@@ -91,6 +99,10 @@ function loadState() {
       parsed.liquids.forEach(l => {
         if (!l.type) l.type = l.name || 'Agua';
       });
+
+      if (!Array.isArray(parsed.customRecipes)) parsed.customRecipes = [];
+      if (!Array.isArray(parsed.customRecipeIngredients)) parsed.customRecipeIngredients = [];
+      if (!Array.isArray(parsed.customIngredients)) parsed.customIngredients = [];
 
       // Cleanup static data from old localStorage state if it exists
       delete parsed.ingredients;
@@ -133,9 +145,23 @@ const CATALOG_FOOD_ITEMS_MAP = new Map(CATALOG_FOOD_ITEMS.map(fi => [fi.id, fi])
 
 const DB = {
   get state() { return appState; },
-  get ingredients() { return CATALOG_INGREDIENTS; },
-  get recipes() { return CATALOG_RECIPES; },
-  get recipeIngredients() { return CATALOG_RECIPE_INGREDIENTS; },
+  get ingredients() { 
+    return [...CATALOG_INGREDIENTS, ...(appState.customIngredients || [])]; 
+  },
+  get recipes() { 
+    const hidden = (appState.userPreferences && appState.userPreferences.hiddenRecipes) ? appState.userPreferences.hiddenRecipes : [];
+    const activeCatalog = CATALOG_RECIPES.filter(r => !hidden.includes(r.id));
+    return [...activeCatalog, ...(appState.customRecipes || [])]; 
+  },
+  get allRecipes() {
+    return [...CATALOG_RECIPES, ...(appState.customRecipes || [])];
+  },
+  get customRecipes() {
+    return appState.customRecipes || [];
+  },
+  get recipeIngredients() { 
+    return [...CATALOG_RECIPE_INGREDIENTS, ...(appState.customRecipeIngredients || [])]; 
+  },
   get pantry() { return appState.pantry; },
   get foodLogs() { return appState.foodLogs; },
   get liquids() { return appState.liquids; },
@@ -143,14 +169,23 @@ const DB = {
   get foodItems() { return [...CATALOG_FOOD_ITEMS, ...(appState.foodItems || [])]; },
 
   getIngredientById(id) {
+    if (!id) return null;
+    const custom = (appState.customIngredients || []).find(i => i.id === id);
+    if (custom) return custom;
     return CATALOG_INGREDIENTS_MAP.get(id) || null;
   },
 
   getRecipeById(id) {
+    if (!id) return null;
+    const custom = (appState.customRecipes || []).find(r => r.id === id);
+    if (custom) return custom;
     return CATALOG_RECIPES_MAP.get(id) || null;
   },
 
   getRecipeIngredients(recipeId) {
+    if (!recipeId) return [];
+    const customRis = (appState.customRecipeIngredients || []).filter(ri => ri.recipe_id === recipeId);
+    if (customRis.length > 0) return customRis;
     return CATALOG_RECIPE_INGREDIENTS.filter(ri => ri.recipe_id === recipeId);
   },
 
@@ -294,6 +329,142 @@ const DB = {
       log.quantity_g = newQty;
       persistState();
     }
+  },
+
+  saveRecipe(recipeData, ingredientsArray = []) {
+    if (!appState.customRecipes) appState.customRecipes = [];
+    if (!appState.customRecipeIngredients) appState.customRecipeIngredients = [];
+
+    const isEdit = Boolean(recipeData.id && appState.customRecipes.some(r => r.id === recipeData.id));
+    const recipeId = isEdit 
+      ? recipeData.id 
+      : ('rec_custom_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4));
+
+    const savedRecipe = {
+      id: recipeId,
+      name: (recipeData.name || 'Receta sin nombre').trim(),
+      meal_type: (recipeData.meal_type || 'desayuno').toLowerCase(),
+      instructions: (recipeData.instructions || '').trim(),
+      isCustom: true,
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (isEdit) {
+      const idx = appState.customRecipes.findIndex(r => r.id === recipeId);
+      appState.customRecipes[idx] = savedRecipe;
+    } else {
+      appState.customRecipes.push(savedRecipe);
+    }
+
+    // Replace recipe ingredients
+    appState.customRecipeIngredients = appState.customRecipeIngredients.filter(ri => ri.recipe_id !== recipeId);
+    
+    ingredientsArray.forEach((ing, index) => {
+      if (!ing.ingredient_id || !ing.quantity) return;
+      appState.customRecipeIngredients.push({
+        id: `ri_custom_${Date.now()}_${index}`,
+        recipe_id: recipeId,
+        ingredient_id: ing.ingredient_id,
+        quantity: Math.max(1, Number(ing.quantity) || 100),
+      });
+
+      // Ensure item exists in pantry with default 0 if not present
+      if (!appState.pantry.some(p => p.ingredient_id === ing.ingredient_id)) {
+        appState.pantry.push({ ingredient_id: ing.ingredient_id, quantity_available: 0 });
+      }
+    });
+
+    persistState();
+    return savedRecipe;
+  },
+
+  deleteCustomRecipe(recipeId) {
+    if (!appState.customRecipes) appState.customRecipes = [];
+    if (!appState.customRecipeIngredients) appState.customRecipeIngredients = [];
+
+    appState.customRecipes = appState.customRecipes.filter(r => r.id !== recipeId);
+    appState.customRecipeIngredients = appState.customRecipeIngredients.filter(ri => ri.recipe_id !== recipeId);
+
+    if (appState.userPreferences && appState.userPreferences.favorites) {
+      appState.userPreferences.favorites = appState.userPreferences.favorites.filter(id => id !== recipeId);
+    }
+
+    persistState();
+  },
+
+  toggleHideRecipe(recipeId) {
+    if (!appState.userPreferences) appState.userPreferences = {};
+    if (!Array.isArray(appState.userPreferences.hiddenRecipes)) {
+      appState.userPreferences.hiddenRecipes = [];
+    }
+
+    const arr = appState.userPreferences.hiddenRecipes;
+    const idx = arr.indexOf(recipeId);
+    let isHidden = false;
+
+    if (idx === -1) {
+      arr.push(recipeId);
+      isHidden = true;
+    } else {
+      arr.splice(idx, 1);
+      isHidden = false;
+    }
+
+    persistState();
+    return isHidden;
+  },
+
+  isRecipeHidden(recipeId) {
+    return Boolean(appState.userPreferences?.hiddenRecipes?.includes(recipeId));
+  },
+
+  saveCustomIngredient(ingData) {
+    if (!appState.customIngredients) appState.customIngredients = [];
+
+    const isEdit = Boolean(ingData.id && appState.customIngredients.some(i => i.id === ingData.id));
+    const ingId = isEdit 
+      ? ingData.id 
+      : ('ing_custom_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4));
+
+    const savedIng = {
+      id: ingId,
+      name: (ingData.name || 'Nuevo ingrediente').trim(),
+      category: (ingData.category || 'Otro').trim(),
+      calories_per_100g: Math.max(0, Number(ingData.calories_per_100g) || 0),
+      protein_per_100g: Math.max(0, Number(ingData.protein_per_100g) || 0),
+      carbs_per_100g: Math.max(0, Number(ingData.carbs_per_100g) || 0),
+      fat_per_100g: Math.max(0, Number(ingData.fat_per_100g) || 0),
+      isCustom: true,
+    };
+
+    if (isEdit) {
+      const idx = appState.customIngredients.findIndex(i => i.id === ingId);
+      appState.customIngredients[idx] = savedIng;
+    } else {
+      appState.customIngredients.push(savedIng);
+    }
+
+    // Ensure it exists in pantry
+    if (!appState.pantry.some(p => p.ingredient_id === ingId)) {
+      appState.pantry.push({ ingredient_id: ingId, quantity_available: 0 });
+    }
+
+    persistState();
+    return savedIng;
+  },
+
+  addCustomIngredient(ingData) {
+    return this.saveCustomIngredient(ingData);
+  },
+
+  deleteCustomIngredient(ingId) {
+    if (!appState.customIngredients) appState.customIngredients = [];
+    appState.customIngredients = appState.customIngredients.filter(i => i.id !== ingId);
+    appState.pantry = appState.pantry.filter(p => p.ingredient_id !== ingId);
+    if (appState.customRecipeIngredients) {
+      appState.customRecipeIngredients = appState.customRecipeIngredients.filter(ri => ri.ingredient_id !== ingId);
+    }
+    persistState();
   },
 };
 

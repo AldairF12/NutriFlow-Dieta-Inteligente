@@ -6,6 +6,7 @@
 @import url('components/chat.css');
 @import url('components/register-sheet.css');
 @import url('components/voice.css');
+@import url('components/recipe-editor.css');
 @import url('views/dashboard.css');
 @import url('views/profile.css');
 @import url('views/diary.css');

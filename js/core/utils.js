@@ -3,21 +3,23 @@
 // ============================================================
 
 const MEAL_LABELS = {
-  desayuno: { emoji: '\u{1F305}', label: 'Desayuno' },
-  almuerzo: { emoji: '\u2600\uFE0F', label: 'Almuerzo' },
-  merienda: { emoji: '\u{1F34E}', label: 'Merienda' },
-  cena:     { emoji: '\u{1F319}', label: 'Cena'     },
+  desayuno: { emoji: '🌅', label: 'Desayuno' },
+  almuerzo: { emoji: '☀️', label: 'Almuerzo' },
+  merienda: { emoji: '🥪', label: 'Merienda' },
+  cena:     { emoji: '🌙', label: 'Cena'     },
+  snack:    { emoji: '🥨', label: 'Snack'    },
 };
 
 function getMealTypeEmoji(type) {
-  if (!type) return '\u{1F37D}\uFE0F';
+  if (!type) return '🍽️';
   const m = {
-    desayuno: '\u{1F305}',
-    almuerzo: '\u2600\uFE0F',
-    merienda: '\u{1F34E}',
-    cena:     '\u{1F319}',
+    desayuno: '🌅',
+    almuerzo: '☀️',
+    merienda: '🥪',
+    cena:     '🌙',
+    snack:    '🥨',
   };
-  return m[type.toLowerCase()] || '\u{1F37D}\uFE0F';
+  return m[type.toLowerCase()] || '🍽️';
 }
 
 function animateNumber(elementId, targetValue, suffix = '') {
