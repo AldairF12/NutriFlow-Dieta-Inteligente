@@ -93,6 +93,7 @@ function renderDashboardScreen() {
   renderMacroBars(consumed, goals);
   renderPlanVsExtra(selectedDate);
   renderDashTimeline(selectedDate);
+  if (typeof renderDashHydration === 'function') renderDashHydration(selectedDate);
 }
 
 function renderCachedAISummary(dateStr) {
@@ -343,13 +344,42 @@ function createCalendarDayElement(dayNum, dateKey, goalCal, todayStr, selectedDa
     `;
   }
 
-  btn.onclick = () => {
-    _dashSelectedDate = dateKey;
-    renderDashboardScreen();
+  let pressTimer = null;
+  const cancelPress = () => {
+    if (pressTimer) {
+      clearTimeout(pressTimer);
+      pressTimer = null;
+    }
   };
 
+  btn.onpointerdown = (e) => {
+    pressTimer = setTimeout(() => {
+      _dashSelectedDate = dateKey;
+      if (typeof window.setActiveDate === 'function') {
+        window.setActiveDate(dateKey);
+        if (typeof window.goToDiaryToEdit === 'function') window.goToDiaryToEdit();
+      }
+      pressTimer = null;
+    }, 600);
+  };
+
+  btn.onpointerup = (e) => {
+    if (pressTimer) {
+      cancelPress();
+      _dashSelectedDate = dateKey;
+      renderDashboardScreen();
+    }
+  };
+
+  btn.onpointercancel = cancelPress;
+  btn.onpointerleave = cancelPress;
   return btn;
 }
+
+window.resetDashboardSelectedDate = function() {
+  _dashSelectedDate = getTodayString();
+  if (typeof renderDashboardScreen === 'function') renderDashboardScreen();
+};
 
 // ??????????????????????????????????????????????
 // ANILLO DE CALOR?AS CON RELIEVE Y NUBES CUTE
@@ -368,13 +398,13 @@ function renderCaloriesRing(consumed, goal) {
   const gap = CIRC - dash;
   const remaining = Math.max(0, goal - consumed);
 
-  const shadowColor = pct < 0.5 ? 'rgba(52, 211, 153, 0.35)' : pct < 0.85 ? 'rgba(245, 158, 11, 0.35)' : 'rgba(239, 68, 68, 0.35)';
-  const gradStart = pct < 0.85 ? '#10b981' : '#f59e0b';
-  const gradEnd = pct < 0.85 ? '#3b82f6' : '#ef4444';
+  const shadowColor = pct < 0.5 ? 'rgba(110, 231, 183, 0.35)' : pct < 0.85 ? 'rgba(253, 230, 138, 0.35)' : 'rgba(252, 165, 165, 0.35)';
+  const gradStart = pct < 0.85 ? '#6ee7b7' : '#fcd34d'; // pastel green / pastel yellow
+  const gradEnd = pct < 0.85 ? '#93c5fd' : '#fca5a5'; // pastel blue / pastel red
 
   const glowFilter = pct > 0 
     ? `filter: drop-shadow(0 6px 14px ${shadowColor});` 
-    : `filter: drop-shadow(0 4px 10px rgba(16, 185, 129, 0.12));`;
+    : `filter: drop-shadow(0 4px 10px rgba(110, 231, 183, 0.12));`;
 
   container.innerHTML = `
     <div class="dash-ring-hero-stage">
@@ -499,8 +529,18 @@ function renderDashTimeline(dateStr) {
     ? window.DB.getLogsByDate(dateStr)
     : [];
 
+  const foodLogs = logs.filter(l => l.type !== 'liquid');
   if (title) {
-    title.textContent = `\u{1F4CB} Comidas del d\u00EDa (${logs.length})`;
+    let titleHtml = `\u{1F4CB} Comidas del d\u00EDa (${foodLogs.length})`;
+    if (dateStr !== getDashTodayIso()) {
+      titleHtml += ` <button onclick="window.setActiveDate('${dateStr}'); window.goToDiaryToEdit()" style="margin-left:auto; padding:4px 12px; border-radius:99px; background:var(--primary-100, #dbeafe); color:var(--primary-700, #1d4ed8); border:none; cursor:pointer; font-size:0.8rem; font-weight:600; display:flex; align-items:center; gap:4px;">✏️ Editar</button>`;
+      title.style.display = 'flex';
+      title.style.alignItems = 'center';
+      title.style.width = '100%';
+    } else {
+      title.style.display = 'block';
+    }
+    title.innerHTML = titleHtml;
   }
 
   container.innerHTML = '';
@@ -515,11 +555,21 @@ function renderDashTimeline(dateStr) {
     return;
   }
 
+  const groups = {
+    breakfast: { title: '🌅 Desayuno', items: [] },
+    lunch: { title: '☀️ Almuerzo', items: [] },
+    dinner: { title: '🌙 Cena', items: [] },
+    snacks: { title: '🥪 Snacks y Extras', items: [] }
+  };
+
   logs.forEach(log => {
+    if (log.type === 'liquid') return; // Handled entirely by renderDashHydration now
+
     let name = 'Alimento';
     let typeEmoji = '\u{1F373}';
     let calories = 0;
     const isPlanned = (log.type === 'meal' && log.planned !== false) || log.planned === true;
+    let targetGroup = 'snacks';
 
     if (log.type === 'meal') {
       const recipe = window.DB.getRecipeById(log.reference_id);
@@ -527,6 +577,12 @@ function renderDashTimeline(dateStr) {
         name = recipe.name;
         typeEmoji = typeof getMealTypeEmoji === 'function' ? getMealTypeEmoji(recipe.meal_type) : '\u{1F373}';
         calories = calcRecipeMacros(recipe.id).calories;
+        
+        let mType = (log.mealCategory || recipe.meal_type || '').toLowerCase();
+        if (mType === 'breakfast' || mType === 'desayuno') targetGroup = 'breakfast';
+        else if (mType === 'lunch' || mType === 'almuerzo') targetGroup = 'lunch';
+        else if (mType === 'dinner' || mType === 'cena') targetGroup = 'dinner';
+        else targetGroup = 'snacks';
       }
     } else if (log.type === 'food_item') {
       const fi = window.DB.getFoodItemById(log.reference_id);
@@ -536,28 +592,167 @@ function renderDashTimeline(dateStr) {
         const factor = (log.quantity_g || 100) / 100;
         calories = Math.round((fi.calories_per_100g || 0) * factor);
       }
-    } else if (log.type === 'liquid') {
-      const liquidsList = window.DB.liquids || (window.DB.state && window.DB.state.liquids) || [];
-      const liq = liquidsList.find(l => l.id === log.reference_id);
-      name = liq ? liq.name : 'Agua / Bebida';
-      typeEmoji = liq && liq.icon ? liq.icon : '\u{1F4A7}';
-      calories = 0;
+      
+      if (log.mealCategory) {
+        let mType = log.mealCategory.toLowerCase();
+        if (mType === 'breakfast' || mType === 'desayuno') targetGroup = 'breakfast';
+        else if (mType === 'lunch' || mType === 'almuerzo') targetGroup = 'lunch';
+        else if (mType === 'dinner' || mType === 'cena') targetGroup = 'dinner';
+        else targetGroup = 'snacks';
+      } else if (log.timestamp) {
+        const hr = new Date(log.timestamp).getHours();
+        if (hr >= 5 && hr < 11) targetGroup = 'breakfast';
+        else if (hr >= 11 && hr < 16) targetGroup = 'lunch';
+        else if (hr >= 19 || hr < 4) targetGroup = 'dinner';
+        else targetGroup = 'snacks';
+      }
     }
 
     const timeStr = log.timestamp
       ? new Date(log.timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
       : '--:--';
 
-    const item = document.createElement('div');
-    item.className = `dash-timeline-item ${isPlanned ? 'item-planned' : 'item-extra'}`;
-    item.innerHTML = `
-      <div class="dash-timeline-icon">${typeEmoji}</div>
-      <div class="dash-timeline-info">
-        <div class="dash-timeline-name">${name}</div>
-        <div class="dash-timeline-time">${timeStr} \u2022 <span class="badge-${isPlanned ? 'plan' : 'extra'}">${isPlanned ? 'Del plan' : 'Extra'}</span></div>
-      </div>
-      <div class="dash-timeline-cal">${calories > 0 ? `${calories} kcal` : `${log.quantity_g || 250} ml`}</div>
-    `;
-    container.appendChild(item);
+    groups[targetGroup].items.push({
+      log, name, typeEmoji, calories, isPlanned, timeStr, 
+      timestampMs: log.timestamp ? new Date(log.timestamp).getTime() : 0
+    });
   });
+
+  const order = ['breakfast', 'lunch', 'snacks', 'dinner'];
+  
+  order.forEach(groupKey => {
+    const group = groups[groupKey];
+    if (group.items.length === 0) return;
+    
+    // Sort items inside the group chronologically
+    group.items.sort((a, b) => a.timestampMs - b.timestampMs);
+
+    // Render group title
+    const groupTitle = document.createElement('div');
+    groupTitle.style.cssText = 'font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin: 16px 0 8px 4px; text-transform: uppercase; letter-spacing: 0.5px;';
+    groupTitle.textContent = group.title;
+    container.appendChild(groupTitle);
+
+    // Render items
+    group.items.forEach(item => {
+      const el = document.createElement('div');
+      el.className = `dash-timeline-item ${item.isPlanned ? 'item-planned' : 'item-extra'}`;
+      el.innerHTML = `
+        <div class="dash-timeline-icon">${item.typeEmoji}</div>
+        <div class="dash-timeline-info">
+          <div class="dash-timeline-name">${item.name}</div>
+          <div class="dash-timeline-time">${item.timeStr} \u2022 <span class="badge-${item.isPlanned ? 'plan' : 'extra'}">${item.isPlanned ? 'Del plan' : 'Extra'}</span></div>
+        </div>
+        <div class="dash-timeline-cal">${item.calories > 0 ? `${item.calories} kcal` : `${item.log.quantity_g || 250} ml`}</div>
+        <button class="btn-delete-log" data-id="${item.log.id}" title="Eliminar" aria-label="Eliminar comida" style="background:none; border:none; cursor:pointer; font-size:1.1rem; padding: 4px; margin-left: 8px; color: #9ca3af; transition: color 0.2s;">&times;</button>
+      `;
+      const delBtn = el.querySelector('.btn-delete-log');
+      if (delBtn) {
+        delBtn.onclick = (e) => {
+          e.stopPropagation();
+          if (confirm('¿Eliminar este registro?')) {
+            // Revertir stock de despensa si es una comida planificada
+            if (item.log.type === 'meal' && item.log.planned) {
+              const ris = window.DB.getRecipeIngredients(item.log.reference_id) || [];
+              ris.forEach(ri => {
+                const pantryItem = window.DB.getPantryItem(ri.ingredient_id);
+                const currentQty = pantryItem ? pantryItem.quantity_available : 0;
+                window.DB.updatePantryQuantity(ri.ingredient_id, currentQty + ri.quantity);
+              });
+            }
+            window.DB.removeFoodLog(item.log.id);
+            if (typeof renderDashboardScreen === 'function') renderDashboardScreen();
+          }
+        };
+      }
+      container.appendChild(el);
+    });
+  });
+}
+
+function renderDashHydration(dateStr) {
+  const dashBody = document.querySelector('.dashboard-body');
+  if (!dashBody) return;
+  
+  // Clean up any existing hydration container to avoid duplicates
+  const existing = document.getElementById('dash-hydration-container');
+  if (existing) existing.remove();
+  
+  const logs = (window.DB && typeof window.DB.getLogsByDate === 'function')
+    ? window.DB.getLogsByDate(dateStr)
+    : [];
+    
+  const liquidLogs = logs.filter(l => l.type === 'liquid');
+  if (liquidLogs.length === 0) return; // Don't show if no liquids
+  
+  const totalMl = liquidLogs.reduce((sum, l) => sum + (l.quantity_g || 250), 0);
+  const goalMl = 2000;
+  const pct = Math.min(100, Math.round((totalMl / goalMl) * 100));
+  
+  const hydrationContainer = document.createElement('div');
+  hydrationContainer.id = 'dash-hydration-container';
+  hydrationContainer.style.cssText = 'margin-bottom: 24px;';
+  
+  const liquidListHtml = liquidLogs.length > 0 ? `
+    <div style="margin-top: 16px; border-top: 1px dashed var(--gray-200, #e2e8f0); padding-top: 12px; display: flex; flex-wrap: wrap; gap: 8px;">
+      ${liquidLogs.map(l => {
+        const liq = (window.DB.liquids || []).find(lx => lx.id === l.reference_id) || (window.DB.state && window.DB.state.liquids ? window.DB.state.liquids.find(lx => lx.id === l.reference_id) : null);
+        const name = liq ? liq.name : 'Agua';
+        const icon = liq ? liq.icon : '💧';
+        const ml = l.quantity_g || 250;
+        const time = new Date(l.timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        return `<div style="display:flex; align-items:center; background: var(--gray-50, #f8fafc); padding: 4px 8px; border-radius: 8px; font-size: 0.75rem; color: var(--gray-600, #475569); gap: 6px;">
+          <span>${icon} ${name} ${ml}ml</span>
+          <span style="color: var(--gray-400, #94a3b8); font-size: 0.7rem;">${time}</span>
+          <button onclick="if(confirm('¿Eliminar este líquido?')) { window.DB.removeFoodLog('${l.id}'); renderDashboardScreen(); }" style="background:none; border:none; cursor:pointer; font-size:1rem; margin-left: 2px; color: var(--gray-400, #94a3b8); padding: 0;">&times;</button>
+        </div>`;
+      }).join('')}
+    </div>
+  ` : '';
+  
+  hydrationContainer.innerHTML = `
+    <div class="hydration-card" style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.04); display: flex; flex-direction: column;">
+      <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">💧 Hidratación</div>
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <div class="water-glass" style="width: 50px; height: 70px; border: 3px solid var(--primary-300, #93c5fd); border-top: none; border-radius: 0 0 12px 12px; position: relative; overflow: hidden; background: #f8fafc; flex-shrink: 0;">
+          <div class="water-fill" style="position: absolute; bottom: 0; left: 0; right: 0; height: 0%; background: linear-gradient(180deg, var(--primary-400, #60a5fa), var(--primary-500, #3b82f6)); transition: height 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);"></div>
+        </div>
+        <div style="flex-grow: 1;">
+          <div style="font-size: 0.75rem; color: var(--primary-600, #2563eb); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 2px;">Progreso del día</div>
+          <div style="font-size: 1.5rem; font-weight: 800; color: var(--text-main); line-height: 1.2;">
+            ${totalMl.toLocaleString()} <span style="font-size: 0.9rem; color: var(--text-muted); font-weight: 500;">/ ${goalMl.toLocaleString()} ml</span>
+          </div>
+          <div style="width: 100%; height: 6px; background: var(--gray-100, #f1f5f9); border-radius: 99px; margin-top: 8px; overflow: hidden;">
+            <div style="height: 100%; width: 0%; background: var(--primary-400, #60a5fa); border-radius: 99px; transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);" class="water-bar"></div>
+          </div>
+        </div>
+      </div>
+      ${liquidListHtml}
+    </div>
+  `;
+  
+  // Append completely outside the dash-timeline wrapper
+  dashBody.appendChild(hydrationContainer);
+
+  // Animate fills when scrolled into view
+  if ('IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        const fill = hydrationContainer.querySelector('.water-fill');
+        const bar = hydrationContainer.querySelector('.water-bar');
+        if (fill) fill.style.height = `${pct}%`;
+        if (bar) bar.style.width = `${pct}%`;
+        observer.disconnect();
+      }
+    }, { threshold: 0.1 });
+    observer.observe(hydrationContainer);
+  } else {
+    // Fallback if no observer support
+    setTimeout(() => {
+      const fill = hydrationContainer.querySelector('.water-fill');
+      const bar = hydrationContainer.querySelector('.water-bar');
+      if (fill) fill.style.height = `${pct}%`;
+      if (bar) bar.style.width = `${pct}%`;
+    }, 100);
+  }
 }

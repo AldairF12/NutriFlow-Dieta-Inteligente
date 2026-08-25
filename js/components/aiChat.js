@@ -268,8 +268,7 @@ function sendQuickPrompt(text) {
   const input = document.getElementById('ai-chat-input');
   if (!input) return;
   input.value = text;
-  input.blur(); // Cerrar teclado
-  sendChatMessage();
+  input.focus(); // Allow user to edit before sending
 }
 
 function initAIChat() {

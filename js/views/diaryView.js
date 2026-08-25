@@ -12,7 +12,8 @@ function renderDiaryScreen(options = {}) {
 
   const dateEl = document.getElementById('current-date');
   if (dateEl) {
-    dateEl.textContent = new Date().toLocaleDateString('es-ES', {
+    const targetDate = window.ACTIVE_DATE ? new Date(window.ACTIVE_DATE + 'T12:00:00') : new Date();
+    dateEl.textContent = targetDate.toLocaleDateString('es-ES', {
       weekday: 'long', day: 'numeric', month: 'long'
     });
   }

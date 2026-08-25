@@ -96,8 +96,11 @@ function loadState() {
       delete parsed.ingredients;
       delete parsed.recipes;
       delete parsed.recipe_ingredients;
-      delete parsed.foodItems;
-
+      
+      // Preserve custom food items (IDs like fi_1724...) but drop static ones (IDs like fi_001)
+      if (parsed.foodItems) {
+        parsed.foodItems = parsed.foodItems.filter(fi => fi.id && fi.id.length > 10);
+      }
       appState = parsed;
     }
   } catch (e) {
@@ -166,9 +169,12 @@ const DB = {
   },
 
   getTodayLogs() {
-    const d = new Date();
-    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-    return appState.foodLogs.filter(l => l.date === today);
+    let dateStr = window.ACTIVE_DATE;
+    if (!dateStr) {
+      const d = new Date();
+      dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
+    return appState.foodLogs.filter(l => l.date === dateStr);
   },
 
   getLogsByDate(dateStr) {
@@ -176,11 +182,14 @@ const DB = {
   },
 
   addFoodLog(log) {
-    const d = new Date();
-    const today = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    let dateStr = window.ACTIVE_DATE;
+    if (!dateStr) {
+      const d = new Date();
+      dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    }
     const newLog = {
       id: 'log_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-      date: today,
+      date: dateStr,
       timestamp: new Date().toISOString(),
       ...log,
     };

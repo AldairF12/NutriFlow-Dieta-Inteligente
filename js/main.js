@@ -3,6 +3,60 @@
 // ============================================================
 
 let _isTabSwitching = false;
+window.ACTIVE_DATE = null; // null means 'today'
+
+function getTodayString() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+window.setActiveDate = function(dateStr) {
+  if (dateStr === getTodayString()) {
+    window.ACTIVE_DATE = null;
+    if (typeof window.resetDashboardSelectedDate === 'function') {
+      window.resetDashboardSelectedDate();
+    }
+  } else {
+    window.ACTIVE_DATE = dateStr;
+  }
+  renderGlobalDateBanner();
+  
+  if (typeof renderDiaryScreen === 'function') renderDiaryScreen();
+  if (typeof renderDashboardScreen === 'function') renderDashboardScreen();
+};
+
+window.goToDiaryToEdit = function() {
+  const diaryTab = document.querySelector('.nav-item[data-screen="diary"]');
+  if (diaryTab) diaryTab.click();
+};
+
+function renderGlobalDateBanner() {
+  let banner = document.getElementById('global-date-banner');
+  if (!window.ACTIVE_DATE) {
+    if (banner) banner.remove();
+    return;
+  }
+  
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'global-date-banner';
+    banner.className = 'global-date-banner';
+    document.body.appendChild(banner);
+  }
+  
+  const d = new Date(window.ACTIVE_DATE + 'T12:00:00');
+  const formattedDate = d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+  
+  banner.innerHTML = `
+    <div class="gdb-info">
+      <span class="gdb-icon">📅</span>
+      <span class="gdb-text">Editando: <strong>${formattedDate}</strong></span>
+    </div>
+    <div class="gdb-actions">
+      <button class="gdb-btn-close" onclick="window.setActiveDate('${getTodayString()}')">✕</button>
+    </div>
+  `;
+}
 
 // ??????????????????????????????????????????????
 // NAVEGACI?N ENTRE PANTALLAS
