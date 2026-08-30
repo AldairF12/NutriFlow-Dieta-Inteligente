@@ -54,7 +54,7 @@ const AI = {
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
             generationConfig: {
-              temperature: 0.3,
+              temperature: 0.0,
               maxOutputTokens: 1024,
             }
           })
@@ -113,9 +113,10 @@ const AI = {
 
     // 3. Consultar Gemini
     console.log('[NutriFlow AI] 🤖 Consultando a Gemini para:', foodName);
-    const prompt = `Devuelve SOLO un objeto JSON válido (sin markdown, sin bloques de código, sin texto extra) con la información nutricional de "${foodName}" por cada 100 gramos. Usa exactamente este formato JSON:
+    const prompt = `Calcula los macronutrientes basándote estrictamente en las Tablas Peruanas de Composición de Alimentos (CENAN / Instituto Nacional de Salud Perú) y estándares oficiales USDA/FAO.
+Devuelve SOLO un objeto JSON válido (sin markdown, sin bloques de código, sin texto extra) con la información nutricional de "${foodName}" por cada 100 gramos:
 {
-  "name": "nombre oficial del alimento en español con mayúscula inicial (ej. Plátano, Harina de almendras)",
+  "name": "nombre culinario común y limpio en español (ej. Plátano de seda, Papa amarilla sancochada, Huevo sancochado)",
   "category": "una de: Proteína, Cereal, Verdura, Fruta, Lácteo, Grasa, Legumbre, Especia, Otro",
   "calories_per_100g": número entero,
   "protein_per_100g": número decimal con un decimal,
@@ -141,22 +142,142 @@ const AI = {
     return { item: { ...parsed, _isTemp: true, source: 'gemini' }, fromCache: false };
   },
 
-  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // ────────────────────────────────────────────
+  // ANÁLISIS UNIFICADO DE PLATOS / COMIDAS (SINGLE-PASS)
+  // ────────────────────────────────────────────
+
+  /**
+   * Analiza un texto de comida/plato en lenguaje natural en 1 solo pase (Single-Pass).
+   * Desglosa ingredientes, porciones contextuales (ej. "2 papas", "media lata de atún", "100g", "media palta")
+   * y calcula los macronutrientes individuales y totales.
+   * @param {string} text - Texto ingresado por el usuario o transcripción de voz
+   * @returns {Promise<object>} - { meal_title, meal_type, is_compound, items: [...], total: {...} }
+   */
+  async analyzeMealText(text) {
+    if (!text || !text.trim()) {
+      throw new Error('El texto no puede estar vacío');
+    }
+
+    console.log('[NutriFlow AI] 🍲 Analizando comida/plato en 1 solo pase:', text);
+
+    const prompt = `Eres un asistente experto en nutrición para el público de Perú y Latinoamérica.
+Calcula los macronutrientes basándote estrictamente en las Tablas Peruanas de Composición de Alimentos (CENAN / Instituto Nacional de Salud del Perú) y referencias oficiales USDA/FAO.
+
+Analiza la siguiente comida o alimento descrita por el usuario en lenguaje natural.
+Calcula y desglosa los ingredientes, sus porciones estimadas en gramos y sus macronutrientes (calorías, proteína, carbohidratos, grasa).
+
+INSTRUCCIONES CLAVE:
+1. Usa nombres culinarios limpios, comunes y estandarizados (ej. "Huevo sancochado", "Plátano sancochado", "Papa sancochada", "Arroz blanco cocido", "Palta", "Atún en conserva al agua", "Pechuga de pollo a la plancha"). Evita nombres científicos o enciclopédicos como "Huevo de gallina cocido".
+2. Interpreta unidades cotidianas con precisión:
+   - 1 huevo mediano ≈ 60g (2 huevos ≈ 120g)
+   - 1 papa mediana cocida ≈ 150g (2 papas ≈ 300g)
+   - 1 plátano de seda/isla mediano ≈ 120g a 150g
+   - 1/2 lata de atún escurrido ≈ 80g
+   - 1/2 palta mediana ≈ 100g
+   - 1 taza de arroz cocido ≈ 150g (porción estándar ≈ 100g a 150g)
+   - 1 rebanada de pan de molde ≈ 30g
+3. Si el usuario menciona cantidades exactas o gramos (ej. "150g de pechuga"), respeta estrictamente ese gramaje.
+4. Calcula con precisión matemática las calorías y macronutrientes para la porción en gramos de cada alimento.
+5. Infiere meal_type por contexto ("desayuné", "almorcé", "cené", "merienda", etc.). Si no es claro, usa "Snack".
+6. is_compound debe ser true si hay 2 o más alimentos/ingredientes distintos, o false si es 1 solo alimento.
+
+Devuelve SOLO un objeto JSON válido (sin bloques de código markdown, sin texto extra) con esta estructura exacta:
+{
+  "meal_title": "Nombre corto y descriptivo del plato en español (ej. Huevos y plátano sancochados)",
+  "meal_type": "Desayuno" | "Almuerzo" | "Cena" | "Merienda" | "Snack",
+  "is_compound": true o false,
+  "items": [
+    {
+      "name": "Nombre culinario común del alimento (ej. Huevo sancochado, Plátano sancochado, Palta, Arroz blanco)",
+      "portion_desc": "Descripción de la porción (ej. 2 unidades medianas, 1/2 lata, 100g)",
+      "quantity_g": número entero en gramos (ej. 120),
+      "calories": número entero de calorías de esa porción,
+      "protein": número decimal con un decimal de proteína en g,
+      "carbs": número decimal con un decimal de carbohidratos en g,
+      "fat": número decimal con un decimal de grasa en g,
+      "category": "Proteína" | "Cereal" | "Verdura" | "Fruta" | "Lácteo" | "Grasa" | "Legumbre" | "Otro"
+    }
+  ],
+  "total": {
+    "quantity_g": número entero suma de gramos,
+    "calories": número entero suma de calorías,
+    "protein": número decimal suma de proteína,
+    "carbs": número decimal suma de carbohidratos,
+    "fat": número decimal suma de grasa
+  }
+}
+
+Texto del usuario: "${text}"`;
+
+    const raw = await this._call(prompt);
+    const cleaned = raw.replace(/```json|```/g, '').trim();
+
+    console.log('[NutriFlow AI] 📦 Respuesta cruda de analyzeMealText:', cleaned);
+
+    try {
+      const parsed = JSON.parse(cleaned);
+      
+      if (!parsed.items || !Array.isArray(parsed.items) || parsed.items.length === 0) {
+        throw new Error('No se detectaron alimentos en el análisis.');
+      }
+
+      // Asegurar que cada item tenga valores numéricos válidos
+      parsed.items = parsed.items.map(it => {
+        const qG = Math.max(1, parseInt(it.quantity_g) || 100);
+        const cal = Math.max(0, parseInt(it.calories) || 0);
+        const p = Math.max(0, parseFloat(it.protein) || 0);
+        const c = Math.max(0, parseFloat(it.carbs) || 0);
+        const f = Math.max(0, parseFloat(it.fat) || 0);
+        return {
+          name: (it.name || 'Alimento').trim(),
+          portion_desc: it.portion_desc || `${qG}g`,
+          quantity_g: qG,
+          calories: cal,
+          protein: parseFloat(p.toFixed(1)),
+          carbs: parseFloat(c.toFixed(1)),
+          fat: parseFloat(f.toFixed(1)),
+          category: it.category || 'Otro'
+        };
+      });
+
+      // Recalcular total de forma consistente
+      if (!parsed.total || typeof parsed.total !== 'object') {
+        parsed.total = {};
+      }
+      parsed.total.quantity_g = parsed.items.reduce((s, it) => s + it.quantity_g, 0);
+      parsed.total.calories = parsed.items.reduce((s, it) => s + it.calories, 0);
+      parsed.total.protein = parseFloat(parsed.items.reduce((s, it) => s + it.protein, 0).toFixed(1));
+      parsed.total.carbs = parseFloat(parsed.items.reduce((s, it) => s + it.carbs, 0).toFixed(1));
+      parsed.total.fat = parseFloat(parsed.items.reduce((s, it) => s + it.fat, 0).toFixed(1));
+
+      if (parsed.items.length > 1) {
+        parsed.is_compound = true;
+      }
+
+      console.log('[NutriFlow AI] ✅ analyzeMealText parseado con éxito:', parsed);
+      return parsed;
+    } catch (e) {
+      console.error('[NutriFlow AI] ❌ Error parseando JSON de analyzeMealText:', raw, e);
+      throw new Error('No pudimos estructurar la información nutricional. Intenta reformular el texto.');
+    }
+  },
+
+  // ────────────────────────────────────────────
   // REGISTRO POR VOZ
-  // \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+  // ────────────────────────────────────────────
 
   /**
    * Extrae el nombre del alimento y la cantidad en gramos de un texto natural.
-   * @param {string} transcript - Ej. "me com\u00ed doscientos gramos de pollo asado"
+   * @param {string} transcript - Ej. "me comí doscientos gramos de pollo asado"
    * @returns {Promise<{food_name: string, quantity_g: number}>}
    */
   async parseVoiceInput(transcript) {
     const prompt = `Extrae el alimento y la cantidad en gramos del siguiente texto. 
-Devuelve SOLO un objeto JSON v\u00e1lido (NUNCA un array, sin texto adicional) con esta estructura exacta. Si hay varios alimentos, \u00fanelos en un solo nombre (ej. "huevos con pan"):
+Devuelve SOLO un objeto JSON válido (NUNCA un array, sin texto adicional) con esta estructura exacta. Si hay varios alimentos, únelos en un solo nombre (ej. "huevos con pan"):
 {
-  "food_name": "nombre del alimento o combinaci\u00f3n (MANT\u00c9N modificadores importantes como 'sin az\u00facar', 'frito', 'light', etc.)",
-  "quantity_g": numero entero en gramos (SI el usuario NO especifica una cantidad exacta ni un peso, devuelve null. NO intentes adivinar ni estimar la porci\u00f3n aqu\u00ed),
-  "meal_type": "Desayuno" | "Almuerzo" | "Cena" | "Merienda" | "Snack" (Infiere por el contexto como "cen\u00e9", "almorc\u00e9". Usa "Snack" si no es claro)
+  "food_name": "nombre del alimento o combinación (MANTÉN modificadores importantes como 'sin azúcar', 'frito', 'light', etc.)",
+  "quantity_g": numero entero en gramos (SI el usuario NO especifica una cantidad exacta ni un peso, devuelve null. NO intentes adivinar ni estimar la porción aquí),
+  "meal_type": "Desayuno" | "Almuerzo" | "Cena" | "Merienda" | "Snack" (Infiere por el contexto como "cené", "almorcé". Usa "Snack" si no es claro)
 }
 
 Texto del usuario: "${transcript}"`;

@@ -1,5 +1,7 @@
 var _selectedFoodItem = null;
 window._selectedFoodItem = null;
+var _selectedCompoundMeal = null;
+window._selectedCompoundMeal = null;
 
 function openRegisterSheet() {
   const sheet   = document.getElementById('register-sheet');
@@ -60,14 +62,35 @@ function initRegisterSheet() {
     });
   });
 
-  // Selector de chips de comida
+  // Selector de chips de comida (registro simple)
   document.getElementById('rs-meal-chips')?.addEventListener('click', e => {
     const chip = e.target.closest('.rs-meal-chip');
     if (!chip) return;
-    document.querySelectorAll('.rs-meal-chip').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('#rs-meal-chips .rs-meal-chip').forEach(c => c.classList.remove('active'));
     chip.classList.add('active');
     document.getElementById('rs-gram-meal-type').value = chip.dataset.val;
   });
+
+  // Selector de chips de comida (plato compuesto)
+  document.getElementById('rs-compound-meal-chips')?.addEventListener('click', e => {
+    const chip = e.target.closest('.rs-meal-chip');
+    if (!chip) return;
+    document.querySelectorAll('#rs-compound-meal-chips .rs-meal-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    document.getElementById('rs-compound-meal-type').value = chip.dataset.val;
+  });
+
+  // Acciones de plato compuesto
+  document.getElementById('btn-rs-compound-cancel')?.addEventListener('click', () => {
+    const confirmEl = document.getElementById('rs-compound-confirm');
+    if (confirmEl) confirmEl.hidden = true;
+    _selectedCompoundMeal = null;
+    const voiceContainer = document.querySelector('.rs-voice-container');
+    if (voiceContainer) voiceContainer.classList.remove('voice-minimized');
+    const collapsedBar = document.getElementById('rs-voice-collapsed-bar');
+    if (collapsedBar) collapsedBar.hidden = true;
+  });
+  document.getElementById('btn-rs-compound-save')?.addEventListener('click', saveCompoundMealEntry);
 
   // Gestos tactiles para cerrar (Swipe down)
   const sheet = document.getElementById('register-sheet');
@@ -113,7 +136,7 @@ function initRegisterSheet() {
     searchInput.addEventListener('input', debounce(handleFoodSearch, 280));
   }
 
-  // \u2500\u2500 Gramaje: botones +/\u2212 y guardado \u2500\u2500
+  // ── Gramaje: botones +/− y guardado ──
   const gramMinus = document.getElementById('rs-gram-minus');
   const gramPlus  = document.getElementById('rs-gram-plus');
   const gramInput = document.getElementById('rs-gram-input');
@@ -132,10 +155,10 @@ function initRegisterSheet() {
   if (gramInput) gramInput.addEventListener('input', updateGramMacros);
   if (gramSave)  gramSave.addEventListener('click', saveFreeFoodEntry);
 
-  // \u2500\u2500 Voz: inicializar \u2500\u2500
+  // ── Voz: inicializar ──
   initVoiceRegistration();
 
-  // Visibilidad del FAB seg\u00fan pesta\u00f1a activa
+  // Visibilidad del FAB según pestaña activa
   updateRegisterFabVisibility();
   document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', updateRegisterFabVisibility);
@@ -150,8 +173,12 @@ function updateRegisterFabVisibility() {
 function resetRSSearchView() {
   const searchView = document.getElementById('rs-view-search');
   const confirmEl = document.getElementById('rs-gram-confirm');
+  const compoundEl = document.getElementById('rs-compound-confirm');
   if (searchView && confirmEl && confirmEl.parentNode !== searchView) {
     searchView.appendChild(confirmEl);
+  }
+  if (searchView && compoundEl && compoundEl.parentNode !== searchView) {
+    searchView.appendChild(compoundEl);
   }
   const input   = document.getElementById('rs-search-input');
   const results = document.getElementById('rs-search-results');
@@ -159,24 +186,31 @@ function resetRSSearchView() {
   const gramInp = document.getElementById('rs-gram-input');
   if (input)   input.value = '';
   if (gramInp) gramInp.value = '';
-  if (results) results.innerHTML = '<div class="rs-result-empty">Escribe para buscar un alimento \u{1f50d}</div>';
+  if (results) results.innerHTML = '<div class="rs-result-empty">Escribe para buscar un alimento 🔍</div>';
   if (confirm) {
     confirm.hidden = true;
     document.getElementById('rs-gram-item-name').textContent = '';
     document.getElementById('rs-gram-macros').innerHTML = '';
   }
+  if (compoundEl) {
+    compoundEl.hidden = true;
+  }
   _selectedFoodItem = null;
+  _selectedCompoundMeal = null;
 }
 async function handleFoodSearch() {
   const query   = document.getElementById('rs-search-input')?.value.trim();
   const results = document.getElementById('rs-search-results');
   const confirm = document.getElementById('rs-gram-confirm');
+  const compoundConfirm = document.getElementById('rs-compound-confirm');
   if (!results) return;
   if (confirm) confirm.hidden = true;
+  if (compoundConfirm) compoundConfirm.hidden = true;
   _selectedFoodItem = null;
+  _selectedCompoundMeal = null;
 
   if (!query || query.length < 2) {
-    results.innerHTML = '<div class="rs-result-empty">Escribe para buscar un alimento \u{1f50d}</div>';
+    results.innerHTML = '<div class="rs-result-empty">Escribe para buscar un alimento 🔍</div>';
     return;
   }
 
@@ -213,40 +247,72 @@ async function handleFoodSearch() {
     });
   }
 
+  // Botón de búsqueda / análisis con IA siempre presente (al final de los resultados o en vacío)
+  const aiSection = document.createElement('div');
+  aiSection.className = 'rs-result-empty';
+  aiSection.style.padding = (localMatches.length > 0 || ingMatches.length > 0) ? '16px 0 8px' : '24px 0';
+  
   if (localMatches.length === 0 && ingMatches.length === 0) {
-    // No encontrado \u2014 bot\u00f3n IA
-    const emptyDiv = document.createElement('div');
-    emptyDiv.className = 'rs-result-empty';
-    emptyDiv.innerHTML = `
-      <span>No encontrado en tu BD \u{1f914}</span>
+    aiSection.innerHTML = `
+      <span>No encontrado en tu BD 🤔</span>
       ${AI.isConfigured()
-        ? `<button class="btn-search-ai" id="btn-search-ai-now">\u{1f916} Buscar con IA: "${query}"</button>`
+        ? `<button class="btn-search-ai" id="btn-search-ai-now">🤖 Buscar con IA: "${query}"</button>`
         : `<span style="font-size:0.75rem">Configura tu API Key en Perfil para usar IA</span>`
       }
     `;
-    results.appendChild(emptyDiv);
-
-    document.getElementById('btn-search-ai-now')?.addEventListener('click', async (e) => {
-      const btn = e.currentTarget;
-      btn.disabled = true;
-      btn.textContent = '\u23f3 Consultando Gemini\u2026';
-      try {
-        const { item } = await AI.fetchNutritionInfo(query);
-        if (item) {
-          results.innerHTML = '';
-          results.appendChild(buildFoodResultItem(item, 'food_item'));
-          selectFoodForGram(item);
-          showToast('\u2728 Informaci\u00f3n obtenida de Gemini');
-        } else {
-          showToast('\u274c Gemini no encontr\u00f3 informaci\u00f3n de ese alimento');
-        }
-      } catch {
-        showToast('\u274c Error al consultar Gemini');
-        btn.disabled = false;
-        btn.textContent = `\u{1f916} Buscar con IA: "${query}"`;
+  } else {
+    aiSection.innerHTML = `
+      <span style="font-size:0.78rem; color:var(--gray-400);">¿No es lo que buscas o es un plato compuesto?</span>
+      ${AI.isConfigured()
+        ? `<button class="btn-search-ai" id="btn-search-ai-now">✨ Analizar con IA: "${query}"</button>`
+        : `<span style="font-size:0.75rem">Configura tu API Key en Perfil para usar IA</span>`
       }
-    });
+    `;
   }
+  results.appendChild(aiSection);
+
+  document.getElementById('btn-search-ai-now')?.addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    btn.textContent = '⏳ Consultando Gemini…';
+    try {
+      console.log('[NutriFlow UI] 🔍 Ejecutando análisis unificado IA para query:', query);
+      const parsed = await AI.analyzeMealText(query);
+      if (parsed && parsed.items && parsed.items.length > 0) {
+        if (parsed.is_compound && parsed.items.length > 1) {
+          showCompoundMealConfirm(parsed, 'search');
+        } else {
+          const single = parsed.items[0];
+          const factor100 = (single.quantity_g > 0) ? (100 / single.quantity_g) : 1;
+          const itemForGram = {
+            name: single.name,
+            calories_per_100g: Math.round(single.calories * factor100),
+            protein_per_100g: parseFloat((single.protein * factor100).toFixed(1)),
+            carbs_per_100g: parseFloat((single.carbs * factor100).toFixed(1)),
+            fat_per_100g: parseFloat((single.fat * factor100).toFixed(1)),
+            typical_serving_g: single.quantity_g || 100,
+            _isTemp: true,
+            source: 'gemini'
+          };
+          selectFoodForGram(itemForGram);
+          const gramInput = document.getElementById('rs-gram-input');
+          if (gramInput && single.quantity_g) {
+            gramInput.value = single.quantity_g;
+            updateGramMacros();
+          }
+        }
+        showToast('✨ Información obtenida de Gemini');
+      } else {
+        showToast('❌ Gemini no encontró información de ese alimento');
+      }
+    } catch (err) {
+      console.error('[NutriFlow UI] Error en búsqueda IA:', err);
+      showToast('❌ Error al consultar Gemini');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = `✨ Buscar con IA: "${query}"`;
+    }
+  });
 }
 function buildFoodResultItem(item, _type) {
   const el = document.createElement('div');
@@ -265,9 +331,12 @@ function buildFoodResultItem(item, _type) {
 function selectFoodForGram(item) {
   _selectedFoodItem = item;
   const confirm  = document.getElementById('rs-gram-confirm');
+  const compoundConfirm = document.getElementById('rs-compound-confirm');
   const nameEl   = document.getElementById('rs-gram-item-name');
   const gramInp  = document.getElementById('rs-gram-input');
   if (!confirm) return;
+
+  if (compoundConfirm) compoundConfirm.hidden = true;
 
   nameEl.textContent = item.name;
   gramInp.placeholder = `Ej: ${item.typical_serving_g || 100}`;
@@ -310,16 +379,17 @@ function saveFreeFoodEntry() {
   if (!_selectedFoodItem || !gramInput) return;
   const qty = Math.max(1, parseInt(gramInput.value) || 100);
 
-  // Si es un ingrediente o un item temporal de Gemini, lo a\u00f1adimos a food_items
+  // Si es un ingrediente o un item temporal de Gemini, lo añadimos/actualizamos en food_items
   let refId = _selectedFoodItem.id;
   if (_selectedFoodItem._fromIngredient || _selectedFoodItem._isTemp) {
-    const saved = DB.addFoodItem({
+    const saved = DB.upsertFoodItem({
       name: _selectedFoodItem.name,
       calories_per_100g: _selectedFoodItem.calories_per_100g || 0,
       protein_per_100g:  _selectedFoodItem.protein_per_100g  || 0,
       carbs_per_100g:    _selectedFoodItem.carbs_per_100g    || 0,
       fat_per_100g:      _selectedFoodItem.fat_per_100g      || 0,
       typical_serving_g: _selectedFoodItem.typical_serving_g || 100,
+      category: _selectedFoodItem.category || 'Otro',
       source: _selectedFoodItem._isTemp ? 'gemini' : 'ingredient'
     });
     refId = saved.id;
@@ -336,11 +406,246 @@ function saveFreeFoodEntry() {
     mealCategory: mealCategory
   });
 
-  showToast(`\u2705 ${_selectedFoodItem.name} (${qty}g) registrado`);
+  showToast(`✅ ${_selectedFoodItem.name} (${qty}g) registrado`);
   closeRegisterSheet();
   renderDiaryScreen();
   renderDailyMacros();
 }
+
+// ────────────────────────────────────────────
+// PLATOS COMPUESTOS (MULTI-ITEM)
+// ────────────────────────────────────────────
+
+let _compoundMealOrigin = 'search';
+
+function showCompoundMealConfirm(data, originView = 'search') {
+  _selectedCompoundMeal = JSON.parse(JSON.stringify(data));
+  _compoundMealOrigin = originView;
+  const compoundConfirm = document.getElementById('rs-compound-confirm');
+  const gramConfirm = document.getElementById('rs-gram-confirm');
+  const titleEl = document.getElementById('rs-compound-title');
+  const listEl = document.getElementById('rs-compound-items-list');
+  if (!compoundConfirm || !titleEl || !listEl) return;
+
+  if (gramConfirm) gramConfirm.hidden = true;
+
+  if (originView === 'search') {
+    const searchView = document.getElementById('rs-view-search');
+    if (searchView && compoundConfirm.parentNode !== searchView) {
+      searchView.appendChild(compoundConfirm);
+    }
+  } else if (originView === 'voice') {
+    const voiceContainer = document.querySelector('.rs-voice-container');
+    if (voiceContainer) {
+      if (compoundConfirm.parentNode !== voiceContainer) {
+        voiceContainer.appendChild(compoundConfirm);
+      }
+      voiceContainer.classList.add('voice-minimized');
+      const collapsedBar = document.getElementById('rs-voice-collapsed-bar');
+      const collapsedPreview = document.getElementById('rs-voice-collapsed-preview');
+      const voiceInput = document.getElementById('rs-voice-input');
+      if (collapsedPreview) {
+        collapsedPreview.textContent = voiceInput?.value.trim() || data.meal_title || 'Dictado de voz';
+      }
+      if (collapsedBar) collapsedBar.hidden = false;
+    }
+  }
+
+  titleEl.textContent = data.meal_title || 'Plato detectado';
+
+  let mealTypeVal = 'snack';
+  if (data.meal_type) {
+    const mt = data.meal_type.toLowerCase();
+    if (mt.includes('desayuno')) mealTypeVal = 'breakfast';
+    else if (mt.includes('almuerzo')) mealTypeVal = 'lunch';
+    else if (mt.includes('cena')) mealTypeVal = 'dinner';
+    else if (mt.includes('merienda')) mealTypeVal = 'merienda';
+  }
+  const mealTypeInput = document.getElementById('rs-compound-meal-type');
+  if (mealTypeInput) mealTypeInput.value = mealTypeVal;
+
+  document.querySelectorAll('#rs-compound-meal-chips .rs-meal-chip').forEach(c => {
+    if (c.dataset.val === mealTypeVal) c.classList.add('active');
+    else c.classList.remove('active');
+  });
+
+  renderCompoundItemsList();
+
+  compoundConfirm.hidden = false;
+  setTimeout(() => compoundConfirm.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60);
+}
+
+function renderCompoundItemsList() {
+  const listEl = document.getElementById('rs-compound-items-list');
+  if (!listEl || !_selectedCompoundMeal || !_selectedCompoundMeal.items) return;
+
+  listEl.innerHTML = '';
+
+  _selectedCompoundMeal.items.forEach((item, index) => {
+    if (item._basePer100 == null) {
+      const q = Math.max(1, item.quantity_g || 100);
+      item._basePer100 = {
+        cal: (item.calories / q) * 100,
+        prot: (item.protein / q) * 100,
+        carb: (item.carbs / q) * 100,
+        fat: (item.fat / q) * 100
+      };
+      item.currentGrams = item.quantity_g || 100;
+      item.currentCal = item.calories;
+      item.currentProt = item.protein;
+      item.currentCarb = item.carbs;
+      item.currentFat = item.fat;
+    }
+
+    const row = document.createElement('div');
+    row.className = 'rs-compound-item-row';
+    row.innerHTML = `
+      <div class="rs-compound-item-info">
+        <div class="rs-compound-item-name">${item.name}</div>
+        <div class="rs-compound-item-portion">${item.portion_desc || ''}</div>
+      </div>
+      <div class="rs-compound-item-controls">
+        <button type="button" class="btn-compound-qty btn-minus" data-index="${index}" aria-label="Disminuir gramos">−</button>
+        <input type="number" class="rs-compound-item-qty-input" data-index="${index}" value="${item.currentGrams}" min="1" max="2000" />
+        <span class="rs-compound-item-unit">g</span>
+        <button type="button" class="btn-compound-qty btn-plus" data-index="${index}" aria-label="Aumentar gramos">+</button>
+      </div>
+      <div class="rs-compound-item-kcal" id="rs-comp-kcal-${index}">
+        <span class="rs-compound-kcal-num">${Math.round(item.currentCal)}</span>
+        <span class="rs-compound-kcal-unit">kcal</span>
+      </div>
+    `;
+
+    const input = row.querySelector('.rs-compound-item-qty-input');
+    const minusBtn = row.querySelector('.btn-minus');
+    const plusBtn = row.querySelector('.btn-plus');
+
+    const updateItemGrams = (newGrams) => {
+      const val = Math.max(1, Math.min(2000, newGrams));
+      item.currentGrams = val;
+      if (input) input.value = val;
+      const factor = val / 100;
+      item.currentCal = Math.round(item._basePer100.cal * factor);
+      item.currentProt = parseFloat((item._basePer100.prot * factor).toFixed(1));
+      item.currentCarb = parseFloat((item._basePer100.carb * factor).toFixed(1));
+      item.currentFat = parseFloat((item._basePer100.fat * factor).toFixed(1));
+
+      const kcalEl = document.getElementById(`rs-comp-kcal-${index}`);
+      if (kcalEl) {
+        const numSpan = kcalEl.querySelector('.rs-compound-kcal-num');
+        if (numSpan) numSpan.textContent = Math.round(item.currentCal);
+        else kcalEl.textContent = `${item.currentCal} kcal`;
+      }
+
+      updateCompoundTotalMacros();
+    };
+
+    input?.addEventListener('input', (e) => {
+      const g = parseInt(e.target.value) || 1;
+      updateItemGrams(g);
+    });
+
+    minusBtn?.addEventListener('click', () => {
+      const g = Math.max(1, (item.currentGrams || 100) - 10);
+      updateItemGrams(g);
+    });
+
+    plusBtn?.addEventListener('click', () => {
+      const g = Math.min(2000, (item.currentGrams || 100) + 10);
+      updateItemGrams(g);
+    });
+
+    listEl.appendChild(row);
+  });
+
+  updateCompoundTotalMacros();
+}
+
+function updateCompoundTotalMacros() {
+  const macrosEl = document.getElementById('rs-compound-total-macros');
+  if (!macrosEl || !_selectedCompoundMeal || !_selectedCompoundMeal.items) return;
+
+  const totalCal = _selectedCompoundMeal.items.reduce((s, it) => s + (it.currentCal || it.calories || 0), 0);
+  const totalProt = parseFloat(_selectedCompoundMeal.items.reduce((s, it) => s + (it.currentProt || it.protein || 0), 0).toFixed(1));
+  const totalCarb = parseFloat(_selectedCompoundMeal.items.reduce((s, it) => s + (it.currentCarb || it.carbs || 0), 0).toFixed(1));
+  const totalFat = parseFloat(_selectedCompoundMeal.items.reduce((s, it) => s + (it.currentFat || it.fat || 0), 0).toFixed(1));
+
+  macrosEl.innerHTML = `
+    <div class="rs-compound-macro-chip cal">
+      <span class="rs-compound-macro-val">${totalCal}</span>
+      <span class="rs-compound-macro-lbl">kcal</span>
+    </div>
+    <div class="rs-compound-macro-chip prot">
+      <span class="rs-compound-macro-val">${totalProt}g</span>
+      <span class="rs-compound-macro-lbl">Prot</span>
+    </div>
+    <div class="rs-compound-macro-chip carb">
+      <span class="rs-compound-macro-val">${totalCarb}g</span>
+      <span class="rs-compound-macro-lbl">Carb</span>
+    </div>
+    <div class="rs-compound-macro-chip fat">
+      <span class="rs-compound-macro-val">${totalFat}g</span>
+      <span class="rs-compound-macro-lbl">Grasa</span>
+    </div>
+  `;
+}
+
+function saveCompoundMealEntry() {
+  if (!_selectedCompoundMeal || !_selectedCompoundMeal.items || _selectedCompoundMeal.items.length === 0) return;
+
+  const mealSelect = document.getElementById('rs-compound-meal-type');
+  const mealCategory = mealSelect ? mealSelect.value : 'snack';
+
+  // 1. Calcular totales exactos del plato
+  const totalQty = _selectedCompoundMeal.items.reduce((s, it) => s + (parseInt(it.currentGrams || it.quantity_g) || 100), 0);
+  const totalCal = _selectedCompoundMeal.items.reduce((s, it) => s + (it.currentCal || it.calories || 0), 0);
+  const totalProt = parseFloat(_selectedCompoundMeal.items.reduce((s, it) => s + (it.currentProt || it.protein || 0), 0).toFixed(1));
+  const totalCarb = parseFloat(_selectedCompoundMeal.items.reduce((s, it) => s + (it.currentCarb || it.carbs || 0), 0).toFixed(1));
+  const totalFat = parseFloat(_selectedCompoundMeal.items.reduce((s, it) => s + (it.currentFat || it.fat || 0), 0).toFixed(1));
+
+  const plateName = _selectedCompoundMeal.meal_title || 'Plato combinado';
+  const factor100 = totalQty > 0 ? (100 / totalQty) : 1;
+
+  // 2. Guardar o actualizar el plato compuesto como 1 solo alimento consolidado
+  const compoundFoodItem = DB.upsertFoodItem({
+    name: plateName,
+    calories_per_100g: Math.round(totalCal * factor100),
+    protein_per_100g: parseFloat((totalProt * factor100).toFixed(1)),
+    carbs_per_100g: parseFloat((totalCarb * factor100).toFixed(1)),
+    fat_per_100g: parseFloat((totalFat * factor100).toFixed(1)),
+    typical_serving_g: totalQty,
+    category: 'Otro',
+    source: 'gemini'
+  });
+
+  // 3. Registrar 1 única entrada limpia en el diario con los macros consolidados
+  DB.addFoodLog({
+    type: 'food_item',
+    reference_id: compoundFoodItem.id,
+    quantity_g: totalQty,
+    planned: false,
+    mealCategory: mealCategory
+  });
+
+  showToast(`✅ ${plateName} (${totalQty}g) registrado`);
+  
+  const compoundConfirm = document.getElementById('rs-compound-confirm');
+  if (compoundConfirm) compoundConfirm.hidden = true;
+
+  const voiceContainer = document.querySelector('.rs-voice-container');
+  if (voiceContainer) voiceContainer.classList.remove('voice-minimized');
+  const collapsedBar = document.getElementById('rs-voice-collapsed-bar');
+  if (collapsedBar) collapsedBar.hidden = true;
+
+  _selectedCompoundMeal = null;
+
+  closeRegisterSheet();
+  renderDiaryScreen();
+  renderDailyMacros();
+}
+
+window.showCompoundMealConfirm = showCompoundMealConfirm;
+window.selectFoodForGram = selectFoodForGram;
 
 function renderRSFavoritesView() {
   const container = document.getElementById('rs-favorites-content');

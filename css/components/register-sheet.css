@@ -369,3 +369,387 @@
 .rs-fav-chip:hover  { background: var(--mint-50); border-color: var(--mint-300); }
 .rs-fav-chip:active { transform: scale(0.96); }
 
+/* ── Confirmación de Plato Compuesto (Multi-item) ── */
+.rs-compound-confirm {
+  padding: 16px 12px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1.5px solid var(--gray-200);
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08), 0 8px 24px rgba(0, 0, 0, 0.08);
+  margin: 4px 0 12px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  animation: slideDown 0.25s ease-out;
+}
+
+.rs-compound-confirm[hidden] {
+  display: none !important;
+}
+
+.rs-compound-header {
+  text-align: center;
+}
+
+.rs-compound-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  background: #eef2ff;
+  color: #4338ca;
+  border: 1.5px solid #c7d2fe;
+  padding: 4px 12px;
+  border-radius: 99px;
+  margin-bottom: 6px;
+}
+
+.rs-compound-title {
+  font-size: 1.22rem;
+  font-weight: 800;
+  color: var(--gray-900);
+  margin: 0;
+  text-transform: capitalize;
+  letter-spacing: -0.2px;
+}
+
+.rs-compound-items-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gray-500);
+  text-align: left;
+  margin-bottom: -4px;
+}
+
+.rs-compound-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+  width: 100%;
+  box-sizing: border-box;
+  padding-right: 1px;
+}
+
+.rs-compound-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 10px;
+  background: #ffffff;
+  border-radius: 14px;
+  border: 1.5px solid var(--gray-200);
+  gap: 6px;
+  width: 100%;
+  box-sizing: border-box;
+  min-width: 0;
+  transition: border-color 0.15s;
+}
+
+.rs-compound-item-row:hover {
+  border-color: var(--mint-300);
+}
+
+.rs-compound-item-info {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-align: left;
+}
+
+.rs-compound-item-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--gray-800);
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rs-compound-item-portion {
+  font-size: 0.73rem;
+  color: var(--gray-400);
+  margin-top: 1px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.rs-compound-item-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* Botones de control de cantidad */
+.btn-compound-qty {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  line-height: 1;
+  user-select: none;
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, background-color 0.15s ease;
+}
+
+/* Botón - (Gris suave con icono oscuro) */
+.btn-compound-qty.btn-minus {
+  background-color: #f1f5f9 !important;
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border: 1.5px solid #cbd5e1 !important;
+}
+
+.btn-compound-qty.btn-minus:hover {
+  background-color: #e2e8f0 !important;
+  background: #e2e8f0 !important;
+  color: #334155 !important;
+  transform: scale(1.05);
+}
+
+.btn-compound-qty.btn-minus:active {
+  transform: scale(0.92);
+  background-color: #cbd5e1 !important;
+  background: #cbd5e1 !important;
+}
+
+.btn-compound-qty.btn-minus:focus,
+.btn-compound-qty.btn-minus:focus-visible {
+  outline: none !important;
+  background-color: #f1f5f9 !important;
+  background: #f1f5f9 !important;
+  box-shadow: 0 0 0 2px rgba(100, 116, 139, 0.2);
+}
+
+/* Botón + (Verde menta claro con icono blanco) */
+.btn-compound-qty.btn-plus {
+  background-color: #3ab98d !important;
+  background: #3ab98d !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.btn-compound-qty.btn-plus:hover {
+  background-color: #2f9e77 !important;
+  background: #2f9e77 !important;
+  color: #ffffff !important;
+  transform: scale(1.05);
+}
+
+.btn-compound-qty.btn-plus:active {
+  transform: scale(0.92);
+  background-color: #268060 !important;
+  background: #268060 !important;
+}
+
+.btn-compound-qty.btn-plus:focus,
+.btn-compound-qty.btn-plus:focus-visible {
+  outline: none !important;
+  background-color: #3ab98d !important;
+  background: #3ab98d !important;
+  box-shadow: 0 0 0 2px rgba(58, 185, 141, 0.35);
+}
+
+.rs-compound-item-qty-input {
+  width: 44px;
+  height: 28px;
+  text-align: center;
+  border: 1.5px solid var(--mint-300);
+  border-radius: 8px;
+  padding: 2px 0;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: #111827;
+  background: #fff;
+  font-family: inherit;
+  outline: none;
+  -moz-appearance: textfield;
+}
+
+.rs-compound-item-qty-input::-webkit-outer-spin-button,
+.rs-compound-item-qty-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.rs-compound-item-qty-input:focus {
+  border-color: var(--mint-500);
+  box-shadow: 0 0 0 2px rgba(62, 168, 140, 0.15);
+}
+
+.rs-compound-item-unit {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: var(--gray-500);
+  margin-right: 1px;
+}
+
+/* Calorías en 2 líneas con tono cálido diferenciado (Ámbar) */
+.rs-compound-item-kcal {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  min-width: 36px;
+  text-align: right;
+  flex-shrink: 0;
+  line-height: 1.05;
+}
+
+.rs-compound-kcal-num {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #d97706; /* Ámbar cálido para diferenciar del input de gramos */
+}
+
+.rs-compound-kcal-unit {
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: #b45309;
+  opacity: 0.8;
+  text-transform: lowercase;
+  margin-top: 1px;
+}
+
+.rs-compound-total-box {
+  background: #ffffff;
+  border-radius: 16px;
+  padding: 12px 10px;
+  border: 1.5px solid var(--gray-200);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.rs-compound-total-title {
+  font-size: 0.74rem;
+  font-weight: 800;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  text-align: center;
+}
+
+/* 4 macros en una sola fila */
+.rs-compound-macros-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  width: 100%;
+}
+
+.rs-compound-macro-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 2px;
+  border-radius: 12px;
+  text-align: center;
+  min-width: 0;
+}
+
+.rs-compound-macro-chip.cal {
+  background: #fef9c3;
+  border: 1.5px solid #fde047;
+  color: #854d0e;
+}
+
+.rs-compound-macro-chip.prot {
+  background: #e0f2fe;
+  border: 1.5px solid #bae6fd;
+  color: #0369a1;
+}
+
+.rs-compound-macro-chip.carb {
+  background: #dcfce7;
+  border: 1.5px solid #bbf7d0;
+  color: #15803d;
+}
+
+.rs-compound-macro-chip.fat {
+  background: #fae8ff;
+  border: 1.5px solid #f5d0fe;
+  color: #a21caf;
+}
+
+.rs-compound-macro-val {
+  font-size: 0.86rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.rs-compound-macro-lbl {
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-top: 2px;
+}
+
+.rs-compound-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.rs-compound-actions .btn-cancel {
+  padding: 12px 18px;
+  border-radius: 12px;
+  border: 1.5px solid var(--gray-300);
+  background: #fff;
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--gray-700);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.rs-compound-actions .btn-cancel:hover {
+  background: var(--gray-50);
+}
+
+.rs-compound-actions .btn-save-goals {
+  flex: 1;
+  padding: 12px;
+  border-radius: 12px;
+  border: none;
+  background-color: var(--mint-500);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  margin-top: 0;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.rs-compound-actions .btn-save-goals:hover {
+  background-color: var(--mint-600);
+}
+
+.rs-compound-actions .btn-save-goals:active {
+  transform: scale(0.98);
+}
+
+

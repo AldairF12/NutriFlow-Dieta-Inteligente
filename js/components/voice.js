@@ -595,7 +595,28 @@ function initVoiceRegistration() {
   const status = document.getElementById('rs-voice-status');
 
   if (processBtn) {
+    processBtn.disabled = !input?.value?.trim();
     processBtn.addEventListener('click', processVoiceInput);
+  }
+
+  const expandBtn = document.getElementById('btn-rs-voice-expand');
+  if (expandBtn) {
+    expandBtn.addEventListener('click', () => {
+      const voiceContainer = document.querySelector('.rs-voice-container');
+      const collapsedBar = document.getElementById('rs-voice-collapsed-bar');
+      const compoundConfirm = document.getElementById('rs-compound-confirm');
+      if (voiceContainer) voiceContainer.classList.remove('voice-minimized');
+      if (collapsedBar) collapsedBar.hidden = true;
+      if (compoundConfirm) compoundConfirm.hidden = true;
+    });
+  }
+
+  if (input) {
+    input.addEventListener('input', () => {
+      const val = input.value.trim();
+      if (processBtn) processBtn.disabled = !val;
+      updateVoiceDBSuggestions(val);
+    });
   }
 
   _voiceDictation = initVoiceDictation({
@@ -608,16 +629,22 @@ function initVoiceRegistration() {
     },
     onResult: () => {
       if (area) area.hidden = false;
+      const val = input ? input.value.trim() : '';
+      if (processBtn) processBtn.disabled = !val;
+      updateVoiceDBSuggestions(val);
     },
     onError: (err) => {
       if (status) status.textContent = `Error: ${err}`;
     },
     onEnd: () => {
       if (micBtn) micBtn.classList.remove('recording');
-      if (hint && input && input.value) {
+      const val = input ? input.value.trim() : '';
+      if (processBtn) processBtn.disabled = !val;
+      updateVoiceDBSuggestions(val);
+      if (hint && val) {
         hint.textContent = 'Puedes editar el texto abajo y luego procesarlo.';
       } else if (hint) {
-        hint.textContent = 'Toca el micr\u00f3fono para dictar...';
+        hint.textContent = 'Toca el micrófono para dictar...';
       }
     }
   });
@@ -627,29 +654,130 @@ function initVoiceRegistration() {
   }
 }
 
+function updateVoiceDBSuggestions(text) {
+  const sugBox = document.getElementById('rs-voice-suggestions');
+  if (!sugBox) return;
+
+  if (!text || text.length < 2) {
+    sugBox.hidden = true;
+    sugBox.innerHTML = '';
+    return;
+  }
+
+  const lower = text.toLowerCase();
+  const words = lower.split(/[\s,.;]+/).filter(w => w.length >= 3);
+  
+  const foundItems = new Map();
+
+  // Buscar en foodItems locales
+  (DB.foodItems || []).forEach(fi => {
+    const fiNameLower = fi.name.toLowerCase();
+    if (lower.includes(fiNameLower) || words.some(w => fiNameLower.includes(w))) {
+      if (!foundItems.has(fi.name)) {
+        foundItems.set(fi.name, { ...fi, _type: 'food_item' });
+      }
+    }
+  });
+
+  // Buscar en ingredientes
+  (DB.ingredients || []).forEach(ing => {
+    const ingNameLower = ing.name.toLowerCase();
+    if (lower.includes(ingNameLower) || words.some(w => ingNameLower.includes(w))) {
+      if (!foundItems.has(ing.name)) {
+        foundItems.set(ing.name, {
+          id: ing.id,
+          name: ing.name,
+          calories_per_100g: ing.calories_per_100g || 0,
+          protein_per_100g:  ing.protein_per_100g  || 0,
+          carbs_per_100g:    ing.carbs_per_100g    || 0,
+          fat_per_100g:      ing.fat_per_100g      || 0,
+          typical_serving_g: 100,
+          _fromIngredient: true,
+          _type: 'ingredient'
+        });
+      }
+    }
+  });
+
+  const matches = Array.from(foundItems.values()).slice(0, 4);
+
+  if (matches.length === 0) {
+    sugBox.hidden = true;
+    sugBox.innerHTML = '';
+    return;
+  }
+
+  sugBox.innerHTML = `
+    <div class="rs-voice-sug-title">Sugerencias rápidas de tu BD:</div>
+    <div class="rs-voice-sug-chips" id="rs-voice-sug-chips-list"></div>
+  `;
+
+  const chipsList = sugBox.querySelector('#rs-voice-sug-chips-list');
+  matches.forEach(item => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'rs-voice-sug-chip';
+    chip.textContent = `🥗 ${item.name}`;
+    chip.title = `Seleccionar directamente ${item.name} (${Math.round(item.calories_per_100g)} kcal/100g)`;
+    chip.addEventListener('click', () => {
+      const voiceContainer = document.querySelector('.rs-voice-container');
+      const gramConfirm = document.getElementById('rs-gram-confirm');
+      const compoundConfirm = document.getElementById('rs-compound-confirm');
+      if (compoundConfirm) compoundConfirm.hidden = true;
+      if (voiceContainer && gramConfirm) {
+        voiceContainer.appendChild(gramConfirm);
+        if (typeof selectFoodForGram === 'function') {
+          selectFoodForGram(item);
+        }
+      }
+    });
+    chipsList.appendChild(chip);
+  });
+
+  sugBox.hidden = false;
+}
+
 function resetRSVoiceView() {
   const hint = document.getElementById('rs-voice-hint');
   const input = document.getElementById('rs-voice-input');
   const area = document.getElementById('rs-voice-transcript-area');
   const status = document.getElementById('rs-voice-status');
+  const sugBox = document.getElementById('rs-voice-suggestions');
+  const processBtn = document.getElementById('btn-rs-voice-process');
   
-  if (hint) hint.textContent = 'Toca el micr\u00f3fono y dime qu\u00e9 consumiste\n(Ej. "Me com\u00ed dos huevos con pan" o "Un vaso de leche")';
+  if (hint) hint.textContent = 'Toca el micrófono y dime qué consumiste\n(Ej. "Me comí dos papas con arroz, atún y palta")';
   if (input) input.value = '';
   if (area) area.hidden = true;
   if (status) status.textContent = '';
+  if (sugBox) {
+    sugBox.hidden = true;
+    sugBox.innerHTML = '';
+  }
+  if (processBtn) processBtn.disabled = true;
   if (_voiceDictation) _voiceDictation.stop();
   
-  // Restaurar UI de confirmaci\u00f3n a su lugar original
   const voiceContainer = document.querySelector('.rs-voice-container');
-  if (voiceContainer) voiceContainer.style.display = 'flex';
+  if (voiceContainer) {
+    voiceContainer.style.display = 'flex';
+    voiceContainer.classList.remove('voice-minimized');
+  }
+  
+  const collapsedBar = document.getElementById('rs-voice-collapsed-bar');
+  if (collapsedBar) collapsedBar.hidden = true;
   
   const gramConfirm = document.getElementById('rs-gram-confirm');
+  const compoundConfirm = document.getElementById('rs-compound-confirm');
   const searchView = document.getElementById('rs-view-search');
   if (gramConfirm && searchView) {
     gramConfirm.hidden = true;
     searchView.appendChild(gramConfirm);
   }
+  if (compoundConfirm && searchView) {
+    compoundConfirm.hidden = true;
+    searchView.appendChild(compoundConfirm);
+  }
 }
+
 async function processVoiceInput() {
   const input = document.getElementById('rs-voice-input');
   const status = document.getElementById('rs-voice-status');
@@ -659,70 +787,82 @@ async function processVoiceInput() {
   if (!text) return;
 
   if (processBtn) processBtn.disabled = true;
-  if (status) status.textContent = 'Procesando con IA... \u23f3';
+  if (status) status.textContent = 'Analizando tu comida... ⏳';
 
   try {
-    const parsed = await AI.parseVoiceInput(text);
-    if (!parsed || !parsed.food_name) throw new Error('No se detect\u00f3 alimento');
+    console.log('[NutriFlow Voice] 🎙️ Analizando comida con IA:', text);
     
-    if (status) status.textContent = `Analizando: ${parsed.food_name}...`;
-
-    // Usar la IA centralizada para buscar en BD o consultar macros
-    const { item } = await AI.fetchNutritionInfo(parsed.food_name);
-    let bestMatch = item;
-    
-    if (status) status.textContent = '\u00a1Listo!';
-    
-    // Pasar al confirmador de gramaje
-    _selectedFoodItem = bestMatch;
-    window._selectedFoodItem = bestMatch;
-    
-    // Ocultar la UI de voz, mostrar el confirmador
-    const voiceContainer = document.querySelector('.rs-voice-container');
-    const gramConfirm = document.getElementById('rs-gram-confirm'); // usar el mismo del search view
-    
-    // Movemos el confirmador a la vista actual
-    const voiceView = document.getElementById('rs-view-voice');
-    if (voiceContainer && gramConfirm) {
-      voiceContainer.appendChild(gramConfirm);
-      gramConfirm.hidden = false;
-      // Ya NO ocultamos voiceContainer para que el usuario pueda ver/editar su transcripci\u00f3n
-      // si voiceContainer) voiceContainer.style.display = 'none';
-      
-      const nameEl = document.getElementById('rs-gram-item-name');
-      if (nameEl) nameEl.textContent = bestMatch.name;
-
-      const inputG = document.getElementById('rs-gram-input');
-      if (inputG) {
-        inputG.placeholder = `Ej: ${bestMatch.typical_serving_g || 100}`;
-        inputG.value = parsed.quantity_g || bestMatch.typical_serving_g || 100;
-      }
-      
-      const mealSelect = document.getElementById('rs-gram-meal-type');
-      if (mealSelect) {
-        let val = 'snack';
-        if (parsed.meal_type) {
-          const mt = parsed.meal_type.toLowerCase();
-          if (mt.includes('desayuno')) val = 'breakfast';
-          else if (mt.includes('almuerzo')) val = 'lunch';
-          else if (mt.includes('cena')) val = 'dinner';
-          else if (mt.includes('merienda')) val = 'merienda';
-        }
-        mealSelect.value = val;
-        // Actualizar visual de chips
-        document.querySelectorAll('.rs-meal-chip').forEach(c => {
-          if (c.dataset.val === val) c.classList.add('active');
-          else c.classList.remove('active');
-        });
-      }
-
-      if (typeof updateGramMacros === 'function') updateGramMacros();
+    const parsed = await AI.analyzeMealText(text);
+    if (!parsed || !parsed.items || parsed.items.length === 0) {
+      throw new Error('No se detectaron alimentos en el análisis.');
     }
-    
+
+    if (status) status.textContent = '¡Listo!';
+
+    if (parsed.is_compound && parsed.items.length > 1) {
+      if (typeof showCompoundMealConfirm === 'function') {
+        showCompoundMealConfirm(parsed, 'voice');
+      }
+    } else {
+      const single = parsed.items[0];
+      const factor100 = (single.quantity_g > 0) ? (100 / single.quantity_g) : 1;
+      const bestMatch = {
+        name: single.name,
+        calories_per_100g: Math.round(single.calories * factor100),
+        protein_per_100g: parseFloat((single.protein * factor100).toFixed(1)),
+        carbs_per_100g: parseFloat((single.carbs * factor100).toFixed(1)),
+        fat_per_100g: parseFloat((single.fat * factor100).toFixed(1)),
+        typical_serving_g: single.quantity_g || 100,
+        _isTemp: true,
+        source: 'gemini'
+      };
+
+      _selectedFoodItem = bestMatch;
+      window._selectedFoodItem = bestMatch;
+
+      const voiceContainer = document.querySelector('.rs-voice-container');
+      const gramConfirm = document.getElementById('rs-gram-confirm');
+      const compoundConfirm = document.getElementById('rs-compound-confirm');
+      if (compoundConfirm) compoundConfirm.hidden = true;
+
+      if (voiceContainer && gramConfirm) {
+        voiceContainer.appendChild(gramConfirm);
+        gramConfirm.hidden = false;
+
+        const nameEl = document.getElementById('rs-gram-item-name');
+        if (nameEl) nameEl.textContent = bestMatch.name;
+
+        const inputG = document.getElementById('rs-gram-input');
+        if (inputG) {
+          inputG.placeholder = `Ej: ${bestMatch.typical_serving_g || 100}`;
+          inputG.value = single.quantity_g || bestMatch.typical_serving_g || 100;
+        }
+
+        const mealSelect = document.getElementById('rs-gram-meal-type');
+        if (mealSelect) {
+          let val = 'snack';
+          if (parsed.meal_type) {
+            const mt = parsed.meal_type.toLowerCase();
+            if (mt.includes('desayuno')) val = 'breakfast';
+            else if (mt.includes('almuerzo')) val = 'lunch';
+            else if (mt.includes('cena')) val = 'dinner';
+            else if (mt.includes('merienda')) val = 'merienda';
+          }
+          mealSelect.value = val;
+          document.querySelectorAll('#rs-meal-chips .rs-meal-chip').forEach(c => {
+            if (c.dataset.val === val) c.classList.add('active');
+            else c.classList.remove('active');
+          });
+        }
+
+        if (typeof updateGramMacros === 'function') updateGramMacros();
+        setTimeout(() => gramConfirm.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 60);
+      }
+    }
   } catch (err) {
-    console.error('Error parseVoiceInput:', err);
-    if (status) status.textContent = 'Error al entender. Intenta editar el texto.';
+    console.error('[NutriFlow Voice] ❌ Error en processVoiceInput:', err);
+    if (status) status.textContent = 'Error al entender. Intenta editar el texto o reformularlo.';
   } finally {
-    if (processBtn) processBtn.disabled = false;
+    if (processBtn) processBtn.disabled = !input?.value?.trim();
   }
 }

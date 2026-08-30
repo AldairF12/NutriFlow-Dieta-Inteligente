@@ -307,12 +307,30 @@ const DB = {
   addFoodItem(item) {
     if (!appState.foodItems) appState.foodItems = [];
     const newItem = {
-      id: 'fi_' + Date.now(),
+      id: 'fi_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
       ...item,
     };
     appState.foodItems.push(newItem);
     persistState();
     return newItem;
+  },
+
+  upsertFoodItem(item) {
+    if (!appState.foodItems) appState.foodItems = [];
+    const lower = (item.name || '').trim().toLowerCase();
+    const existingIndex = appState.foodItems.findIndex(fi => fi.name.toLowerCase() === lower);
+    if (existingIndex !== -1) {
+      appState.foodItems[existingIndex] = {
+        ...appState.foodItems[existingIndex],
+        ...item,
+        id: appState.foodItems[existingIndex].id, // Preservar ID original
+        updatedAt: new Date().toISOString()
+      };
+      persistState();
+      return appState.foodItems[existingIndex];
+    } else {
+      return this.addFoodItem(item);
+    }
   },
 
   getFrequentItems() {
