@@ -732,6 +732,14 @@
           <h2 class="rs-title">Registro por voz</h2>
         </div>
         <div class="rs-voice-container">
+          <!-- Barra colapsada cuando se detecta el plato -->
+          <div id="rs-voice-collapsed-bar" class="rs-voice-collapsed-bar" hidden>
+            <div class="rs-voice-collapsed-text">
+              <span>🗣️</span> <span id="rs-voice-collapsed-preview">Tu dictado...</span>
+            </div>
+            <button type="button" id="btn-rs-voice-expand" class="btn-voice-expand">✏️ Editar</button>
+          </div>
+
           <p class="rs-voice-hint" id="rs-voice-hint">Toca el microfono y dime que comiste (ej. "Me comi dos huevos con 50 gramos de pan")</p>
           
           <button id="btn-rs-voice-mic" class="rs-voice-mic-btn" aria-label="Iniciar grabacion">
@@ -742,12 +750,45 @@
           <div class="rs-voice-transcript-area" id="rs-voice-transcript-area" hidden>
             <label for="rs-voice-input" class="rs-voice-label">Revisa o edita tu mensaje:</label>
             <textarea id="rs-voice-input" class="rs-voice-input" rows="3" placeholder="Tu mensaje aparecera aqui..."></textarea>
-            <button id="btn-rs-voice-process" class="rs-voice-process-btn">
+            <div id="rs-voice-suggestions" class="rs-voice-suggestions" hidden></div>
+            <button id="btn-rs-voice-process" class="rs-voice-process-btn" disabled>
               &#10024; Procesar con IA
             </button>
           </div>
           
           <div id="rs-voice-status" class="rs-voice-status"></div>
+        </div>
+      </div>
+
+      <!-- Panel de Confirmación de Plato Compuesto (Multi-item) -->
+      <div id="rs-compound-confirm" class="rs-compound-confirm" hidden>
+        <div class="rs-compound-header">
+          <span class="rs-compound-badge">&#10024; PLATO DETECTADO</span>
+          <div class="rs-compound-title" id="rs-compound-title"></div>
+        </div>
+        
+        <div style="margin-bottom: 12px; text-align: center;">
+          <div class="rs-meal-chips" id="rs-compound-meal-chips">
+            <div class="rs-meal-chip" data-val="breakfast">Desayuno</div>
+            <div class="rs-meal-chip" data-val="lunch">Almuerzo</div>
+            <div class="rs-meal-chip" data-val="merienda">Merienda</div>
+            <div class="rs-meal-chip" data-val="dinner">Cena</div>
+            <div class="rs-meal-chip active" data-val="snack">Snack</div>
+          </div>
+          <input type="hidden" id="rs-compound-meal-type" value="snack" />
+        </div>
+
+        <div class="rs-compound-items-label">Alimentos detectados:</div>
+        <div id="rs-compound-items-list" class="rs-compound-items-list"></div>
+
+        <div class="rs-compound-total-box">
+          <div class="rs-compound-total-title">TOTAL DEL PLATO</div>
+          <div id="rs-compound-total-macros" class="rs-compound-macros-grid"></div>
+        </div>
+
+        <div class="rs-compound-actions">
+          <button type="button" id="btn-rs-compound-cancel" class="btn-cancel">Cancelar</button>
+          <button type="button" id="btn-rs-compound-save" class="btn-save-goals">&#10003; Registrar Plato</button>
         </div>
       </div>
 
