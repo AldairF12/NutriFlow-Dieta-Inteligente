@@ -427,9 +427,10 @@
   font-weight: 600;
   color: #4338ca;
   background: rgba(99, 102, 241, 0.1);
-  padding: 1px 5px;
-  border-radius: 4px;
+  padding: 1px 6px;
+  border-radius: 6px;
   display: inline-block;
+  white-space: nowrap;
 }
 
 /* Modal Limpiar Chat */

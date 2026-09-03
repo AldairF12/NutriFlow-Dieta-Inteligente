@@ -177,16 +177,27 @@ function parseChatMarkdown(text) {
 
 function formatChatInline(str) {
   if (!str) return '';
+
+  // 1. Unidades nutricionales admitidas
+  const unitSuffix = '(?:kcal|calor[ií]as?|cals?|g|gr|gramos?|ml|mililitros?|litros?|l|kg|kilos?|%)(?:\\s*(?:de|\\/|por)\\s*(?:(?:tus\\s*)?(?:peso(?:\\s*corporal)?|kilo(?:\\s*de\\s*peso(?:\\s*corporal)?)?|kg|d[ií]a|porci[oó]n|calor[ií]as?(?:\\s*totales)?|macros?|prote[ií]nas?|carbohidratos?|carbos?|grasas?|l[ií]pidos?|fibras?)))?';
+
+  // 2. Patrón que captura rangos completos (ej. 'entre 300 y 500 kcal', '120- 140g de proteína', '1.6 a 2.2g por kilo')
+  // y números individuales con separadores de miles (ej. '1, 552.5 kcal', '1,553 kcal', '4 kcal').
+  const macroHighlightRegex = new RegExp(
+    `\\b((?:(?:entre|de)\\s+(?:el\\s+)?)?\\d+(?:[.,]\\s*\\d+)*%?\\s*(?:-|–|—|\\ba\\b|\\bal\\b|\\by\\b|\\bhasta\\b)\\s*\\d+(?:[.,]\\s*\\d+)*%?\\s*${unitSuffix}|\\d+(?:[.,]\\s*\\d+)*%?\\s*${unitSuffix})\\b`,
+    'gi'
+  );
+
   return str
     // Negrita (**texto**)
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     // Cursiva (*texto* o _texto_)
     .replace(/\*([^\*]+?)\*/g, '<em>$1</em>')
     .replace(/_([^_]+?)_/g, '<em>$1</em>')
-    // C\u00f3digo inline (`c\u00f3digo`)
+    // Código inline (`código`)
     .replace(/`([^`]+?)`/g, '<code class="chat-code">$1</code>')
-    // Resaltado de macros y calor\u00edas
-    .replace(/\b(\d+(?:\.\d+)?\s*(?:kcal|calor\u00edas|calorias|g\s*(?:de\s*)?(?:prote[i\u00ed]na|carbohidratos|carbos|grasas?|fibra)))\b/gi, '<span class="chat-macro-highlight">$1</span>');
+    // Resaltado inteligente de macros, rangos y calorías
+    .replace(macroHighlightRegex, '<span class="chat-macro-highlight">$1</span>');
 }
 
 function appendChatMessage(role, text, isLoad = false, msgId = null, isPinned = false) {
