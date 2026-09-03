@@ -200,6 +200,17 @@ function formatChatInline(str) {
     .replace(macroHighlightRegex, '<span class="chat-macro-highlight">$1</span>');
 }
 
+function escapeChatHtml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+    .replace(/\n/g, '<br>');
+}
+
 function appendChatMessage(role, text, isLoad = false, msgId = null, isPinned = false) {
   const container = document.getElementById('ai-chat-messages');
   if (!container) return;
@@ -208,7 +219,7 @@ function appendChatMessage(role, text, isLoad = false, msgId = null, isPinned = 
   const msg = document.createElement('div');
   msg.className = `chat-msg chat-msg--${role}`;
   
-  const formattedText = parseChatMarkdown(text);
+  const formattedText = (role === 'bot') ? parseChatMarkdown(text) : escapeChatHtml(text);
   
   let actionsHtml = '';
   if (role === 'bot') {
