@@ -289,12 +289,12 @@ function renderIngredientPickerList() {
   container.innerHTML = '';
 
   const allIngredients = window.DB.ingredients || [];
-  const query = _pickerSearchQuery.toLowerCase().trim();
+  const query = typeof normalizeSearchText === 'function' ? normalizeSearchText(_pickerSearchQuery) : _pickerSearchQuery.toLowerCase().trim();
 
   const filtered = allIngredients.filter(ing => {
-    const nameMatch = (ing.name || '').toLowerCase().includes(query);
-    const catMatch = (ing.category || '').toLowerCase().includes(query);
-    return nameMatch || catMatch;
+    const nameNorm = typeof normalizeSearchText === 'function' ? normalizeSearchText(ing.name || '') : (ing.name || '').toLowerCase();
+    const catNorm = typeof normalizeSearchText === 'function' ? normalizeSearchText(ing.category || '') : (ing.category || '').toLowerCase();
+    return nameNorm.includes(query) || catNorm.includes(query);
   });
 
   if (filtered.length === 0) {

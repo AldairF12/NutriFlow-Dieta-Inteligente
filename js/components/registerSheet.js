@@ -214,13 +214,18 @@ async function handleFoodSearch() {
     return;
   }
 
-  // 1. Buscar localmente en food_items
+  // 1. Buscar localmente en food_items (ya ordenado por relevancia y sin tildes)
   const localMatches = DB.searchFoodItems(query);
+  const localNames = new Set(localMatches.map(m => (typeof normalizeSearchText === 'function' ? normalizeSearchText(m.name) : m.name.toLowerCase())));
+
+  const normQuery = typeof normalizeSearchText === 'function' ? normalizeSearchText(query) : query.toLowerCase();
 
   // 2. Buscar en ingredientes del sistema
-  const ingMatches = DB.ingredients.filter(i =>
-    i.name.toLowerCase().includes(query.toLowerCase())
-  ).slice(0, 5);
+  const ingMatches = (DB.ingredients || []).filter(i => {
+    const normName = typeof normalizeSearchText === 'function' ? normalizeSearchText(i.name) : i.name.toLowerCase();
+    if (localNames.has(normName)) return false;
+    return normName.includes(normQuery) || (normQuery.length >= 3 && normQuery.includes(normName));
+  }).slice(0, 5);
 
   results.innerHTML = '';
 

@@ -62,13 +62,15 @@ function updateRecipesViewToggleBtn(btn) {
 
 function recipeMatchesSearch(recipe) {
   if (!_recipesSearchQuery) return true;
-  const nameMatch = (recipe.name || '').toLowerCase().includes(_recipesSearchQuery);
-  if (nameMatch) return true;
+  const normQ = typeof normalizeSearchText === 'function' ? normalizeSearchText(_recipesSearchQuery) : _recipesSearchQuery.toLowerCase();
+  const nameNorm = typeof normalizeSearchText === 'function' ? normalizeSearchText(recipe.name || '') : (recipe.name || '').toLowerCase();
+  if (nameNorm.includes(normQ)) return true;
   
   const ris = window.DB ? window.DB.getRecipeIngredients(recipe.id) : [];
   return ris.some(ri => {
     const ing = window.DB ? window.DB.getIngredientById(ri.ingredient_id) : null;
-    return ing && (ing.name || '').toLowerCase().includes(_recipesSearchQuery);
+    const ingNorm = typeof normalizeSearchText === 'function' ? normalizeSearchText(ing?.name || '') : (ing?.name || '').toLowerCase();
+    return ing && ingNorm.includes(normQ);
   });
 }
 

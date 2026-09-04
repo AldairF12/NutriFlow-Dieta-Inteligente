@@ -605,9 +605,11 @@ function initVoiceRegistration() {
       const voiceContainer = document.querySelector('.rs-voice-container');
       const collapsedBar = document.getElementById('rs-voice-collapsed-bar');
       const compoundConfirm = document.getElementById('rs-compound-confirm');
+      const gramConfirm = document.getElementById('rs-gram-confirm');
       if (voiceContainer) voiceContainer.classList.remove('voice-minimized');
       if (collapsedBar) collapsedBar.hidden = true;
       if (compoundConfirm) compoundConfirm.hidden = true;
+      if (gramConfirm) gramConfirm.hidden = true;
     });
   }
 
@@ -658,48 +660,122 @@ function updateVoiceDBSuggestions(text) {
   const sugBox = document.getElementById('rs-voice-suggestions');
   if (!sugBox) return;
 
-  if (!text || text.length < 2) {
+  if (!text || text.trim().length < 2) {
     sugBox.hidden = true;
     sugBox.innerHTML = '';
     return;
   }
 
-  const lower = text.toLowerCase();
-  const words = lower.split(/[\s,.;]+/).filter(w => w.length >= 3);
-  
-  const foundItems = new Map();
+  const normQuery = typeof normalizeSearchText === 'function'
+    ? normalizeSearchText(text)
+    : text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 
-  // Buscar en foodItems locales
+  const stopWords = (typeof SPANISH_STOP_WORDS !== 'undefined') ? SPANISH_STOP_WORDS : new Set(['con', 'sin', 'de', 'del', 'los', 'las', 'un', 'una', 'y', 'o', 'el', 'la']);
+
+  // Extraer tokens significativos de la búsqueda (omitiendo palabras de parada como "con", "de", etc.)
+  const rawTokens = normQuery.split(/[\s,.;+/()~0-9-]+/).filter(w => w.length >= 2);
+  const queryTokens = rawTokens.filter(w => !stopWords.has(w));
+  const effectiveTokens = queryTokens.length > 0 ? queryTokens : rawTokens;
+
+  const candidates = [];
+  const seenNames = new Set();
+
+  // 1. Recopilar candidatos de DB.foodItems
   (DB.foodItems || []).forEach(fi => {
-    const fiNameLower = fi.name.toLowerCase();
-    if (lower.includes(fiNameLower) || words.some(w => fiNameLower.includes(w))) {
-      if (!foundItems.has(fi.name)) {
-        foundItems.set(fi.name, { ...fi, _type: 'food_item' });
-      }
-    }
+    if (!fi || !fi.name || seenNames.has(fi.name)) return;
+    seenNames.add(fi.name);
+    candidates.push({
+      item: { ...fi, _type: 'food_item' },
+      nameNorm: typeof normalizeSearchText === 'function' ? normalizeSearchText(fi.name) : fi.name.toLowerCase()
+    });
   });
 
-  // Buscar en ingredientes
+  // 2. Recopilar candidatos de DB.ingredients
   (DB.ingredients || []).forEach(ing => {
-    const ingNameLower = ing.name.toLowerCase();
-    if (lower.includes(ingNameLower) || words.some(w => ingNameLower.includes(w))) {
-      if (!foundItems.has(ing.name)) {
-        foundItems.set(ing.name, {
-          id: ing.id,
-          name: ing.name,
-          calories_per_100g: ing.calories_per_100g || 0,
-          protein_per_100g:  ing.protein_per_100g  || 0,
-          carbs_per_100g:    ing.carbs_per_100g    || 0,
-          fat_per_100g:      ing.fat_per_100g      || 0,
-          typical_serving_g: 100,
-          _fromIngredient: true,
-          _type: 'ingredient'
-        });
-      }
-    }
+    if (!ing || !ing.name || seenNames.has(ing.name)) return;
+    seenNames.add(ing.name);
+    candidates.push({
+      item: {
+        id: ing.id,
+        name: ing.name,
+        calories_per_100g: ing.calories_per_100g || 0,
+        protein_per_100g:  ing.protein_per_100g  || 0,
+        carbs_per_100g:    ing.carbs_per_100g    || 0,
+        fat_per_100g:      ing.fat_per_100g      || 0,
+        typical_serving_g: 100,
+        _fromIngredient: true,
+        _type: 'ingredient'
+      },
+      nameNorm: typeof normalizeSearchText === 'function' ? normalizeSearchText(ing.name) : ing.name.toLowerCase()
+    });
   });
 
-  const matches = Array.from(foundItems.values()).slice(0, 4);
+  // 3. Evaluar relevancia y puntaje de cada candidato
+  const scored = [];
+
+  for (const { item, nameNorm } of candidates) {
+    let score = 0;
+
+    // Coincidencia exacta completa (ej. "Pan francés" === "Pan francés")
+    if (nameNorm === normQuery) {
+      score = 20000;
+    }
+    // El nombre del alimento empieza con la consulta completa (ej. "pan fran" -> "pan frances")
+    else if (nameNorm.startsWith(normQuery)) {
+      score = 15000 + normQuery.length;
+    }
+    // Coincidencia basada en tokens significativos
+    else if (effectiveTokens.length > 0) {
+      const itemTokens = nameNorm.split(/[\s,.;+/()~0-9-]+/).filter(w => w.length >= 2);
+      let matchedExactCount = 0;
+      let tokenScoreSum = 0;
+
+      for (const qToken of effectiveTokens) {
+        let bestTokenMatch = { matched: false, score: 0 };
+        for (const iToken of itemTokens) {
+          const matchRes = (typeof isFuzzyTokenMatch === 'function')
+            ? isFuzzyTokenMatch(qToken, iToken)
+            : (iToken === qToken ? { matched: true, score: 500 } : (iToken.startsWith(qToken) ? { matched: true, score: 350 } : { matched: false, score: 0 }));
+
+          if (matchRes.matched && matchRes.score > bestTokenMatch.score) {
+            bestTokenMatch = matchRes;
+          }
+        }
+        if (bestTokenMatch.matched) {
+          matchedExactCount++;
+          tokenScoreSum += bestTokenMatch.score;
+        }
+      }
+
+      if (matchedExactCount > 0) {
+        score += tokenScoreSum;
+        const queryCoverage = matchedExactCount / effectiveTokens.length;
+        score += Math.round(queryCoverage * 6000);
+
+        if (matchedExactCount >= effectiveTokens.length) {
+          score += 4000;
+        }
+        const itemCoverage = matchedExactCount / Math.max(1, itemTokens.length);
+        score += Math.round(itemCoverage * 1500);
+      } else {
+        score = 0;
+      }
+
+      // Bonus si la frase del usuario comienza con el nombre del alimento
+      if (normQuery.startsWith(nameNorm)) {
+        score += 2000;
+      } else if (normQuery.includes(nameNorm)) {
+        score += 1000;
+      }
+    }
+
+    if (score > 0) {
+      scored.push({ item, score });
+    }
+  }
+
+  scored.sort((a, b) => b.score - a.score);
+  const matches = scored.slice(0, 4).map(s => s.item);
 
   if (matches.length === 0) {
     sugBox.hidden = true;
@@ -723,11 +799,24 @@ function updateVoiceDBSuggestions(text) {
       const voiceContainer = document.querySelector('.rs-voice-container');
       const gramConfirm = document.getElementById('rs-gram-confirm');
       const compoundConfirm = document.getElementById('rs-compound-confirm');
+      const collapsedBar = document.getElementById('rs-voice-collapsed-bar');
+      const collapsedPreview = document.getElementById('rs-voice-collapsed-preview');
+      const voiceInput = document.getElementById('rs-voice-input');
+
       if (compoundConfirm) compoundConfirm.hidden = true;
-      if (voiceContainer && gramConfirm) {
-        voiceContainer.appendChild(gramConfirm);
-        if (typeof selectFoodForGram === 'function') {
-          selectFoodForGram(item);
+
+      if (voiceContainer) {
+        voiceContainer.classList.add('voice-minimized');
+        if (collapsedPreview) {
+          collapsedPreview.textContent = voiceInput?.value.trim() || item.name || 'Dictado de voz';
+        }
+        if (collapsedBar) collapsedBar.hidden = false;
+
+        if (gramConfirm) {
+          voiceContainer.appendChild(gramConfirm);
+          if (typeof selectFoodForGram === 'function') {
+            selectFoodForGram(item);
+          }
         }
       }
     });
@@ -827,6 +916,15 @@ async function processVoiceInput() {
 
       if (voiceContainer && gramConfirm) {
         voiceContainer.appendChild(gramConfirm);
+        voiceContainer.classList.add('voice-minimized');
+        const collapsedBar = document.getElementById('rs-voice-collapsed-bar');
+        const collapsedPreview = document.getElementById('rs-voice-collapsed-preview');
+        const voiceInput = document.getElementById('rs-voice-input');
+        if (collapsedPreview) {
+          collapsedPreview.textContent = voiceInput?.value.trim() || bestMatch.name || 'Dictado de voz';
+        }
+        if (collapsedBar) collapsedBar.hidden = false;
+
         gramConfirm.hidden = false;
 
         const nameEl = document.getElementById('rs-gram-item-name');

@@ -2,6 +2,70 @@
 // utils.js ? Constantes y Utilidades Compartidas
 // ============================================================
 
+const SPANISH_STOP_WORDS = new Set([
+  // Preposiciones y conjunciones
+  'a', 'al', 'con', 'de', 'del', 'desde', 'en', 'entre', 'hacia', 'hasta', 'para', 'por', 'segun', 'según', 'sin', 'sobre', 'tras',
+  'y', 'e', 'ni', 'o', 'u', 'pero', 'mas', 'más', 'sino', 'que', 'porque', 'como',
+  // Artículos y pronombres
+  'el', 'la', 'los', 'las', 'un', 'una', 'unos', 'unas', 'lo', 'le', 'les', 'me', 'te', 'se', 'nos', 'os', 'mi', 'mis', 'tu', 'tus', 'su', 'sus', 'yo', 'tu', 'él', 'ella', 'ellos', 'ellas', 'este', 'esta', 'estos', 'estas', 'ese', 'esa', 'esos', 'esas',
+  // Verbos frecuentes de registro / ingesta
+  'comer', 'comi', 'comí', 'comimos', 'comieron', 'tome', 'tomé', 'tomar', 'tomamos', 'bebi', 'bebí', 'beber',
+  'desayune', 'desayuné', 'desayunar', 'almorce', 'almorcé', 'almorzar', 'cene', 'cené', 'cenar',
+  'consumi', 'consumí', 'consumir', 'pedi', 'pedí', 'servi', 'serví', 'poner', 'puse',
+  // Cantidades / unidades
+  'un', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez',
+  'gramo', 'gramos', 'gr', 'g', 'kilo', 'kilos', 'kg', 'ml', 'litro', 'litros', 'taza', 'tazas',
+  'cucharada', 'cucharadas', 'cda', 'cdas', 'cdta', 'cdtas', 'cucharadita', 'cucharaditas',
+  'plato', 'platos', 'porcion', 'porción', 'porciones', 'rebanada', 'rebanadas', 'rebanadita', 'rebanaditas',
+  'unidad', 'unidades', 'ud', 'uds', 'vaso', 'vasos', 'botella', 'botellas', 'lata', 'latas'
+]);
+
+function normalizeSearchText(str) {
+  if (!str) return '';
+  return str
+    .toString()
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
+function isFuzzyTokenMatch(qToken, iToken) {
+  if (!qToken || !iToken) return { matched: false, score: 0, type: 'none' };
+  if (qToken === iToken) return { matched: true, score: 500, type: 'exact' };
+  if (iToken.startsWith(qToken)) return { matched: true, score: 400, type: 'prefix' };
+  if (qToken.startsWith(iToken) && iToken.length >= 3) return { matched: true, score: 350, type: 'stem' };
+  
+  if (qToken.length >= 3 && iToken.length >= 3) {
+    if (qToken.slice(0, 3) === iToken.slice(0, 3)) {
+      if (Math.abs(qToken.length - iToken.length) <= 1) {
+        let diff = 0, i = 0, j = 0;
+        while (i < qToken.length && j < iToken.length) {
+          if (qToken[i] !== iToken[j]) {
+            diff++;
+            if (qToken.length > iToken.length) i++;
+            else if (iToken.length > qToken.length) j++;
+            else { i++; j++; }
+          } else {
+            i++; j++;
+          }
+        }
+        diff += (qToken.length - i) + (iToken.length - j);
+        if (diff <= 1) {
+          return { matched: true, score: 300, type: 'fuzzy' };
+        }
+      }
+    }
+  }
+  return { matched: false, score: 0, type: 'none' };
+}
+
+if (typeof window !== 'undefined') {
+  window.SPANISH_STOP_WORDS = SPANISH_STOP_WORDS;
+  window.normalizeSearchText = normalizeSearchText;
+  window.isFuzzyTokenMatch = isFuzzyTokenMatch;
+}
+
 const MEAL_LABELS = {
   desayuno: { emoji: '🌅', label: 'Desayuno' },
   almuerzo: { emoji: '☀️', label: 'Almuerzo' },

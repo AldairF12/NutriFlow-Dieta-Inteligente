@@ -52,7 +52,11 @@ function updatePantryViewToggleBtn(btn) {
 }
 
 function pantryItemVisible(ing) {
-  if (_pantrySearchQuery && !(ing.name || '').toLowerCase().includes(_pantrySearchQuery)) return false;
+  if (_pantrySearchQuery) {
+    const normQ = typeof normalizeSearchText === 'function' ? normalizeSearchText(_pantrySearchQuery) : _pantrySearchQuery.toLowerCase();
+    const normName = typeof normalizeSearchText === 'function' ? normalizeSearchText(ing.name || '') : (ing.name || '').toLowerCase();
+    if (!normName.includes(normQ)) return false;
+  }
   if (_pantryFilterActive) {
     const item = (window.DB && typeof window.DB.getPantryItem === 'function') ? window.DB.getPantryItem(ing.id) : null;
     const qty  = item ? item.quantity_available : 0;

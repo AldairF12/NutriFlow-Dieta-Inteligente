@@ -291,17 +291,64 @@ const DB = {
 
   getFoodItemByExactName(name) {
     if (!name) return null;
-    const lower = name.trim().toLowerCase();
-    const custom = (appState.foodItems || []).find(fi => fi.name.toLowerCase() === lower);
+    const norm = typeof normalizeSearchText === 'function' ? normalizeSearchText(name) : name.trim().toLowerCase();
+    const custom = (appState.foodItems || []).find(fi => (typeof normalizeSearchText === 'function' ? normalizeSearchText(fi.name) : fi.name.toLowerCase()) === norm);
     if (custom) return custom;
-    return CATALOG_FOOD_ITEMS.find(fi => fi.name.toLowerCase() === lower) || null;
+    return CATALOG_FOOD_ITEMS.find(fi => (typeof normalizeSearchText === 'function' ? normalizeSearchText(fi.name) : fi.name.toLowerCase()) === norm) || null;
   },
 
   searchFoodItems(query) {
     const allItems = [...CATALOG_FOOD_ITEMS, ...(appState.foodItems || [])];
     if (!query) return allItems;
-    const q = query.trim().toLowerCase();
-    return allItems.filter(fi => fi.name.toLowerCase().includes(q) || (fi.category || '').toLowerCase().includes(q));
+    const qNorm = typeof normalizeSearchText === 'function' ? normalizeSearchText(query) : query.trim().toLowerCase();
+    if (!qNorm) return allItems;
+
+    const stopWords = (typeof SPANISH_STOP_WORDS !== 'undefined') ? SPANISH_STOP_WORDS : new Set(['con', 'sin', 'de', 'del', 'los', 'las', 'un', 'una', 'y', 'o']);
+    const rawTokens = qNorm.split(/[\s,.;+/()~0-9-]+/).filter(t => t.length >= 2);
+    const qTokens = rawTokens.filter(t => !stopWords.has(t));
+    const effectiveTokens = qTokens.length > 0 ? qTokens : rawTokens;
+
+    const scored = [];
+    for (const fi of allItems) {
+      const nameNorm = typeof normalizeSearchText === 'function' ? normalizeSearchText(fi.name) : (fi.name || '').toLowerCase();
+      const catNorm = typeof normalizeSearchText === 'function' ? normalizeSearchText(fi.category || '') : (fi.category || '').toLowerCase();
+
+      let score = 0;
+      if (nameNorm === qNorm) {
+        score = 10000;
+      } else if (nameNorm.startsWith(qNorm)) {
+        score = 5000 + qNorm.length;
+      } else if (nameNorm.includes(qNorm)) {
+        score = 3000 + qNorm.length;
+      } else if (catNorm.includes(qNorm)) {
+        score = 1000;
+      } else if (effectiveTokens.length > 0) {
+        const itemTokens = nameNorm.split(/[\s,.;+/()~0-9-]+/).filter(t => t.length >= 2);
+        let matched = 0;
+        for (const qt of effectiveTokens) {
+          if (itemTokens.includes(qt)) {
+            matched++;
+            score += 300;
+          } else if (itemTokens.some(it => it.startsWith(qt))) {
+            matched++;
+            score += 150;
+          } else if (itemTokens.some(it => qt.startsWith(it) && it.length >= 3)) {
+            matched++;
+            score += 100;
+          }
+        }
+        if (matched > 0 && matched >= effectiveTokens.length) {
+          score += 1500;
+        }
+      }
+
+      if (score > 0) {
+        scored.push({ item: fi, score });
+      }
+    }
+
+    scored.sort((a, b) => b.score - a.score);
+    return scored.map(s => s.item);
   },
 
   addFoodItem(item) {
@@ -317,8 +364,8 @@ const DB = {
 
   upsertFoodItem(item) {
     if (!appState.foodItems) appState.foodItems = [];
-    const lower = (item.name || '').trim().toLowerCase();
-    const existingIndex = appState.foodItems.findIndex(fi => fi.name.toLowerCase() === lower);
+    const norm = typeof normalizeSearchText === 'function' ? normalizeSearchText(item.name || '') : (item.name || '').trim().toLowerCase();
+    const existingIndex = appState.foodItems.findIndex(fi => (typeof normalizeSearchText === 'function' ? normalizeSearchText(fi.name) : fi.name.toLowerCase()) === norm);
     if (existingIndex !== -1) {
       appState.foodItems[existingIndex] = {
         ...appState.foodItems[existingIndex],
