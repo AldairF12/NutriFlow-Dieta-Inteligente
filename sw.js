@@ -14,9 +14,35 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
+// Manejador de eventos PUSH en segundo plano (Web Push desde Cloudflare Worker)
+self.addEventListener('push', (event) => {
+  let data = {};
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data = { body: event.data.text() };
+    }
+  }
+
+  const title = data.title || '🥑 NutriFlow Recordatorio';
+  const options = {
+    body: data.body || 'Tú registra. Nosotros hacemos las cuentas.',
+    icon: 'img/favicon.png',
+    badge: 'img/logo.png',
+    tag: data.tag || 'nutriflow-reminder',
+    renotify: true,
+    data: data.data || { url: './' },
+    vibrate: [100, 50, 100]
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
 // Manejador para cuando el usuario toca la notificación en el móvil o escritorio
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const targetUrl = (event.notification.data && event.notification.data.url) || './';
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (const client of clientList) {
@@ -25,8 +51,9 @@ self.addEventListener('notificationclick', (event) => {
         }
       }
       if (clients.openWindow) {
-        return clients.openWindow('./');
+        return clients.openWindow(targetUrl);
       }
     })
   );
 });
+

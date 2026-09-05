@@ -192,7 +192,7 @@ function renderNotificationsSettings() {
     container.appendChild(row);
   });
 
-  // 3. Botón de prueba
+  // 3. Botón de prueba local (inmediata)
   if (btnTest) {
     btnTest.onclick = async () => {
       if (window.NotificationService.getPermission() !== 'granted') {
@@ -202,6 +202,97 @@ function renderNotificationsSettings() {
       }
       window.NotificationService.sendTestNotification();
       if (typeof showToast === 'function') showToast('🔔 Notificación de prueba enviada');
+    };
+  }
+
+  // 4. Cloudflare Worker Sync (Modo segundo plano / pantalla bloqueada)
+  const workerInput = document.getElementById('notif-worker-url');
+  const btnSync = document.getElementById('btn-sync-cloudflare');
+  const badgeBg = document.getElementById('notif-bg-badge');
+  const testRow = document.getElementById('notif-bg-test-row');
+  const btnTestPush = document.getElementById('btn-test-cloud-push');
+
+  if (workerInput) {
+    const savedUrl = window.NotificationService.getWorkerUrl();
+    if (savedUrl) {
+      workerInput.value = savedUrl;
+    }
+  }
+
+  // Verificar estado de suscripción Push en segundo plano
+  if (window.NotificationService.isPushSubscribed) {
+    window.NotificationService.isPushSubscribed().then(isSub => {
+      const hasUrl = !!(workerInput && workerInput.value.trim());
+      if (isSub && hasUrl) {
+        if (badgeBg) {
+          badgeBg.textContent = '🟢 Conectado';
+          badgeBg.className = 'notif-bg-badge connected';
+        }
+        if (testRow) testRow.style.display = 'flex';
+      } else {
+        if (badgeBg) {
+          badgeBg.textContent = 'No conectado';
+          badgeBg.className = 'notif-bg-badge';
+        }
+        if (testRow) testRow.style.display = 'none';
+      }
+    });
+  }
+
+  if (btnSync && workerInput) {
+    btnSync.onclick = async () => {
+      const url = workerInput.value.trim();
+      if (!url) {
+        if (typeof showToast === 'function') showToast('⚠️ Ingresa la URL de tu Cloudflare Worker');
+        workerInput.focus();
+        return;
+      }
+
+      btnSync.disabled = true;
+      btnSync.textContent = 'Conectando...';
+
+      try {
+        const res = await window.NotificationService.syncWithCloudflare(url);
+        if (typeof showToast === 'function') {
+          showToast('☁️ ¡Conectado a Cloudflare! Recordatorios en segundo plano activos 🥑');
+        }
+        if (badgeBg) {
+          badgeBg.textContent = '🟢 Conectado';
+          badgeBg.className = 'notif-bg-badge connected';
+        }
+        if (testRow) testRow.style.display = 'flex';
+        renderNotificationsSettings();
+      } catch (err) {
+        console.error('[NutriFlow Sync]', err);
+        if (typeof showToast === 'function') {
+          showToast(`❌ Error: ${err.message || 'No se pudo sincronizar'}`);
+        }
+      } finally {
+        btnSync.disabled = false;
+        btnSync.textContent = 'Sincronizar';
+      }
+    };
+  }
+
+  if (btnTestPush) {
+    btnTestPush.onclick = async () => {
+      btnTestPush.disabled = true;
+      if (typeof showToast === 'function') {
+        showToast('📱 Enviando... ¡Bloquea tu pantalla ahora! 🥑');
+      }
+
+      try {
+        await window.NotificationService.sendTestPushCloudflare();
+        setTimeout(() => {
+          btnTestPush.disabled = false;
+        }, 3000);
+      } catch (err) {
+        console.error('[NutriFlow Test Push]', err);
+        if (typeof showToast === 'function') {
+          showToast(`❌ ${err.message || 'Error enviando push'}`);
+        }
+        btnTestPush.disabled = false;
+      }
     };
   }
 }

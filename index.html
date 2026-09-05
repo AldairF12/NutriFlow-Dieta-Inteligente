@@ -242,11 +242,41 @@
               <!-- Lista de Recordatorios -->
               <div id="notif-reminders-list" class="notif-reminders-list" role="list" aria-label="Lista de recordatorios"></div>
 
-              <!-- Botón de prueba rápida -->
+              <!-- Botón de prueba rápida (local) -->
               <div class="notif-test-action">
                 <button type="button" id="btn-test-notification" class="btn-test-notif">
-                  <span>🔔 Enviar recordatorio de prueba</span>
+                  <span>🔔 Enviar recordatorio de prueba (inmediato)</span>
                 </button>
+              </div>
+
+              <!-- Sincronización en segundo plano (Cloudflare Web Push) -->
+              <div class="notif-bg-sync-card">
+                <div class="notif-bg-header">
+                  <div class="notif-bg-title-group">
+                    <span class="notif-bg-icon">☁️</span>
+                    <div>
+                      <h4 class="notif-bg-title">Modo Segundo Plano (Cloudflare)</h4>
+                      <p class="notif-bg-desc">Recibe alertas con la app cerrada y pantalla bloqueada</p>
+                    </div>
+                  </div>
+                  <span id="notif-bg-badge" class="notif-bg-badge">No conectado</span>
+                </div>
+
+                <div class="notif-bg-inputs">
+                  <label for="notif-worker-url" class="notif-bg-label">URL de tu Cloudflare Worker:</label>
+                  <div class="notif-bg-input-row">
+                    <input type="url" id="notif-worker-url" class="notif-worker-input" placeholder="https://nutriflow-worker.<subdominio>.workers.dev" autocomplete="off" />
+                    <button type="button" id="btn-sync-cloudflare" class="btn-sync-cloudflare">Sincronizar</button>
+                  </div>
+                  <p class="notif-bg-hint">Vincula tus recordatorios con tu base de datos D1 para que el Worker te avise sin importar que el móvil esté bloqueado.</p>
+                </div>
+
+                <div class="notif-bg-test-row" id="notif-bg-test-row" style="display: none;">
+                  <button type="button" id="btn-test-cloud-push" class="btn-test-cloud-push">
+                    📱 Probar Push con pantalla bloqueada
+                  </button>
+                  <p class="notif-bg-test-hint">Toca aquí, apaga/bloquea la pantalla de tu móvil y espera 3 segundos 🥑</p>
+                </div>
               </div>
             </div>
           </div>

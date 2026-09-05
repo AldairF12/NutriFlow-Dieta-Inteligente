@@ -156,6 +156,129 @@ const DEFAULT_REMINDERS = {
 const NotificationService = {
   _timer: null,
   _lastNotified: {},
+  VAPID_PUBLIC_KEY: 'BCn-AdPMbKSpv6USZz716SHl-6zPhNr2KWsLpzWL-ZsnsmaOoNVKat6J2LO8Qc6chuhnRQbKUuZNrCMMGRkbUA4',
+
+  urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  },
+
+  getWorkerUrl() {
+    const prefs = (window.DB && window.DB.userPreferences) ? window.DB.userPreferences : {};
+    return prefs.workerUrl || localStorage.getItem('nutriflow_worker_url') || '';
+  },
+
+  setWorkerUrl(url) {
+    const cleanUrl = (url || '').trim().replace(/\/+$/, '');
+    if (window.DB && window.DB.userPreferences) {
+      window.DB.userPreferences.workerUrl = cleanUrl;
+      if (typeof persistState === 'function') persistState();
+    }
+    try {
+      localStorage.setItem('nutriflow_worker_url', cleanUrl);
+    } catch (e) {}
+    return cleanUrl;
+  },
+
+  async isPushSubscribed() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return false;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      return !!sub;
+    } catch (e) {
+      return false;
+    }
+  },
+
+  async syncWithCloudflare(customUrl) {
+    const workerUrl = customUrl ? this.setWorkerUrl(customUrl) : this.getWorkerUrl();
+    if (!workerUrl) {
+      throw new Error('Ingresa la URL de tu Cloudflare Worker primero.');
+    }
+
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      throw new Error('Este navegador o dispositivo no soporta notificaciones push en segundo plano.');
+    }
+
+    // 1. Asegurar permiso
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      throw new Error('Permiso de notificaciones no otorgado.');
+    }
+
+    // 2. Obtener o crear PushSubscription con nuestra VAPID Public Key
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: this.urlBase64ToUint8Array(this.VAPID_PUBLIC_KEY)
+      });
+    }
+
+    const subJson = sub.toJSON();
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'America/Lima';
+    const reminders = this.getReminders();
+
+    // 3. Registrar en D1 a través del Cloudflare Worker
+    const res = await fetch(`${workerUrl}/api/subscribe`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        endpoint: subJson.endpoint,
+        keys: subJson.keys,
+        timezone: tz,
+        reminders
+      })
+    });
+
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(errData.message || errData.error || `Error del servidor Worker (${res.status})`);
+    }
+
+    const resData = await res.json();
+    return resData;
+  },
+
+  async sendTestPushCloudflare() {
+    const workerUrl = this.getWorkerUrl();
+    if (!workerUrl) {
+      throw new Error('Configura la URL de tu Worker en Ajustes primero.');
+    }
+
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      throw new Error('Web Push no disponible.');
+    }
+
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      throw new Error('Primero debes sincronizar con Cloudflare antes de probar.');
+    }
+
+    const res = await fetch(`${workerUrl}/api/test-push`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        endpoint: sub.endpoint,
+        keys: sub.toJSON().keys
+      })
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data.success) {
+      throw new Error(data.message || data.error || 'Error enviando notificación push');
+    }
+    return data;
+  },
 
   isSupported() {
     return 'Notification' in window;
@@ -208,7 +331,15 @@ const NotificationService = {
     }
     reminders[mealKey] = { ...reminders[mealKey], ...updates };
     this.saveReminders(reminders);
+
+    // Si tiene worker configurado, sincronizar automáticamente con Cloudflare D1 en segundo plano
+    if (this.getWorkerUrl()) {
+      this.syncWithCloudflare().catch(err => {
+        console.log('[NutriFlow Notif] Sincronización en segundo plano con D1 completada o en espera:', err.message);
+      });
+    }
   },
+
 
   /**
    * Rota los copys según las probabilidades:
