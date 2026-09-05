@@ -244,7 +244,7 @@ const NotificationService = {
     }
 
     const defaultOptions = {
-      icon: 'img/logo.png',
+      icon: 'img/favicon.png',
       badge: 'img/logo.png',
       tag: 'nutriflow-reminder',
       renotify: true,
