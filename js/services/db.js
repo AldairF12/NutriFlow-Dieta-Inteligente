@@ -23,6 +23,14 @@ const initialState = {
       merienda: { start: 16, end: 19 },
       cena:     { start: 20, end: 23 },
     },
+    reminders: {
+      desayuno: { enabled: true, time: '08:30' },
+      snack_morning: { enabled: false, time: '11:00' },
+      almuerzo: { enabled: true, time: '13:30' },
+      merienda: { enabled: true, time: '17:00' },
+      cena: { enabled: true, time: '20:30' },
+      hidratacion: { enabled: true, time: '11:30' }
+    },
   },
 
   customRecipes: [],
@@ -88,6 +96,9 @@ function loadState() {
       }
       if (!parsed.userPreferences.hiddenRecipes) {
         parsed.userPreferences.hiddenRecipes = [];
+      }
+      if (!parsed.userPreferences.reminders) {
+        parsed.userPreferences.reminders = JSON.parse(JSON.stringify(initialState.userPreferences.reminders));
       }
       delete parsed.userPreferences.disliked_ingredients;
 

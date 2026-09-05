@@ -225,6 +225,33 @@
           </div>
         </details>
 
+        <details class="settings-card" id="scard-notifications">
+          <summary class="settings-card-header">
+            <span class="settings-card-icon">🔔</span>
+            <div class="settings-card-header-text">
+              <div class="settings-card-title">Recordatorios de Comidas</div>
+              <div class="settings-card-desc">Tú registra. Nosotros hacemos las cuentas 🥑</div>
+            </div>
+            <span class="settings-card-chevron" aria-hidden="true">&#8250;</span>
+          </summary>
+          <div class="settings-card-body">
+            <div class="settings-card-body-inner">
+              <!-- Estado de Permisos -->
+              <div id="notif-permission-banner" class="notif-permission-banner"></div>
+              
+              <!-- Lista de Recordatorios -->
+              <div id="notif-reminders-list" class="notif-reminders-list" role="list" aria-label="Lista de recordatorios"></div>
+
+              <!-- Botón de prueba rápida -->
+              <div class="notif-test-action">
+                <button type="button" id="btn-test-notification" class="btn-test-notif">
+                  <span>🔔 Enviar recordatorio de prueba</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </details>
+
         <details class="settings-card" id="scard-import">
           <summary class="settings-card-header">
             <span class="settings-card-icon">&#128229;</span>

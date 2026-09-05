@@ -72,11 +72,138 @@ function renderProfileScreen() {
   // Horas de comida
   renderMealHoursEditor();
 
+  // Recordatorios de Comidas y Notificaciones Locales
+  renderNotificationsSettings();
+
   // Metas nutricionales
   renderGoalsSettings();
 
   // Estado de API Key de IA
   renderAIKeySettings();
+}
+
+function renderNotificationsSettings() {
+  const container = document.getElementById('notif-reminders-list');
+  const banner = document.getElementById('notif-permission-banner');
+  const btnTest = document.getElementById('btn-test-notification');
+
+  if (!container || !window.NotificationService) return;
+
+  const perm = window.NotificationService.getPermission();
+
+  // 1. Render Banner de Permisos
+  if (banner) {
+    if (perm === 'granted') {
+      banner.className = 'notif-permission-banner granted';
+      banner.innerHTML = `
+        <div class="notif-perm-icon">🟢</div>
+        <div class="notif-perm-text">
+          <strong>Notificaciones activas</strong>
+          <span>Recibirás los recordatorios en este dispositivo.</span>
+        </div>
+      `;
+    } else if (perm === 'denied') {
+      banner.className = 'notif-permission-banner denied';
+      banner.innerHTML = `
+        <div class="notif-perm-icon">⚠️</div>
+        <div class="notif-perm-text">
+          <strong>Permiso bloqueado</strong>
+          <span>Habilita las notificaciones en los ajustes de tu navegador para recibir alertas.</span>
+        </div>
+      `;
+    } else {
+      banner.className = 'notif-permission-banner default';
+      banner.innerHTML = `
+        <div class="notif-perm-icon">🔔</div>
+        <div class="notif-perm-text">
+          <strong>Activa los recordatorios</strong>
+          <span>Tú registra. Nosotros hacemos las cuentas 🥑</span>
+        </div>
+        <button type="button" class="btn-enable-notif" id="btn-enable-notif">Permitir</button>
+      `;
+      const btnEnable = banner.querySelector('#btn-enable-notif');
+      if (btnEnable) {
+        btnEnable.onclick = async () => {
+          await window.NotificationService.requestPermission();
+          renderNotificationsSettings();
+        };
+      }
+    }
+  }
+
+  // 2. Render Lista de Recordatorios
+  container.innerHTML = '';
+  const reminders = window.NotificationService.getReminders();
+  const copyMatrix = window.NOTIFICATION_COPY_MATRIX || {};
+
+  Object.entries(copyMatrix).forEach(([mealKey, meta]) => {
+    const config = reminders[mealKey] || { enabled: false, time: '08:00' };
+    const sampleCopy = meta.variants?.warm?.body || meta.variants?.minimal?.body || '';
+
+    const row = document.createElement('div');
+    row.className = `notif-reminder-row ${config.enabled ? 'active' : ''}`;
+    row.innerHTML = `
+      <div class="notif-row-left">
+        <span class="notif-meal-emoji">${meta.emoji}</span>
+        <div class="notif-meal-info">
+          <div class="notif-meal-label">${meta.label}</div>
+          <div class="notif-meal-preview">"${sampleCopy}"</div>
+        </div>
+      </div>
+      <div class="notif-row-controls">
+        <input type="time" class="notif-time-input" value="${config.time || '08:00'}" aria-label="Hora de ${meta.label}">
+        <label class="notif-switch" title="${config.enabled ? 'Desactivar recordatorio' : 'Activar recordatorio'}">
+          <input type="checkbox" class="notif-switch-input" ${config.enabled ? 'checked' : ''} aria-label="Activar ${meta.label}">
+          <span class="notif-switch-slider"></span>
+        </label>
+      </div>
+    `;
+
+    // Eventos
+    const timeInput = row.querySelector('.notif-time-input');
+    const switchInput = row.querySelector('.notif-switch-input');
+
+    if (timeInput) {
+      timeInput.onchange = () => {
+        window.NotificationService.updateReminder(mealKey, { time: timeInput.value });
+        if (typeof showToast === 'function') showToast(`⏰ Hora de ${meta.label} ajustada a ${timeInput.value}`);
+      };
+    }
+
+    if (switchInput) {
+      switchInput.onchange = async () => {
+        const isChecked = switchInput.checked;
+        if (isChecked && window.NotificationService.getPermission() !== 'granted') {
+          const res = await window.NotificationService.requestPermission();
+          if (res !== 'granted') {
+            switchInput.checked = false;
+            return;
+          }
+          renderNotificationsSettings();
+        }
+        window.NotificationService.updateReminder(mealKey, { enabled: isChecked });
+        row.classList.toggle('active', isChecked);
+        if (typeof showToast === 'function') {
+          showToast(isChecked ? `🔔 Recordatorio de ${meta.label} activado` : `🔕 Recordatorio de ${meta.label} desactivado`);
+        }
+      };
+    }
+
+    container.appendChild(row);
+  });
+
+  // 3. Botón de prueba
+  if (btnTest) {
+    btnTest.onclick = async () => {
+      if (window.NotificationService.getPermission() !== 'granted') {
+        const res = await window.NotificationService.requestPermission();
+        if (res !== 'granted') return;
+        renderNotificationsSettings();
+      }
+      window.NotificationService.sendTestNotification();
+      if (typeof showToast === 'function') showToast('🔔 Notificación de prueba enviada');
+    };
+  }
 }
 
 function renderMealHoursEditor() {

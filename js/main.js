@@ -107,9 +107,14 @@ function buildEmptyState(msg) {
   return div;
 }
 
-// ??????????????????????????????????????????????
-// INICIALIZACI?N GLOBAL
-// ??????????????????????????????????????????????
+window.navigateToScreen = function(target) {
+  const tab = document.querySelector(`.nav-item[data-screen="${target}"]`);
+  if (tab) tab.click();
+};
+
+// ──────────────────────────────────────────────
+// INICIALIZACIÓN GLOBAL
+// ──────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   if (typeof loadState === 'function') loadState();
   initNavigation();
@@ -129,6 +134,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof initDashboardAIBtn === 'function') initDashboardAIBtn();
   if (typeof initRegisterSheet === 'function') initRegisterSheet();
   if (typeof initPhase2 === 'function') initPhase2();
+  if (window.NotificationService && typeof window.NotificationService.init === 'function') {
+    window.NotificationService.init();
+  }
 
   _isTabSwitching = true;
   if (typeof renderDiaryScreen === 'function') renderDiaryScreen();
