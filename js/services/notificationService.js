@@ -237,7 +237,7 @@ const NotificationService = {
     }
   },
 
-  sendNotification(title, options = {}) {
+  async sendNotification(title, options = {}) {
     if (!this.isSupported() || Notification.permission !== 'granted') {
       console.log('[NutriFlow Notif] No se puede enviar notificación: permisos no otorgados.');
       return null;
@@ -251,8 +251,24 @@ const NotificationService = {
       silent: false
     };
 
+    const finalOptions = { ...defaultOptions, ...options };
+
+    // 1. Prioridad: Service Worker (Obligatorio en móviles Android / PWAs y recomendado por la W3C)
+    if ('serviceWorker' in navigator) {
+      try {
+        const registration = await navigator.serviceWorker.ready;
+        if (registration && typeof registration.showNotification === 'function') {
+          await registration.showNotification(title, finalOptions);
+          return true;
+        }
+      } catch (swErr) {
+        console.warn('[NutriFlow Notif] Service Worker showNotification no disponible, intentando constructor nativo:', swErr);
+      }
+    }
+
+    // 2. Fallback: Constructor clásico para Desktop (cuando no hay Service Worker activo)
     try {
-      const notif = new Notification(title, { ...defaultOptions, ...options });
+      const notif = new Notification(title, finalOptions);
 
       notif.onclick = () => {
         window.focus();
@@ -269,12 +285,12 @@ const NotificationService = {
     }
   },
 
-  sendTestNotification() {
+  async sendTestNotification() {
     const copy = {
       title: '✨ NutriFlow está listo',
       body: 'Tú registra. Nosotros hacemos las cuentas 🥑📊'
     };
-    return this.sendNotification(copy.title, {
+    return await this.sendNotification(copy.title, {
       body: copy.body,
       tag: 'nutriflow-test-' + Date.now()
     });
