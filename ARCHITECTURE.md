@@ -122,25 +122,10 @@ CREATE INDEX IF NOT EXISTS idx_endpoint ON subscriptions(endpoint);
 4. **Rotación probabilística de copy:** Selecciona la variante del mensaje según los pesos de marca (70% minimalista, 20% cálida, 10% divertida).
 5. **Auto-limpieza de suscripciones:** Si el servidor de Google o Apple responde con código `404 Not Found` o `410 Gone` (el usuario desinstaló la PWA o revocó el permiso), la fila se elimina automáticamente de D1.
 
----
-
-## 5. Matriz de Copys y Personalidad de Marca
-
-NutriFlow utiliza una voz cercana bajo el lema:  
-> *"Tú registra. Nosotros hacemos las cuentas 🥑"*
-
-| Momento | Clave | Minimalista (70%) | Cálida (20%) | Divertida (10%) |
-|---|---|---|---|---|
-| **Desayuno** | `desayuno` | 🌅 Hora del desayuno. Registra tu desayuno y empezamos el día con todo. | ☀️ Buenos días. ¿Qué desayunaste hoy? Añádelo y deja que nosotros hagamos las cuentas. | 👀 Tu desayuno nos interesa. Cuéntanos qué cayó esta mañana. |
-| **Snack Mañana** | `snack_morning` | 🥨 ¿Un snack? Si comiste algo, no olvides registrarlo. | 👋 Pausa para un snack. ¿Qué picoteaste? Añádelo en un toque. | 👀 Sabemos que hubo snack. Ahora solo falta contarnos cuál fue. |
-| **Almuerzo** | `almuerzo` | ☀️ Hora del almuerzo. Registra lo que comiste y seguimos con el día. | 🍽️ ¿Qué hay para almorzar? Cuéntanos qué comiste. Nosotros nos encargamos de los macros. | 🍽️ Momento importante. El almuerzo quiere entrar en tu registro. |
-| **Merienda** | `merienda` | 🥪 Hora de la merienda. ¿Comiste algo? Regístralo en un toque. | ☕ Pausa de la tarde. ¿Qué te acompañó esta tarde? Añádelo a tu día. | 👀 ¿Otra vez hambre? No pasa nada. Solo queremos saber qué comiste. |
-| **Cena** | `cena` | 🌙 Hora de cenar. Registra tu cena para cerrar el día. | 🌙 Última parada del día. ¿Qué cenaste? Añádelo y revisa cómo fue tu día. | 🍽️ El último registro. Una cena más y tenemos el día completo. |
-| **Hidratación** | `hidratacion` | 💧 Hora de hidratarte. Registra un vaso de agua y sigue con tu día. | 💧 Un poquito de agua. Tómate un momento para hidratarte. | 💧 Tu cuerpo acaba de mandar un mensaje. Dice que quiere agua. 👀 |
 
 ---
 
-## 6. Seguridad y Privacidad
+## 5. Seguridad y Privacidad
 
 1. **Sin venta ni rastreo de datos:** Los datos de comidas, peso y hábitos nunca salen del dispositivo del usuario hacia servidores de terceros.
 2. **Cifrado de extremo a extremo en Web Push:** El contenido de las notificaciones viaja completamente cifrado con claves únicas generadas en el dispositivo (`p256dh` + `auth`). Ni Cloudflare ni los servidores intermediarios de Google/Apple pueden leer el texto plano del recordatorio antes de que llegue al teléfono.
