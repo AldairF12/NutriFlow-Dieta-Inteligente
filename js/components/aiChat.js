@@ -487,9 +487,11 @@ async function sendChatMessage() {
   } catch (err) {
     removeChatTyping();
     if (err.message === 'NO_KEY') {
-      appendChatMessage('bot', '\u26a0\ufe0f No encontr\u00e9 tu API Key. Ve a Perfil \u2192 Asistente IA para configurarla.');
+      appendChatMessage('bot', '⚠️ No encontré tu API Key. Ve a Perfil → Asistente IA para configurarla.');
+    } else if (err.message === 'OFFLINE' || !navigator.onLine) {
+      appendChatMessage('bot', '📡 Sin conexión a internet: La IA de Gemini requiere acceso a la red. Tus datos locales están seguros y podrás consultar de nuevo cuando recuperes conexión.');
     } else {
-      appendChatMessage('bot', `\u274c Error: ${err.message}`);
+      appendChatMessage('bot', `❌ Error: ${err.message}`);
     }
   } finally {
     input.disabled = false;
@@ -501,21 +503,29 @@ function initDashboardAIBtn() {
   const btn = document.getElementById('btn-dash-refresh-ai');
   if (!btn) return;
   btn.addEventListener('click', async () => {
+    if (!navigator.onLine) {
+      showToast('📡 Sin conexión: El resumen de IA requiere internet');
+      return;
+    }
     if (!AI.isConfigured()) {
-      showToast('\u26a0\ufe0f Configura tu API Key en Perfil \u2192 Asistente IA');
+      showToast('⚠️ Configura tu API Key en Perfil → Asistente IA');
       return;
     }
     const textEl    = document.getElementById('dash-ai-text');
     const loadingEl = document.getElementById('dash-ai-loading');
     btn.disabled = true;
-    btn.textContent = '\u23f3 Generando\u2026';
+    btn.textContent = '⏳ Generando…';
     if (loadingEl) loadingEl.hidden = false;
     if (textEl)    textEl.style.opacity = '0.4';
     try {
       const summary = await AI.getDailySummary();
       if (textEl) { textEl.textContent = summary; textEl.style.opacity = '1'; }
     } catch (err) {
-      showToast('\u274c Error al conectar con Gemini');
+      if (err.message === 'OFFLINE' || !navigator.onLine) {
+        showToast('📡 Sin conexión a internet');
+      } else {
+        showToast('❌ Error al conectar con Gemini');
+      }
       if (textEl) textEl.style.opacity = '1';
     } finally {
       if (loadingEl) loadingEl.hidden = true;

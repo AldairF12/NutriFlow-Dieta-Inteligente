@@ -312,7 +312,11 @@ async function handleFoodSearch() {
       }
     } catch (err) {
       console.error('[NutriFlow UI] Error en búsqueda IA:', err);
-      showToast('❌ Error al consultar Gemini');
+      if (err.message === 'OFFLINE' || !navigator.onLine) {
+        showToast('📡 Sin conexión: La búsqueda con IA requiere internet');
+      } else {
+        showToast('❌ Error al consultar Gemini');
+      }
     } finally {
       btn.disabled = false;
       btn.textContent = `✨ Buscar con IA: "${query}"`;

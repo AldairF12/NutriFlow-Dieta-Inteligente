@@ -573,7 +573,44 @@ function showImportStatus(el, type, msg) {
 }
 
 function initSettingsCardAccordions() {
-  document.querySelectorAll('.settings-card').forEach(details => {
+  const cards = Array.from(document.querySelectorAll('.settings-card'));
+
+  function closeCard(det, cb) {
+    if (!det || !det.hasAttribute('open')) {
+      if (typeof cb === 'function') cb();
+      return;
+    }
+    const b = det.querySelector('.settings-card-body');
+    const chev = det.querySelector('.settings-card-chevron');
+    if (chev) chev.classList.remove('open');
+    det.classList.remove('card-active');
+
+    if (!b) {
+      det.removeAttribute('open');
+      if (typeof cb === 'function') cb();
+      return;
+    }
+
+    b.style.overflow = 'hidden';
+    b.style.height   = b.scrollHeight + 'px';
+    b.style.opacity  = '1';
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        b.style.transition = 'height 0.28s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.20s ease';
+        b.style.height  = '0';
+        b.style.opacity = '0';
+      });
+    });
+
+    setTimeout(() => {
+      det.removeAttribute('open');
+      b.style.cssText = '';
+      if (typeof cb === 'function') cb();
+    }, 300);
+  }
+
+  cards.forEach(details => {
     const summary = details.querySelector('.settings-card-header');
     const body    = details.querySelector('.settings-card-body');
     const chevron = summary && summary.querySelector('.settings-card-chevron');
@@ -587,7 +624,7 @@ function initSettingsCardAccordions() {
       if (isAnimating) return;
       isAnimating = true;
 
-      const isOpen = details.open;
+      const isOpen = details.hasAttribute('open');
 
       function once(fn) {
         let called = false;
@@ -595,34 +632,21 @@ function initSettingsCardAccordions() {
       }
 
       if (isOpen) {
-        if (chevron) chevron.classList.remove('open');
-        body.style.overflow = 'hidden';
-        body.style.height   = body.scrollHeight + 'px';
-        body.style.opacity  = '1';
-
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            body.style.transition = 'height 0.34s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.22s ease';
-            body.style.height  = '0';
-            body.style.opacity = '0';
-          });
-        });
-
-        const onClose = once(() => {
-          body.removeEventListener('transitionend', onHeightEnd);
-          details.removeAttribute('open');
-          body.style.cssText = '';
+        // Cerrar esta tarjeta
+        closeCard(details, () => {
           isAnimating = false;
         });
-
-        function onHeightEnd(ev) {
-          if (ev.propertyName === 'height') onClose();
-        }
-        body.addEventListener('transitionend', onHeightEnd);
-        setTimeout(onClose, 450);
-
       } else {
+        // 1. Cerrar cualquier otra tarjeta que esté abierta (Acordeón exclusivo)
+        cards.forEach(otherCard => {
+          if (otherCard !== details && otherCard.hasAttribute('open')) {
+            closeCard(otherCard);
+          }
+        });
+
+        // 2. Abrir esta tarjeta con animación y resalte
         details.setAttribute('open', '');
+        details.classList.add('card-active');
         const targetH = body.scrollHeight;
 
         body.style.overflow = 'hidden';
@@ -631,7 +655,7 @@ function initSettingsCardAccordions() {
 
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
-            body.style.transition = 'height 0.34s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.26s ease 0.06s';
+            body.style.transition = 'height 0.34s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.26s ease 0.05s';
             body.style.height  = targetH + 'px';
             body.style.opacity = '1';
             if (chevron) chevron.classList.add('open');
@@ -642,6 +666,15 @@ function initSettingsCardAccordions() {
           body.removeEventListener('transitionend', onHeightEnd);
           body.style.cssText = '';
           isAnimating = false;
+
+          // Scroll suave para centrar la tarjeta abierta y no perderse
+          setTimeout(() => {
+            const rect = details.getBoundingClientRect();
+            // Si la cabecera quedó por encima del campo visual, acomodarla
+            if (rect.top < 60 || rect.bottom > window.innerHeight) {
+              details.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+          }, 80);
         });
 
         function onHeightEnd(ev) {

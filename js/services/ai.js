@@ -33,6 +33,11 @@ const AI = {
   // ────────────────────────────────────────────
 
   async _call(prompt) {
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      console.warn('[NutriFlow AI] 📡 Sin conexión a internet.');
+      throw new Error('OFFLINE');
+    }
+
     const key = this.getKey();
     if (!key) {
       console.warn('[NutriFlow AI] ⚠️ No hay API Key configurada.');
@@ -78,7 +83,10 @@ const AI = {
         }
       } catch (e) {
         lastError = e;
-        if (e.message === 'NO_KEY') throw e;
+        if (e.message === 'NO_KEY' || e.message === 'OFFLINE') throw e;
+        if ((typeof navigator !== 'undefined' && !navigator.onLine) || e.name === 'TypeError' || (e.message && e.message.includes('fetch'))) {
+          throw new Error('OFFLINE');
+        }
       }
     }
 
