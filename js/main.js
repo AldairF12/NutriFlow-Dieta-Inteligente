@@ -145,4 +145,12 @@ document.addEventListener('DOMContentLoaded', () => {
   if (typeof renderDashboardScreen === 'function') renderDashboardScreen();
   if (typeof renderProfileScreen === 'function') renderProfileScreen();
   _isTabSwitching = false;
+
+  // Escuchar cambios de conectividad
+  window.addEventListener('online', () => {
+    if (typeof showToast === 'function') showToast('🌐 Conexión restablecida');
+  });
+  window.addEventListener('offline', () => {
+    if (typeof showToast === 'function') showToast('📡 Modo sin conexión activo (Tus datos están seguros)');
+  });
 });
