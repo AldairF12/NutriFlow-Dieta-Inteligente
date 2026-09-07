@@ -914,30 +914,30 @@
   </div>
 
   <!-- Modulos Core -->
-  <script src="js/core/logger.js?v=4.6"></script>
-  <script src="js/core/utils.js?v=4.6"></script>
-  <script src="js/data/catalog.js?v=4.6"></script>
-  <script src="js/services/db.js?v=4.6"></script>
-  <script src="js/utils/calc.js?v=4.6"></script>
-  <script src="js/services/ai.js?v=4.6"></script>
-  <script src="js/services/notificationService.js?v=4.6"></script>
+  <script src="js/core/logger.js?v=4.7"></script>
+  <script src="js/core/utils.js?v=4.7"></script>
+  <script src="js/data/catalog.js?v=4.7"></script>
+  <script src="js/services/db.js?v=4.7"></script>
+  <script src="js/utils/calc.js?v=4.7"></script>
+  <script src="js/services/ai.js?v=4.7"></script>
+  <script src="js/services/notificationService.js?v=4.7"></script>
 
   <!-- Componentes Compartidos -->
-  <script src="js/components/voice.js?v=4.6"></script>
-  <script src="js/components/registerSheet.js?v=4.6"></script>
-  <script src="js/components/aiChat.js?v=4.6"></script>
-  <script src="js/components/recipeEditor.js?v=4.6"></script>
+  <script src="js/components/voice.js?v=4.7"></script>
+  <script src="js/components/registerSheet.js?v=4.7"></script>
+  <script src="js/components/aiChat.js?v=4.7"></script>
+  <script src="js/components/recipeEditor.js?v=4.7"></script>
 
   <!-- Vistas Principales -->
-  <script src="js/views/diaryView.js?v=4.6"></script>
-  <script src="js/views/dashboardView.js?v=4.6"></script>
-  <script src="js/views/profileView.js?v=4.6"></script>
-  <script src="js/views/pantryView.js?v=4.6"></script>
-  <script src="js/views/shoppingView.js?v=4.6"></script>
-  <script src="js/views/recipesView.js?v=4.6"></script>
+  <script src="js/views/diaryView.js?v=4.7"></script>
+  <script src="js/views/dashboardView.js?v=4.7"></script>
+  <script src="js/views/profileView.js?v=4.7"></script>
+  <script src="js/views/pantryView.js?v=4.7"></script>
+  <script src="js/views/shoppingView.js?v=4.7"></script>
+  <script src="js/views/recipesView.js?v=4.7"></script>
 
   <!-- Inicializador (Debe ir al final) -->
-  <script src="js/main.js?v=4.6"></script>
+  <script src="js/main.js?v=4.7"></script>
 
 <script>
   if ('serviceWorker' in navigator) {
@@ -945,6 +945,19 @@
       navigator.serviceWorker.register('sw.js')
         .then(registration => {
           console.log('Service Worker registrado con éxito:', registration.scope);
+          // Forzar comprobación de nueva versión en cada carga
+            registration.update();
+            registration.onupdatefound = () => {
+              const installingWorker = registration.installing;
+              if (installingWorker) {
+                installingWorker.onstatechange = () => {
+                  if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('Nueva versión de NutriFlow detectada. Actualizando...');
+                    window.location.reload();
+                  }
+                };
+              }
+            };
         })
         .catch(error => {
           console.log('Fallo al registrar el Service Worker:', error);

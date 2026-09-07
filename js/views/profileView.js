@@ -575,7 +575,7 @@ function showImportStatus(el, type, msg) {
 function initSettingsCardAccordions() {
   const cards = Array.from(document.querySelectorAll('.settings-card'));
 
-  function closeCard(det, cb) {
+  function closeCard(det, fast = false, cb) {
     if (!det || !det.hasAttribute('open')) {
       if (typeof cb === 'function') cb();
       return;
@@ -591,23 +591,30 @@ function initSettingsCardAccordions() {
       return;
     }
 
+    if (fast) {
+      // Cierre inmediato/rápido de la tarjeta anterior para no saturar la CPU con 2 animaciones a la vez
+      det.removeAttribute('open');
+      b.style.cssText = '';
+      if (typeof cb === 'function') cb();
+      return;
+    }
+
+    // Cierre suave cuando el usuario toca la misma tarjeta para plegarla
     b.style.overflow = 'hidden';
-    b.style.height   = b.scrollHeight + 'px';
+    b.style.height   = b.offsetHeight + 'px';
     b.style.opacity  = '1';
 
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        b.style.transition = 'height 0.28s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.20s ease';
-        b.style.height  = '0';
-        b.style.opacity = '0';
-      });
+      b.style.transition = 'height 0.20s ease-out, opacity 0.15s ease';
+      b.style.height  = '0';
+      b.style.opacity = '0';
     });
 
     setTimeout(() => {
       det.removeAttribute('open');
       b.style.cssText = '';
       if (typeof cb === 'function') cb();
-    }, 300);
+    }, 210);
   }
 
   cards.forEach(details => {
@@ -633,18 +640,18 @@ function initSettingsCardAccordions() {
 
       if (isOpen) {
         // Cerrar esta tarjeta
-        closeCard(details, () => {
+        closeCard(details, false, () => {
           isAnimating = false;
         });
       } else {
-        // 1. Cerrar cualquier otra tarjeta que esté abierta (Acordeón exclusivo)
+        // 1. Cerrar cualquier otra tarjeta que estuviera abierta de forma limpia
         cards.forEach(otherCard => {
           if (otherCard !== details && otherCard.hasAttribute('open')) {
-            closeCard(otherCard);
+            closeCard(otherCard, true);
           }
         });
 
-        // 2. Abrir esta tarjeta con animación y resalte
+        // 2. Abrir esta tarjeta con transición rápida optimizada para 60fps
         details.setAttribute('open', '');
         details.classList.add('card-active');
         const targetH = body.scrollHeight;
@@ -654,12 +661,10 @@ function initSettingsCardAccordions() {
         body.style.opacity  = '0';
 
         requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            body.style.transition = 'height 0.34s cubic-bezier(0.25,0.46,0.45,0.94), opacity 0.26s ease 0.05s';
-            body.style.height  = targetH + 'px';
-            body.style.opacity = '1';
-            if (chevron) chevron.classList.add('open');
-          });
+          body.style.transition = 'height 0.24s cubic-bezier(0.2, 0, 0, 1), opacity 0.18s ease 0.04s';
+          body.style.height  = targetH + 'px';
+          body.style.opacity = '1';
+          if (chevron) chevron.classList.add('open');
         });
 
         const onOpen = once(() => {
@@ -667,25 +672,26 @@ function initSettingsCardAccordions() {
           body.style.cssText = '';
           isAnimating = false;
 
-          // Scroll suave para centrar la tarjeta abierta y no perderse
+          // Scroll suave solo si el inicio de la tarjeta queda fuera de vista
           setTimeout(() => {
             const rect = details.getBoundingClientRect();
-            // Si la cabecera quedó por encima del campo visual, acomodarla
-            if (rect.top < 60 || rect.bottom > window.innerHeight) {
+            if (rect.top < 65 || rect.bottom > window.innerHeight) {
               details.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }
-          }, 80);
+          }, 50);
         });
 
         function onHeightEnd(ev) {
           if (ev.propertyName === 'height') onOpen();
         }
         body.addEventListener('transitionend', onHeightEnd);
-        setTimeout(onOpen, 450);
+        setTimeout(onOpen, 300);
       }
     });
   });
 }
+
+
 
 function renderGoalsSettings() {
   const prefs = (window.DB && window.DB.userPreferences) ? window.DB.userPreferences : {};
