@@ -69,10 +69,15 @@ graph TD
 ### 3.2. Capa de Servicios de Negocio (`js/services/`)
 * **`db.js`:** Capa de abstracción de almacenamiento sobre `localStorage`. Implementa versionado de esquema, migración automática de datos, inicialización con catálogo base y métodos de consulta/escritura reactivos (`getTodayLogs()`, `saveLog()`, `updatePreferences()`).
 * **`calc.js`:** Motor de cálculo nutricional. Totaliza macronutrientes (proteínas, carbohidratos, grasas y calorías) a partir de gramos y proporciones según la base de datos de alimentos.
-* **`ai.js`:** Cliente de IA conectado con la API de Google Gemini para análisis de comidas, desglose de ingredientes y asesoría nutricional.
+* **`ai.js`:** Cliente de IA conectado con la API multimodal de Google Gemini. Admite análisis de comidas por texto natural, dictado por voz y **análisis visual de fotografías de platos (Gemini Vision)** mediante payloads `inlineData` estructurados con las Tablas Peruanas de Composición de Alimentos (CENAN / INS) y estándares USDA/FAO.
 * **`notificationService.js`:** Coordinador híbrido de recordatorios. Mantiene el temporizador local en primer plano (`setInterval`) y gestiona la suscripción y sincronización Web Push con el Cloudflare Worker.
 
-### 3.3. Capa de Service Worker (`sw.js`)
+### 3.3. Pipeline de Visión Computacional & Optimización en Cliente (Canvas)
+* **Preprocesamiento Local (0% Latencia de Carga):** Antes de enviar cualquier imagen a la red, se redimensiona proporcionalmente a un máximo de 1024px y se comprime en JPEG al 80% usando la API nativa de `<canvas>`. Esto reduce imágenes crudas de móviles (5MB–20MB) a paquetes ligeros de ~80–150 KB procesados en 50ms, evitando saturación de memoria y consumo innecesario de datos móviles.
+* **Integración Multimodal Directa:** El cliente genera un objeto Base64 puro que viaja de forma segura directo a la API de Gemini configurada por el usuario, sin intermediarios ni almacenamiento en servidores de terceros.
+* **Flujo Reactivo de Confirmación de Plato Compuesto:** El resultado estructurado por la IA se inyecta en `showCompoundMealConfirm()`, permitiendo al usuario calibrar o modificar los gramos individuales de cada ingrediente antes de guardar en la base de datos local.
+
+### 3.4. Capa de Service Worker (`sw.js`)
 * **Ciclo de vida:** `skipWaiting()` y `clients.claim()` para activación inmediata.
 * **Manejador Offline:** Intercepta eventos `fetch` proveyendo fallback sin conexión para la PWA.
 * **Manejador de Eventos Push:**
@@ -122,10 +127,25 @@ CREATE INDEX IF NOT EXISTS idx_endpoint ON subscriptions(endpoint);
 4. **Rotación probabilística de copy:** Selecciona la variante del mensaje según los pesos de marca (70% minimalista, 20% cálida, 10% divertida).
 5. **Auto-limpieza de suscripciones:** Si el servidor de Google o Apple responde con código `404 Not Found` o `410 Gone` (el usuario desinstaló la PWA o revocó el permiso), la fila se elimina automáticamente de D1.
 
+---
+
+## 5. Matriz de Copys y Personalidad de Marca
+
+NutriFlow utiliza una voz cercana bajo el lema:  
+> *"Tú registra. Nosotros hacemos las cuentas 🥑"*
+
+| Momento | Clave | Minimalista (70%) | Cálida (20%) | Divertida (10%) |
+|---|---|---|---|---|
+| **Desayuno** | `desayuno` | 🌅 Hora del desayuno. Registra tu desayuno y empezamos el día con todo. | ☀️ Buenos días. ¿Qué desayunaste hoy? Añádelo y deja que nosotros hagamos las cuentas. | 👀 Tu desayuno nos interesa. Cuéntanos qué cayó esta mañana. |
+| **Snack Mañana** | `snack_morning` | 🥨 ¿Un snack? Si comiste algo, no olvides registrarlo. | 👋 Pausa para un snack. ¿Qué picoteaste? Añádelo en un toque. | 👀 Sabemos que hubo snack. Ahora solo falta contarnos cuál fue. |
+| **Almuerzo** | `almuerzo` | ☀️ Hora del almuerzo. Registra lo que comiste y seguimos con el día. | 🍽️ ¿Qué hay para almorzar? Cuéntanos qué comiste. Nosotros nos encargamos de los macros. | 🍽️ Momento importante. El almuerzo quiere entrar en tu registro. |
+| **Merienda** | `merienda` | 🥪 Hora de la merienda. ¿Comiste algo? Regístralo en un toque. | ☕ Pausa de la tarde. ¿Qué te acompañó esta tarde? Añádelo a tu día. | 👀 ¿Otra vez hambre? No pasa nada. Solo queremos saber qué comiste. |
+| **Cena** | `cena` | 🌙 Hora de cenar. Registra tu cena para cerrar el día. | 🌙 Última parada del día. ¿Qué cenaste? Añádelo y revisa cómo fue tu día. | 🍽️ El último registro. Una cena más y tenemos el día completo. |
+| **Hidratación** | `hidratacion` | 💧 Hora de hidratarte. Registra un vaso de agua y sigue con tu día. | 💧 Un poquito de agua. Tómate un momento para hidratarte. | 💧 Tu cuerpo acaba de mandar un mensaje. Dice que quiere agua. 👀 |
 
 ---
 
-## 5. Seguridad y Privacidad
+## 6. Seguridad y Privacidad
 
 1. **Sin venta ni rastreo de datos:** Los datos de comidas, peso y hábitos nunca salen del dispositivo del usuario hacia servidores de terceros.
 2. **Cifrado de extremo a extremo en Web Push:** El contenido de las notificaciones viaja completamente cifrado con claves únicas generadas en el dispositivo (`p256dh` + `auth`). Ni Cloudflare ni los servidores intermediarios de Google/Apple pueden leer el texto plano del recordatorio antes de que llegue al teléfono.

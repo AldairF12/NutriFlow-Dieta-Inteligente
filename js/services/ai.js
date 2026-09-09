@@ -29,10 +29,10 @@ const AI = {
   },
 
   // ────────────────────────────────────────────
-  // LLAMADA BASE A LA API
+  // LLAMADA BASE A LA API (TEXTO O MULTIMODAL)
   // ────────────────────────────────────────────
 
-  async _call(prompt) {
+  async _call(prompt, imageOptions = null) {
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
       console.warn('[NutriFlow AI] 📡 Sin conexión a internet.');
       throw new Error('OFFLINE');
@@ -46,8 +46,22 @@ const AI = {
 
     console.log('[NutriFlow AI] 🚀 Iniciando consulta a Gemini API...');
     console.log('[NutriFlow AI] 📝 Prompt:', prompt);
+    if (imageOptions) {
+      console.log('[NutriFlow AI] 🖼️ Incluyendo datos de imagen multimodal (mime:', imageOptions.mimeType || 'image/jpeg', ')');
+    }
 
     let lastError = null;
+
+    const parts = [{ text: prompt }];
+    if (imageOptions && imageOptions.base64Data) {
+      const cleanBase64 = imageOptions.base64Data.replace(/^data:[^;]+;base64,/, '');
+      parts.push({
+        inlineData: {
+          mimeType: imageOptions.mimeType || 'image/jpeg',
+          data: cleanBase64
+        }
+      });
+    }
 
     for (const model of GEMINI_MODELS) {
       try {
@@ -57,10 +71,10 @@ const AI = {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
+            contents: [{ parts }],
             generationConfig: {
               temperature: 0.0,
-              maxOutputTokens: 1024,
+              maxOutputTokens: imageOptions ? 1500 : 1024,
             }
           })
         });
@@ -267,6 +281,126 @@ Texto del usuario: "${text}"`;
     } catch (e) {
       console.error('[NutriFlow AI] ❌ Error parseando JSON de analyzeMealText:', raw, e);
       throw new Error('No pudimos estructurar la información nutricional. Intenta reformular el texto.');
+    }
+  },
+
+  // ────────────────────────────────────────────
+  // ANÁLISIS DE PLATOS MEDIANTE FOTO/IMAGEN (GEMINI VISION)
+  // ────────────────────────────────────────────
+
+  /**
+   * Analiza una fotografía o imagen de comida/plato mediante Gemini Vision en 1 solo pase.
+   * Identifica los alimentos visibles, estima porciones realistas en gramos
+   * y calcula los macronutrientes individuales y totales.
+   * @param {string} base64Data - Cadena base64 de la imagen (con o sin prefijo data:image/...)
+   * @param {string} [mimeType='image/jpeg'] - Tipo MIME de la imagen
+   * @param {string} [optionalNotes=''] - Notas adicionales o contexto provisto por el usuario
+   * @returns {Promise<object>} - { meal_title, meal_type, is_compound, items: [...], total: {...} }
+   */
+  async analyzeMealImage(base64Data, mimeType = 'image/jpeg', optionalNotes = '') {
+    if (!base64Data) {
+      throw new Error('No se proporcionó una imagen válida para analizar.');
+    }
+
+    console.log('[NutriFlow AI] 📸 Iniciando análisis de imagen con Gemini Vision...');
+
+    const prompt = `Eres un asistente experto en nutrición para el público de Perú y Latinoamérica con capacidades avanzadas de visión computacional aplicada a alimentos.
+Calcula los macronutrientes basándote estrictamente en las Tablas Peruanas de Composición de Alimentos (CENAN / Instituto Nacional de Salud del Perú) y referencias oficiales USDA/FAO.
+
+Observa detenidamente la fotografía del plato o alimento proporcionada por el usuario.
+Analiza cada preparación, alimento e ingrediente visible. Identifica sus componentes, estima con rigor realista sus porciones en gramos y calcula sus macronutrientes (calorías, proteína, carbohidratos, grasa).
+
+INSTRUCCIONES CLAVE DE VISIÓN Y ESTIMACIÓN:
+1. Identifica todos los alimentos visibles en el plato (ej. "Pechuga de pollo a la plancha", "Arroz blanco cocido", "Papa sancochada", "Ensalada de lechuga y tomate", "Huevo frito", "Lentejas guisadas", "Palta en rebanadas").
+2. Usa nombres culinarios limpios, comunes y estandarizados en español. Evita nombres enciclopédicos o científicos.
+3. Estimación realista de porciones visuales (asumiendo un plato estándar de aprox. 25-28 cm):
+   - Porción estándar de carbohidrato cocido (arroz, fideos, puré): ≈ 100g a 150g (aprox. 1 taza o puño cerrado).
+   - Tubérculos (papa, camote, yuca sancochada): ≈ 100g a 150g por unidad mediana.
+   - Proteína animal o vegetal cocida (filete de pechuga, carne, pescado, tofu): ≈ 120g a 180g (tamaño palma de la mano).
+   - 1 huevo entero: ≈ 50g a 60g (2 huevos ≈ 100g a 120g).
+   - Ensalada fresca (lechuga, tomate, pepino): ≈ 80g a 120g.
+   - Legumbres guisadas (frijoles, lentejas): ≈ 120g a 160g.
+   - Salsas, aderezos o cremas visibles: ≈ 20g a 40g.
+4. Si el usuario adjunta notas adicionales, dales máxima prioridad para ajustar ingredientes invisibles o porciones específicas.
+5. Infiere meal_type según la composición del plato ("Desayuno", "Almuerzo", "Cena", "Merienda" o "Snack").
+6. is_compound debe ser true si detectas 2 o más alimentos/ingredientes distintos, o false si es 1 solo alimento.
+
+${optionalNotes && optionalNotes.trim() ? `NOTAS ADICIONALES DEL USUARIO: "${optionalNotes.trim()}"` : ''}
+
+Devuelve SOLO un objeto JSON válido (sin bloques de código markdown, sin texto extra) con esta estructura exacta:
+{
+  "meal_title": "Nombre corto y descriptivo del plato en español (ej. Pechuga con arroz y ensalada)",
+  "meal_type": "Desayuno" | "Almuerzo" | "Cena" | "Merienda" | "Snack",
+  "is_compound": true o false,
+  "items": [
+    {
+      "name": "Nombre culinario común del alimento",
+      "portion_desc": "Descripción visual de la porción (ej. 1 filete mediano ~150g, 1 taza ~120g)",
+      "quantity_g": número entero en gramos (ej. 150),
+      "calories": número entero de calorías de esa porción,
+      "protein": número decimal con un decimal de proteína en g,
+      "carbs": número decimal con un decimal de carbohidratos en g,
+      "fat": número decimal con un decimal de grasa en g,
+      "category": "Proteína" | "Cereal" | "Verdura" | "Fruta" | "Lácteo" | "Grasa" | "Legumbre" | "Otro"
+    }
+  ],
+  "total": {
+    "quantity_g": número entero suma de gramos,
+    "calories": número entero suma de calorías,
+    "protein": número decimal suma de proteína,
+    "carbs": número decimal suma de carbohidratos,
+    "fat": número decimal suma de grasa
+  }
+}`;
+
+    const raw = await this._call(prompt, { base64Data, mimeType });
+    const cleaned = raw.replace(/```json|```/g, '').trim();
+
+    console.log('[NutriFlow AI] 📦 Respuesta cruda de analyzeMealImage:', cleaned);
+
+    try {
+      const parsed = JSON.parse(cleaned);
+
+      if (!parsed.items || !Array.isArray(parsed.items) || parsed.items.length === 0) {
+        throw new Error('No se detectaron alimentos identificables en la fotografía.');
+      }
+
+      parsed.items = parsed.items.map(it => {
+        const qG = Math.max(1, parseInt(it.quantity_g) || 100);
+        const cal = Math.max(0, parseInt(it.calories) || 0);
+        const p = Math.max(0, parseFloat(it.protein) || 0);
+        const c = Math.max(0, parseFloat(it.carbs) || 0);
+        const f = Math.max(0, parseFloat(it.fat) || 0);
+        return {
+          name: (it.name || 'Alimento').trim(),
+          portion_desc: it.portion_desc || `${qG}g`,
+          quantity_g: qG,
+          calories: cal,
+          protein: parseFloat(p.toFixed(1)),
+          carbs: parseFloat(c.toFixed(1)),
+          fat: parseFloat(f.toFixed(1)),
+          category: it.category || 'Otro'
+        };
+      });
+
+      if (!parsed.total || typeof parsed.total !== 'object') {
+        parsed.total = {};
+      }
+      parsed.total.quantity_g = parsed.items.reduce((s, it) => s + it.quantity_g, 0);
+      parsed.total.calories = parsed.items.reduce((s, it) => s + it.calories, 0);
+      parsed.total.protein = parseFloat(parsed.items.reduce((s, it) => s + it.protein, 0).toFixed(1));
+      parsed.total.carbs = parseFloat(parsed.items.reduce((s, it) => s + it.carbs, 0).toFixed(1));
+      parsed.total.fat = parseFloat(parsed.items.reduce((s, it) => s + it.fat, 0).toFixed(1));
+
+      if (parsed.items.length > 1) {
+        parsed.is_compound = true;
+      }
+
+      console.log('[NutriFlow AI] ✅ analyzeMealImage parseado con éxito:', parsed);
+      return parsed;
+    } catch (e) {
+      console.error('[NutriFlow AI] ❌ Error parseando JSON de analyzeMealImage:', raw, e);
+      throw new Error('No se pudo interpretar con claridad la comida en la imagen. Intenta con una foto más clara o agrega notas.');
     }
   },
 

@@ -752,4 +752,371 @@
   transform: scale(0.98);
 }
 
+/* ============================================================
+   VISTA: ESCANEO Y DETECCIÓN POR FOTO (GEMINI VISION)
+   ============================================================ */
+
+.rs-photo-container {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 18px 24px;
+  overflow-y: auto;
+  max-height: calc(85svh - 90px);
+  gap: 14px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Reglas estrictas de visibilidad */
+.rs-photo-dropzone[hidden],
+.rs-photo-preview-wrap[hidden],
+.rs-photo-status[hidden],
+.rs-photo-status:empty {
+  display: none !important;
+}
+
+/* ── Dropzone inicial ── */
+.rs-photo-dropzone {
+  border: 2px dashed rgba(58, 185, 141, 0.45);
+  background: linear-gradient(180deg, rgba(58, 185, 141, 0.04) 0%, rgba(58, 185, 141, 0.08) 100%);
+  border-radius: 20px;
+  padding: 24px 16px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.rs-photo-dropzone:hover,
+.rs-photo-dropzone.drag-over {
+  border-color: var(--mint-500);
+  background: rgba(58, 185, 141, 0.12);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(58, 185, 141, 0.15);
+}
+
+.rs-photo-dropzone-icon {
+  font-size: 2.8rem;
+  line-height: 1;
+  margin-bottom: 4px;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.06));
+  animation: photoIconFloat 3s ease-in-out infinite;
+}
+
+@keyframes photoIconFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.rs-photo-dropzone-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--gray-800);
+  margin: 0;
+}
+
+.rs-photo-dropzone-subtitle {
+  font-size: 0.85rem;
+  color: var(--gray-500);
+  margin: 0;
+}
+
+.rs-photo-actions-row {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  max-width: 380px;
+  margin-top: 10px;
+}
+
+.btn-rs-photo-action {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+.btn-rs-photo-action.primary {
+  background: linear-gradient(135deg, var(--mint-400), var(--mint-500));
+  color: #fff;
+  box-shadow: 0 4px 14px rgba(58, 185, 141, 0.35);
+}
+
+.btn-rs-photo-action.primary:hover {
+  background: linear-gradient(135deg, var(--mint-500), var(--mint-600));
+  box-shadow: 0 6px 18px rgba(58, 185, 141, 0.45);
+}
+
+.btn-rs-photo-action.secondary {
+  background: #fff;
+  color: var(--gray-700);
+  border: 1.5px solid var(--gray-300);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.btn-rs-photo-action.secondary:hover {
+  background: var(--gray-50);
+  border-color: var(--gray-400);
+}
+
+.btn-rs-photo-action:active {
+  transform: scale(0.97);
+}
+
+.btn-rs-photo-icon {
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+/* ── Previsualización de la foto ── */
+.rs-photo-preview-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: photoFadeIn 0.3s ease-out;
+}
+
+@keyframes photoFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.rs-photo-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px;
+}
+
+.rs-photo-preview-badge {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--gray-600);
+}
+
+.btn-rs-photo-retake {
+  background: var(--gray-100);
+  color: var(--gray-700);
+  border: 1px solid var(--gray-300);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.15s, transform 0.1s, border-color 0.15s;
+}
+
+.btn-rs-photo-retake:hover {
+  background: var(--gray-200);
+  border-color: var(--gray-400);
+  transform: scale(1.02);
+}
+
+.rs-photo-preview-frame {
+  position: relative;
+  width: 100%;
+  max-height: 320px;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+  background: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rs-photo-preview-img {
+  width: auto;
+  max-width: 100%;
+  height: auto;
+  max-height: 320px;
+  object-fit: contain;
+  display: block;
+}
+
+.rs-photo-notes-area {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rs-photo-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--gray-700);
+}
+
+.rs-photo-notes-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--gray-200);
+  background: var(--gray-50);
+  font-size: 0.88rem;
+  color: var(--gray-800);
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+  box-sizing: border-box;
+}
+
+.rs-photo-notes-input:focus {
+  border-color: var(--mint-500);
+  background: #fff;
+}
+
+.rs-photo-process-btn {
+  width: 100%;
+  padding: 13px;
+  border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, var(--mint-500), #2ba178);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(58, 185, 141, 0.4);
+  transition: transform 0.15s, box-shadow 0.15s, opacity 0.15s;
+}
+
+.rs-photo-process-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(58, 185, 141, 0.5);
+}
+
+.rs-photo-process-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ── Estado de Carga y Progreso ── */
+.rs-photo-status {
+  padding: 12px 16px;
+  border-radius: 14px;
+  font-size: 0.88rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
+}
+
+.rs-photo-status.info {
+  background: rgba(58, 185, 141, 0.1);
+  color: var(--mint-700, #227055);
+  border: 1px solid rgba(58, 185, 141, 0.25);
+}
+
+.rs-photo-status.info.active-scan {
+  background: linear-gradient(90deg, rgba(58, 185, 141, 0.08) 0%, rgba(58, 185, 141, 0.18) 50%, rgba(58, 185, 141, 0.08) 100%);
+  background-size: 200% 100%;
+  animation: scanShimmer 2s infinite linear;
+}
+
+@keyframes scanShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.rs-photo-status-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rs-photo-status-text strong {
+  font-size: 0.9rem;
+  color: var(--gray-800);
+}
+
+.rs-photo-status-text span {
+  font-size: 0.78rem;
+  color: var(--gray-600);
+}
+
+.rs-photo-status.error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.rs-photo-spinner {
+  width: 22px;
+  height: 22px;
+  border: 2.5px solid rgba(58, 185, 141, 0.3);
+  border-top-color: var(--mint-500);
+  border-radius: 50%;
+  animation: photoSpin 0.75s infinite linear;
+  flex-shrink: 0;
+}
+
+@keyframes photoSpin {
+  to { transform: rotate(360deg); }
+}
+
+/* ── Modo minimizado tras detectar plato ── */
+.rs-photo-container.photo-minimized {
+  padding-top: 6px;
+  gap: 10px;
+}
+
+.rs-photo-container.photo-minimized .rs-photo-preview-wrap.minimized {
+  display: flex !important;
+  flex-direction: row;
+  align-items: center;
+  background: var(--gray-50);
+  padding: 8px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--gray-200);
+  gap: 12px;
+}
+
+.rs-photo-container.photo-minimized .rs-photo-preview-wrap.minimized .rs-photo-preview-header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  order: 2;
+  justify-content: space-between;
+}
+
+.rs-photo-container.photo-minimized .rs-photo-preview-wrap.minimized .rs-photo-preview-frame {
+  width: 46px;
+  height: 46px;
+  max-height: 46px;
+  border-radius: 8px;
+  flex-shrink: 0;
+  order: 1;
+  background: transparent;
+}
+
+.rs-photo-container.photo-minimized .rs-photo-preview-wrap.minimized .rs-photo-preview-img {
+  width: 46px;
+  height: 46px;
+  max-height: 46px;
+  object-fit: cover;
+}
+
+.rs-photo-container.photo-minimized .rs-photo-preview-wrap.minimized .rs-photo-notes-area,
+.rs-photo-container.photo-minimized .rs-photo-preview-wrap.minimized .rs-photo-process-btn {
+  display: none !important;
+}
+
+.rs-photo-container.photo-minimized .rs-photo-status {
+  display: none !important;
+}
+
+
 

@@ -730,6 +730,14 @@
             </div>
             <span class="rs-menu-arrow">&#8250;</span>
           </button>
+          <button class="rs-menu-item" data-view="photo">
+            <span class="rs-menu-icon">&#128248;</span>
+            <div class="rs-menu-text">
+              <span class="rs-menu-label">Foto o escaneo</span>
+              <span class="rs-menu-desc">Detecta tu plato con Gemini Vision</span>
+            </div>
+            <span class="rs-menu-arrow">&#8250;</span>
+          </button>
         </div>
       </div>
 
@@ -814,6 +822,64 @@
           </div>
           
           <div id="rs-voice-status" class="rs-voice-status"></div>
+        </div>
+      </div>
+
+      <!-- Vista: Foto o Escaneo de Plato (Gemini Vision) -->
+      <div id="rs-view-photo" class="rs-view" hidden>
+        <div class="rs-sub-header">
+          <button class="rs-back" id="rs-back-photo" aria-label="Volver">&#8249;</button>
+          <h2 class="rs-title">Escanear plato con IA</h2>
+        </div>
+
+        <div class="rs-photo-container rs-scroll-content">
+          <!-- Inputs ocultos de archivo / cámara -->
+          <input type="file" id="rs-photo-input-camera" accept="image/*" capture="environment" style="display: none;" />
+          <input type="file" id="rs-photo-input-file" accept="image/*" style="display: none;" />
+
+          <!-- Estado inicial: Dropzone y opciones de captura -->
+          <div id="rs-photo-dropzone" class="rs-photo-dropzone">
+            <div class="rs-photo-dropzone-icon">&#128248;</div>
+            <h3 class="rs-photo-dropzone-title">Captura o sube tu comida</h3>
+            <p class="rs-photo-dropzone-subtitle">Toma una foto o selecciona una imagen</p>
+            
+            <div class="rs-photo-actions-row">
+              <button type="button" id="btn-rs-photo-camera" class="btn-rs-photo-action primary">
+                <span class="btn-rs-photo-icon">&#128247;</span>
+                <span>Tomar foto</span>
+              </button>
+              <button type="button" id="btn-rs-photo-gallery" class="btn-rs-photo-action secondary">
+                <span class="btn-rs-photo-icon">&#128444;&#65039;</span>
+                <span>Galer&#237;a / Archivo</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Vista previa de la foto seleccionada (Oculta hasta subir imagen) -->
+          <div id="rs-photo-preview-wrap" class="rs-photo-preview-wrap" hidden>
+            <div class="rs-photo-preview-header">
+              <span class="rs-photo-preview-badge">&#128247; Foto cargada</span>
+              <button type="button" id="btn-rs-photo-retake" class="btn-rs-photo-retake" title="Cambiar foto" aria-label="Cambiar foto">
+                &#128260; Cambiar foto
+              </button>
+            </div>
+
+            <div class="rs-photo-preview-frame">
+              <img id="rs-photo-preview-img" class="rs-photo-preview-img" alt="Foto del plato" />
+            </div>
+
+            <div class="rs-photo-notes-area">
+              <label for="rs-photo-notes" class="rs-photo-label">&#191;Alg&#250;n detalle extra? (Opcional)</label>
+              <input type="text" id="rs-photo-notes" class="rs-photo-notes-input" placeholder="Ej: pechuga a la plancha, 1 cdta. de aceite, arroz integral..." />
+            </div>
+
+            <button type="button" id="btn-rs-photo-process" class="rs-photo-process-btn">
+              &#10024; Analizar plato con IA
+            </button>
+          </div>
+
+          <!-- Estado de progreso y carga (Oculto por defecto) -->
+          <div id="rs-photo-status" class="rs-photo-status" hidden></div>
         </div>
       </div>
 
@@ -914,31 +980,32 @@
   </div>
 
   <!-- Modulos Core -->
-  <script src="js/core/logger.js?v=4.7"></script>
-  <script src="js/core/utils.js?v=4.7"></script>
-  <script src="js/data/catalog.js?v=4.7"></script>
-  <script src="js/services/db.js?v=4.7"></script>
-  <script src="js/utils/calc.js?v=4.7"></script>
-  <script src="js/services/ai.js?v=4.7"></script>
-  <script src="js/services/notificationService.js?v=4.7"></script>
+  <script src="js/core/logger.js?v=4.8"></script>
+  <script src="js/core/utils.js?v=4.8"></script>
+  <script src="js/data/catalog.js?v=4.8"></script>
+  <script src="js/services/db.js?v=4.8"></script>
+  <script src="js/utils/calc.js?v=4.8"></script>
+  <script src="js/services/ai.js?v=4.8"></script>
+  <script src="js/services/notificationService.js?v=4.8"></script>
 
   <!-- Componentes Compartidos -->
-  <script src="js/components/voice.js?v=4.7"></script>
-  <script src="js/components/registerSheet.js?v=4.7"></script>
-  <script src="js/components/aiChat.js?v=4.7"></script>
-  <script src="js/components/recipeEditor.js?v=4.7"></script>
+  <script src="js/components/voice.js?v=4.8"></script>
+  <script src="js/components/registerSheet.js?v=4.8"></script>
+  <script src="js/components/aiChat.js?v=4.8"></script>
+  <script src="js/components/recipeEditor.js?v=4.8"></script>
 
   <!-- Vistas Principales -->
-  <script src="js/views/diaryView.js?v=4.7"></script>
-  <script src="js/views/dashboardView.js?v=4.7"></script>
-  <script src="js/views/profileView.js?v=4.7"></script>
-  <script src="js/views/pantryView.js?v=4.7"></script>
-  <script src="js/views/shoppingView.js?v=4.7"></script>
-  <script src="js/views/recipesView.js?v=4.7"></script>
+  <script src="js/views/diaryView.js?v=4.8"></script>
+  <script src="js/views/dashboardView.js?v=4.8"></script>
+  <script src="js/views/profileView.js?v=4.8"></script>
+  <script src="js/views/pantryView.js?v=4.8"></script>
+  <script src="js/views/shoppingView.js?v=4.8"></script>
+  <script src="js/views/recipesView.js?v=4.8"></script>
 
   <!-- Inicializador (Debe ir al final) -->
-  <script src="js/main.js?v=4.7"></script>
+  <script src="js/main.js?v=4.8"></script>
 
+  <!-- Registro de Service Worker para PWA y Notificaciones Móviles -->
 <script>
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {

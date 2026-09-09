@@ -30,9 +30,11 @@
 * **Detector de recetas cocinables:** Indica qué recetas puedes preparar inmediatamente con lo que tienes en casa y cuáles tienen ingredientes faltantes.
 * **Generación automática de lista de compras:** Agrega con un toque los ingredientes que te faltan directamente a tu carrito de compras.
 
-### 🤖 3. Asistente IA & Registro por Voz
-* **Reconocimiento por voz (Web Speech API):** Registra tus comidas hablando de forma natural.
-* **Integración con IA (Google Gemini):** Análisis inteligente de ingredientes, sugerencias personalizadas de comidas y respuestas a dudas nutricionales.
+### 🤖 3. Asistente IA, Visión Computacional & Registro por Voz
+* **Escaneo y Detección de Platos por Foto (Gemini Vision):** Toma una foto con la cámara de tu celular/tablet o sube/arrastra una imagen desde tu computadora; la IA analiza la imagen, desglosa los ingredientes visibles, estima las porciones en gramos según las proporciones del plato y calcula calorías y macronutrientes al instante.
+* **Compresión Inteligente en Cliente (Canvas):** Reduce fotos pesadas (5MB–20MB) en 50–100ms a ~100KB en memoria antes de la subida, garantizando fluidez a 60 FPS y mínimo consumo de datos móviles.
+* **Reconocimiento por voz (Web Speech API):** Registra tus comidas hablando de forma natural en lenguaje cotidiano.
+* **NutriBot Asistente IA (Google Gemini):** Análisis inteligente de ingredientes, sugerencias personalizadas de comidas y respuestas a dudas nutricionales.
 
 ### 🔔 4. Sistema Híbrido de Recordatorios (Web Push Serverless)
 * **Funciona con la pantalla apagada o app cerrada:** Mediante suscripciones estándar W3C Web Push (RFC 8291) y claves criptográficas VAPID.
@@ -124,3 +126,6 @@ El frontend de NutriFlow no requiere ningún paso de compilación (`npm build`).
 
 ---
 
+## 📄 Licencia
+
+Este proyecto está bajo la Licencia MIT. Consulta el archivo `LICENSE` para más detalles.

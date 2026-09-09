@@ -2,6 +2,8 @@ var _selectedFoodItem = null;
 window._selectedFoodItem = null;
 var _selectedCompoundMeal = null;
 window._selectedCompoundMeal = null;
+var _currentPhotoData = null;
+window._currentPhotoData = null;
 
 function openRegisterSheet() {
   const sheet   = document.getElementById('register-sheet');
@@ -40,6 +42,7 @@ function switchRSView(viewName) {
   if (viewName === 'search')    resetRSSearchView();
   if (viewName === 'favorites') renderRSFavoritesView();
   if (viewName === 'voice')     resetRSVoiceView();
+  if (viewName === 'photo')     resetRSPhotoView();
 }
 function initRegisterSheet() {
   const fab     = document.getElementById('btn-register-fab');
@@ -49,7 +52,7 @@ function initRegisterSheet() {
   if (overlay) overlay.addEventListener('click', closeRegisterSheet);
 
   // Botones de volver
-  ['search','favorites','voice'].forEach(view => {
+  ['search','favorites','voice','photo'].forEach(view => {
     const btn = document.getElementById(`rs-back-${view}`);
     if (btn) btn.addEventListener('click', () => switchRSView('menu'));
   });
@@ -89,8 +92,16 @@ function initRegisterSheet() {
     if (voiceContainer) voiceContainer.classList.remove('voice-minimized');
     const collapsedBar = document.getElementById('rs-voice-collapsed-bar');
     if (collapsedBar) collapsedBar.hidden = true;
+
+    const photoContainer = document.querySelector('.rs-photo-container');
+    if (photoContainer) photoContainer.classList.remove('photo-minimized');
+    const previewWrap = document.getElementById('rs-photo-preview-wrap');
+    if (previewWrap) previewWrap.classList.remove('minimized');
   });
   document.getElementById('btn-rs-compound-save')?.addEventListener('click', saveCompoundMealEntry);
+
+  // Inicializar manejadores para escaneo por foto
+  initRSPhotoHandlers();
 
   // Gestos tactiles para cerrar (Swipe down)
   const sheet = document.getElementById('register-sheet');
@@ -100,8 +111,12 @@ function initRegisterSheet() {
 
     sheet.addEventListener('touchstart', (e) => {
       const target = e.target;
-      // No arrastrar si se toca dentro de la zona scrolleable
-      if (target.closest('.rs-scroll-content') && target.closest('.rs-scroll-content').scrollTop > 0) return;
+      // No interferir con el scroll del contenido ni con elementos interactivos
+      const isScrollableZone = target.closest('.rs-scroll-content, .rs-photo-container, .rs-compound-confirm, input, textarea, button, select');
+      if (isScrollableZone && !target.closest('.modal-handle')) {
+        isDragging = false;
+        return;
+      }
       startY = e.touches[0].clientY;
       isDragging = true;
     }, { passive: true });
@@ -458,6 +473,27 @@ function showCompoundMealConfirm(data, originView = 'search') {
       }
       if (collapsedBar) collapsedBar.hidden = false;
     }
+  } else if (originView === 'photo') {
+    const photoContainer = document.querySelector('.rs-photo-container');
+    if (photoContainer) {
+      if (compoundConfirm.parentNode !== photoContainer) {
+        photoContainer.appendChild(compoundConfirm);
+      }
+      photoContainer.classList.add('photo-minimized');
+      const dropzone = document.getElementById('rs-photo-dropzone');
+      const previewWrap = document.getElementById('rs-photo-preview-wrap');
+      const statusEl = document.getElementById('rs-photo-status');
+      if (dropzone) dropzone.hidden = true;
+      if (previewWrap) {
+        previewWrap.hidden = false;
+        previewWrap.classList.add('minimized');
+      }
+      if (statusEl) {
+        statusEl.hidden = true;
+        statusEl.innerHTML = '';
+        statusEl.className = 'rs-photo-status';
+      }
+    }
   }
 
   titleEl.textContent = data.meal_title || 'Plato detectado';
@@ -646,6 +682,11 @@ function saveCompoundMealEntry() {
   const collapsedBar = document.getElementById('rs-voice-collapsed-bar');
   if (collapsedBar) collapsedBar.hidden = true;
 
+  const photoContainer = document.querySelector('.rs-photo-container');
+  if (photoContainer) photoContainer.classList.remove('photo-minimized');
+  const previewWrap = document.getElementById('rs-photo-preview-wrap');
+  if (previewWrap) previewWrap.classList.remove('minimized');
+
   _selectedCompoundMeal = null;
 
   closeRegisterSheet();
@@ -742,4 +783,348 @@ function quickRegisterFav({ type, reference_id }) {
   renderDiaryScreen();
   renderDailyMacros();
 }
+
+// ============================================================
+// ESCANEO Y DETECCIÓN POR FOTO / IMAGEN (GEMINI VISION)
+// ============================================================
+
+/**
+ * Comprime y redimensiona una imagen en el cliente utilizando Canvas.
+ * Mantiene la proporción original con tamaño máximo de 1024px y calidad 80%.
+ * @param {File|Blob} file
+ * @returns {Promise<{ base64: string, mimeType: string, previewUrl: string }>}
+ */
+function compressImageForAI(file, maxDimension = 1024, quality = 0.8) {
+  return new Promise((resolve, reject) => {
+    if (!file || !file.type || !file.type.startsWith('image/')) {
+      return reject(new Error('El archivo seleccionado no es una imagen válida.'));
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('Error al leer el archivo de imagen.'));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Error al decodificar la imagen.'));
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        // Fondo blanco sólido para imágenes transparentes (evita fondos negros en PNG)
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+
+        const mimeType = 'image/jpeg';
+        const dataUrl = canvas.toDataURL(mimeType, quality);
+        const base64 = dataUrl.replace(/^data:image\/jpeg;base64,/, '');
+
+        resolve({
+          base64,
+          mimeType,
+          previewUrl: dataUrl
+        });
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/**
+ * Procesa un archivo de imagen seleccionado y actualiza la vista previa.
+ * @param {File|Blob} file
+ */
+async function handleSelectedPhoto(file) {
+  if (!file) return;
+  if (!file.type || !file.type.startsWith('image/')) {
+    showToast('⚠️ Por favor selecciona un archivo de imagen válido.');
+    return;
+  }
+
+  const dropzone = document.getElementById('rs-photo-dropzone');
+  const previewWrap = document.getElementById('rs-photo-preview-wrap');
+  const previewImg = document.getElementById('rs-photo-preview-img');
+  const statusEl = document.getElementById('rs-photo-status');
+  const processBtn = document.getElementById('btn-rs-photo-process');
+
+  try {
+    if (statusEl) {
+      statusEl.hidden = false;
+      statusEl.className = 'rs-photo-status info';
+      statusEl.innerHTML = '<div class="rs-photo-spinner"></div><span>Optimizando imagen...</span>';
+    }
+
+    const compressed = await compressImageForAI(file);
+    _currentPhotoData = compressed;
+    window._currentPhotoData = compressed;
+
+    if (previewImg) previewImg.src = compressed.previewUrl;
+    if (dropzone) dropzone.hidden = true;
+    if (previewWrap) {
+      previewWrap.hidden = false;
+      previewWrap.classList.remove('minimized');
+    }
+    if (statusEl) {
+      statusEl.hidden = true;
+      statusEl.innerHTML = '';
+      statusEl.className = 'rs-photo-status';
+    }
+    if (processBtn) processBtn.disabled = false;
+  } catch (err) {
+    console.error('[NutriFlow Photo] Error procesando imagen:', err);
+    if (statusEl) {
+      statusEl.hidden = false;
+      statusEl.className = 'rs-photo-status error';
+      statusEl.textContent = '❌ Error al procesar la imagen. Intenta con otra foto.';
+    }
+    showToast('❌ No se pudo cargar la imagen');
+  }
+}
+
+/**
+ * Envía la foto optimizada y notas opcionales a Gemini Vision para el análisis.
+ */
+async function processMealPhotoWithAI() {
+  if (!_currentPhotoData || !_currentPhotoData.base64) {
+    showToast('⚠️ Primero selecciona o toma una foto.');
+    return;
+  }
+
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    showToast('📡 Sin conexión a internet para usar IA.');
+    const statusEl = document.getElementById('rs-photo-status');
+    if (statusEl) {
+      statusEl.hidden = false;
+      statusEl.className = 'rs-photo-status error';
+      statusEl.textContent = '📡 Sin conexión a internet. La detección visual con IA requiere conexión.';
+    }
+    return;
+  }
+
+  if (typeof AI !== 'undefined' && !AI.isConfigured()) {
+    showToast('🔑 Configura tu API Key de Gemini en Perfil');
+    const statusEl = document.getElementById('rs-photo-status');
+    if (statusEl) {
+      statusEl.hidden = false;
+      statusEl.className = 'rs-photo-status error';
+      statusEl.innerHTML = '🔑 Configura tu API Key de Gemini en <strong>Perfil → Asistente IA</strong> para usar esta función.';
+    }
+    return;
+  }
+
+  const statusEl = document.getElementById('rs-photo-status');
+  const processBtn = document.getElementById('btn-rs-photo-process');
+  const notesInput = document.getElementById('rs-photo-notes');
+  const notes = notesInput ? notesInput.value.trim() : '';
+
+  if (processBtn) processBtn.disabled = true;
+  if (statusEl) {
+    statusEl.hidden = false;
+    statusEl.className = 'rs-photo-status info active-scan';
+    statusEl.innerHTML = `
+      <div class="rs-photo-spinner"></div>
+      <div class="rs-photo-status-text">
+        <strong>Analizando tu plato con Gemini Vision...</strong>
+        <span>Identificando alimentos, porciones y macronutrientes</span>
+      </div>
+    `;
+  }
+
+  try {
+    const parsed = await AI.analyzeMealImage(_currentPhotoData.base64, _currentPhotoData.mimeType, notes);
+    if (!parsed || !parsed.items || parsed.items.length === 0) {
+      throw new Error('No se detectaron alimentos identificables en la fotografía.');
+    }
+
+    if (statusEl) {
+      statusEl.hidden = true;
+      statusEl.innerHTML = '';
+    }
+
+    // Desplegar confirmación y ajuste del plato detectado
+    showCompoundMealConfirm(parsed, 'photo');
+
+  } catch (err) {
+    console.error('[NutriFlow Photo] Error en análisis con IA:', err);
+    let msg = 'No se pudo analizar la imagen. Intenta con una foto más clara o agrega notas.';
+    if (err.message === 'OFFLINE') msg = '📡 Sin conexión a internet.';
+    else if (err.message === 'NO_KEY') msg = '🔑 Falta configurar la API Key de Gemini en Perfil.';
+    else if (err.message) msg = err.message;
+
+    if (statusEl) {
+      statusEl.hidden = false;
+      statusEl.className = 'rs-photo-status error';
+      statusEl.textContent = `❌ ${msg}`;
+    }
+    showToast(`❌ ${msg}`);
+  } finally {
+    if (processBtn) processBtn.disabled = false;
+  }
+}
+
+/**
+ * Restablece el estado de la vista de escaneo por foto.
+ */
+function resetRSPhotoView() {
+  _currentPhotoData = null;
+  window._currentPhotoData = null;
+
+  const dropzone = document.getElementById('rs-photo-dropzone');
+  const previewWrap = document.getElementById('rs-photo-preview-wrap');
+  const previewImg = document.getElementById('rs-photo-preview-img');
+  const statusEl = document.getElementById('rs-photo-status');
+  const notesEl = document.getElementById('rs-photo-notes');
+  const cameraInput = document.getElementById('rs-photo-input-camera');
+  const fileInput = document.getElementById('rs-photo-input-file');
+  const compoundConfirm = document.getElementById('rs-compound-confirm');
+  const photoContainer = document.querySelector('.rs-photo-container');
+  const processBtn = document.getElementById('btn-rs-photo-process');
+
+  if (dropzone) dropzone.hidden = false;
+  if (previewWrap) {
+    previewWrap.hidden = true;
+    previewWrap.classList.remove('minimized');
+  }
+  if (previewImg) previewImg.src = '';
+  if (photoContainer) photoContainer.classList.remove('photo-minimized');
+  if (statusEl) {
+    statusEl.hidden = true;
+    statusEl.innerHTML = '';
+    statusEl.className = 'rs-photo-status';
+  }
+  if (notesEl) notesEl.value = '';
+  if (cameraInput) cameraInput.value = '';
+  if (fileInput) fileInput.value = '';
+  if (processBtn) processBtn.disabled = false;
+  if (compoundConfirm && compoundConfirm.parentNode === photoContainer) {
+    compoundConfirm.hidden = true;
+  }
+}
+
+/**
+ * Inicializa los eventos e interacción para el escaneo fotográfico de platos.
+ */
+function initRSPhotoHandlers() {
+  const cameraBtn = document.getElementById('btn-rs-photo-camera');
+  const galleryBtn = document.getElementById('btn-rs-photo-gallery');
+  const cameraInput = document.getElementById('rs-photo-input-camera');
+  const fileInput = document.getElementById('rs-photo-input-file');
+  const retakeBtn = document.getElementById('btn-rs-photo-retake');
+  const processBtn = document.getElementById('btn-rs-photo-process');
+  const dropzone = document.getElementById('rs-photo-dropzone');
+  const notesInput = document.getElementById('rs-photo-notes');
+
+  // Disparar cámara directa
+  cameraBtn?.addEventListener('click', () => {
+    if (cameraInput) {
+      cameraInput.value = '';
+      cameraInput.click();
+    }
+  });
+
+  // Disparar selector de archivos / galería
+  galleryBtn?.addEventListener('click', () => {
+    if (fileInput) {
+      fileInput.value = '';
+      fileInput.click();
+    }
+  });
+
+  // Selección por cámara
+  cameraInput?.addEventListener('change', (e) => {
+    if (e.target.files && e.target.files[0]) {
+      handleSelectedPhoto(e.target.files[0]);
+    }
+  });
+
+  // Selección por galería/archivo
+  fileInput?.addEventListener('change', (e) => {
+    if (e.target.files && e.target.files[0]) {
+      handleSelectedPhoto(e.target.files[0]);
+    }
+  });
+
+  // Botón Cambiar / Repetir foto
+  retakeBtn?.addEventListener('click', () => {
+    resetRSPhotoView();
+  });
+
+  // Botón Analizar con IA
+  processBtn?.addEventListener('click', processMealPhotoWithAI);
+
+  // Enter en notas opcionales dispara el análisis
+  notesInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      processMealPhotoWithAI();
+    }
+  });
+
+  // Drag & Drop en el dropzone
+  if (dropzone) {
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.add('drag-over');
+      }, false);
+    });
+
+    ['dragleave', 'dragend'].forEach(eventName => {
+      dropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropzone.classList.remove('drag-over');
+      }, false);
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dropzone.classList.remove('drag-over');
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+        handleSelectedPhoto(e.dataTransfer.files[0]);
+      }
+    }, false);
+  }
+
+  // Soporte universal para pegar con Ctrl + V
+  window.addEventListener('paste', (e) => {
+    const photoView = document.getElementById('rs-view-photo');
+    const sheet = document.getElementById('register-sheet');
+    if (!sheet || !sheet.classList.contains('open') || !photoView || photoView.hidden) return;
+
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        const file = items[i].getAsFile();
+        if (file) {
+          handleSelectedPhoto(file);
+          break;
+        }
+      }
+    }
+  });
+}
+
+window.resetRSPhotoView = resetRSPhotoView;
+window.handleSelectedPhoto = handleSelectedPhoto;
+
 
