@@ -2,14 +2,14 @@
    STYLES.CSS ? Archivo principal de estilos globales
    ============================================================ */
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-@import url('core/base.css');
-@import url('components/chat.css');
-@import url('components/register-sheet.css');
-@import url('components/voice.css');
-@import url('components/recipe-editor.css');
-@import url('views/dashboard.css');
-@import url('views/profile.css');
-@import url('views/diary.css');
+@import url('core/base.css?v=5.1');
+@import url('components/chat.css?v=5.1');
+@import url('components/register-sheet.css?v=5.1');
+@import url('components/voice.css?v=5.1');
+@import url('components/recipe-editor.css?v=5.1');
+@import url('views/dashboard.css?v=5.1');
+@import url('views/profile.css?v=5.1');
+@import url('views/diary.css?v=5.1');
 
 .global-date-banner {
   position: fixed;

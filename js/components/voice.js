@@ -37,7 +37,8 @@ window.ModalHistory = {
     { selector: '#register-sheet', closeFn: () => typeof closeRegisterSheet === 'function' ? closeRegisterSheet() : document.getElementById('register-sheet')?.classList.remove('open') },
     { selector: '#shopping-modal', closeFn: () => typeof closeShoppingModal === 'function' ? closeShoppingModal() : document.getElementById('shopping-modal')?.classList.remove('open') },
     { selector: '#recipe-modal', closeFn: () => typeof closeRecipeModal === 'function' ? closeRecipeModal() : document.getElementById('recipe-modal')?.classList.remove('open') },
-    { selector: '#ingredient-popover', closeFn: () => typeof closeIngredientPopover === 'function' ? closeIngredientPopover() : document.getElementById('ingredient-popover')?.classList.remove('open') }
+    { selector: '#ingredient-popover', closeFn: () => typeof closeIngredientPopover === 'function' ? closeIngredientPopover() : document.getElementById('ingredient-popover')?.classList.remove('open') },
+    { selector: '#food-log-modal', closeFn: () => typeof closeFoodLogModal === 'function' ? closeFoodLogModal() : document.getElementById('food-log-modal')?.classList.remove('open') }
   ];
 
   let activeModals = [];

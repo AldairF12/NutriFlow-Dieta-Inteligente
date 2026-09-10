@@ -677,7 +677,7 @@ if (document.readyState === 'loading') {
 
 function renderFreeDiaryEntries(container) {
   const todayLogs = (window.DB && typeof window.DB.getTodayLogs === 'function')
-    ? window.DB.getTodayLogs().filter(l => l.type === 'food_item')
+    ? window.DB.getTodayLogs().filter(l => l.type === 'food_item' || (l.type === 'meal' && !l.planned))
     : [];
 
   if (todayLogs.length === 0) return;
@@ -687,39 +687,521 @@ function renderFreeDiaryEntries(container) {
 
   const title = document.createElement('h2');
   title.className = 'extras-section-title';
-  title.textContent = '\u{1F957} Alimentos Libres / Extras';
+  title.textContent = '🥗 Alimentos Libres / Extras';
   section.appendChild(title);
 
+  const catMap = {
+    breakfast: { name: 'Desayuno', emoji: '🌅', cls: 'cat-breakfast' },
+    lunch:     { name: 'Almuerzo',  emoji: '🍽️', cls: 'cat-lunch' },
+    merienda:  { name: 'Merienda',  emoji: '🥪', cls: 'cat-merienda' },
+    dinner:    { name: 'Cena',      emoji: '🌙', cls: 'cat-dinner' },
+    snack:     { name: 'Snack',     emoji: '🥨', cls: 'cat-snack' }
+  };
+
   todayLogs.forEach(log => {
-    const fi = window.DB.getFoodItemById(log.reference_id);
-    if (!fi) return;
+    let name = 'Alimento';
+    let cal = 0, prot = 0, carb = 0, fat = 0;
     const qty = log.quantity_g || 100;
-    const factor = qty / 100;
-    const cal = Math.round((fi.calories_per_100g || 0) * factor);
-    const prot = (fi.protein_per_100g || 0) * factor;
-    const carb = (fi.carbs_per_100g || 0) * factor;
-    const fat = (fi.fat_per_100g || 0) * factor;
+
+    if (log.type === 'food_item') {
+      const fi = window.DB.getFoodItemById(log.reference_id) || (window.DB.getIngredientById ? window.DB.getIngredientById(log.reference_id) : null);
+      if (!fi) return;
+      name = fi.name;
+      const factor = qty / 100;
+      cal = Math.round((fi.calories_per_100g || 0) * factor);
+      prot = (fi.protein_per_100g || 0) * factor;
+      carb = (fi.carbs_per_100g || 0) * factor;
+      fat = (fi.fat_per_100g || 0) * factor;
+    } else if (log.type === 'meal') {
+      const recipe = window.DB.getRecipeById(log.reference_id);
+      if (!recipe) return;
+      name = recipe.name;
+      const macros = recipe.macros || (typeof calcRecipeMacros === 'function' ? calcRecipeMacros(recipe.id) : { calories: 0, protein: 0, carbs: 0, fat: 0 });
+      cal = macros.calories || 0;
+      prot = macros.protein || 0;
+      carb = macros.carbs || 0;
+      fat = macros.fat || 0;
+    }
+
+    const catKey = log.mealCategory || 'snack';
+    const catInfo = catMap[catKey] || catMap.snack;
 
     const card = document.createElement('div');
-    card.className = 'card--free-food';
+    card.className = `card--free-food ${catInfo.cls}`;
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-label', `Detalles de ${name}`);
     card.innerHTML = `
       <div class="free-food-info">
-        <div class="free-food-name">${fi.name} <span class="free-entry-badge">Extra</span></div>
-        <div class="free-food-meta">${qty}g \u2022 ${cal} kcal \u2022 P:${prot.toFixed(1)}g C:${carb.toFixed(1)}g G:${fat.toFixed(1)}g</div>
+        <div class="free-food-name-row">
+          <span class="free-food-name">${name}</span>
+          <span class="free-entry-badge">${catInfo.emoji} ${catInfo.name}</span>
+        </div>
+        <div class="free-food-meta">${qty}${log.type === 'meal' && !log.quantity_g ? ' porción' : 'g'} • ${cal} kcal • P:${prot.toFixed(1)}g C:${carb.toFixed(1)}g G:${fat.toFixed(1)}g</div>
       </div>
-      <div class="free-food-actions">
-        <button class="btn-free-delete" title="Eliminar registro" aria-label="Eliminar ${fi.name}">\u2715</button>
-      </div>
+      <div class="free-food-arrow">›</div>
     `;
 
-    card.querySelector('.btn-free-delete').addEventListener('click', () => {
-      window.DB.removeFoodLog(log.id);
-      showToast('\u21BA Registro eliminado');
-      renderDiaryScreen();
+    card.addEventListener('click', () => {
+      openFoodLogModal(log.id);
+    });
+    card.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openFoodLogModal(log.id);
+      }
     });
 
     section.appendChild(card);
   });
 
   container.appendChild(section);
+}
+
+// ============================================================
+// MODAL DE DETALLE Y EDICIÓN DE COMIDA (FOOD LOG MODAL)
+// ======================================================================================================================
+let _foodLogActiveLogId = null;
+let _foodLogSelectedCategory = 'snack';
+let _foodLogInitialCategory = 'snack';
+let _foodLogInitialQty = 100;
+let _foodLogBase100g = { cal: 0, prot: 0, carb: 0, fat: 0 };
+let _foodLogIsPortionBased = false;
+
+function openFoodLogModal(logId) {
+  const log = window.DB && typeof window.DB.getFoodLogById === 'function'
+    ? window.DB.getFoodLogById(logId)
+    : null;
+  if (!log) return;
+
+  _foodLogActiveLogId = log.id;
+  _foodLogSelectedCategory = log.mealCategory || 'snack';
+  _foodLogInitialCategory = _foodLogSelectedCategory;
+
+  const modal = document.getElementById('food-log-modal');
+  const overlay = document.getElementById('food-log-overlay');
+  if (!modal || !overlay) return;
+
+  const titleEl = document.getElementById('food-log-title');
+  const subtitleEl = document.getElementById('food-log-subtitle');
+  const catBadgeEl = document.getElementById('food-log-category-badge');
+  const typeBadgeEl = document.getElementById('food-log-type-badge');
+  const calValEl = document.getElementById('food-log-cal-val');
+  const protValEl = document.getElementById('food-log-prot-val');
+  const carbValEl = document.getElementById('food-log-carb-val');
+  const fatValEl = document.getElementById('food-log-fat-val');
+  const ringProt = document.getElementById('food-log-ring-prot');
+  const ringCarb = document.getElementById('food-log-ring-carb');
+  const ringFat = document.getElementById('food-log-ring-fat');
+  const gramInput = document.getElementById('food-log-gram-input');
+  const favBtn = document.getElementById('btn-food-log-fav');
+  const chipsContainer = document.getElementById('food-log-chips');
+  const saveBtn = document.getElementById('btn-food-log-save');
+  const delBtn = document.getElementById('btn-food-log-delete');
+
+  const catNames = {
+    breakfast: '🌅 Desayuno',
+    lunch: '🍽️ Almuerzo',
+    merienda: '🥪 Merienda',
+    dinner: '🌙 Cena',
+    snack: '🥨 Snack'
+  };
+
+  // Subtítulo con horario formateado
+  const timeStr = log.timestamp
+    ? new Date(log.timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+    : '';
+  subtitleEl.textContent = timeStr ? `Registrado hoy a las ${timeStr}` : 'Registrado hoy';
+  catBadgeEl.textContent = catNames[_foodLogSelectedCategory] || '🥨 Snack';
+  typeBadgeEl.textContent = log.planned ? 'Del plan' : 'Extra';
+
+  // Dirty check: Guardar solo se activa si hay cambios
+  function checkDirty() {
+    const curQty = parseInt(gramInput.value) || 0;
+    const isDirty = (_foodLogSelectedCategory !== _foodLogInitialCategory) || (curQty !== _foodLogInitialQty);
+    if (saveBtn) {
+      saveBtn.disabled = !isDirty;
+    }
+  }
+
+  // Chips interactivos de tipo de comida (centrados)
+  if (chipsContainer) {
+    const chipBtns = chipsContainer.querySelectorAll('.food-log-chip');
+    chipBtns.forEach(btn => {
+      const val = btn.dataset.val;
+      if (val === _foodLogSelectedCategory) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+      btn.onclick = () => {
+        chipBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _foodLogSelectedCategory = val;
+        catBadgeEl.textContent = catNames[val] || val;
+        checkDirty();
+      };
+    });
+  }
+
+  // Resolver datos de alimento o receta
+  let itemName = 'Alimento';
+  let qty = log.quantity_g || 100;
+  _foodLogIsPortionBased = false;
+
+  if (log.type === 'meal') {
+    const r = window.DB.getRecipeById(log.reference_id);
+    itemName = r ? r.name : 'Receta';
+    const macros = r ? (r.macros || (typeof calcRecipeMacros === 'function' ? calcRecipeMacros(r.id) : { calories: 0, protein: 0, carbs: 0, fat: 0 })) : { calories: 0, protein: 0, carbs: 0, fat: 0 };
+
+    if (log.quantity_g && log.quantity_g > 10) {
+      qty = log.quantity_g;
+      const factor = qty / 100;
+      _foodLogBase100g = {
+        cal: (macros.calories || 0) / (factor || 1),
+        prot: (macros.protein || 0) / (factor || 1),
+        carb: (macros.carbs || 0) / (factor || 1),
+        fat: (macros.fat || 0) / (factor || 1)
+      };
+    } else {
+      _foodLogIsPortionBased = true;
+      qty = log.quantity_g || 1;
+      _foodLogBase100g = {
+        cal: macros.calories || 0,
+        prot: macros.protein || 0,
+        carb: macros.carbs || 0,
+        fat: macros.fat || 0
+      };
+    }
+  } else if (log.type === 'food_item') {
+    const fi = window.DB.getFoodItemById(log.reference_id) || (window.DB.getIngredientById ? window.DB.getIngredientById(log.reference_id) : null);
+    itemName = fi ? fi.name : 'Alimento';
+    _foodLogBase100g = {
+      cal: fi?.calories_per_100g || 0,
+      prot: fi?.protein_per_100g || 0,
+      carb: fi?.carbs_per_100g || 0,
+      fat: fi?.fat_per_100g || 0
+    };
+    qty = log.quantity_g || 100;
+  } else if (log.type === 'liquid') {
+    const liq = (window.DB.liquids || []).find(l => l.id === log.reference_id);
+    itemName = liq ? `${liq.icon || '💧'} ${liq.name}` : 'Líquido';
+    _foodLogBase100g = { cal: 0, prot: 0, carb: 0, fat: 0 };
+    qty = log.quantity_g || 250;
+  }
+
+  _foodLogInitialQty = qty;
+  titleEl.textContent = itemName;
+
+  // Actualizador en vivo de macros y gráfico circular (idéntico a recetas)
+  const CIRC = 2 * Math.PI * 24; // R = 24 => ~150.796
+
+  function renderLiveMacros(currentVal) {
+    let cal = 0, prot = 0, carb = 0, fat = 0;
+    if (_foodLogIsPortionBased) {
+      cal = Math.round(_foodLogBase100g.cal * currentVal);
+      prot = Math.round(_foodLogBase100g.prot * currentVal * 10) / 10;
+      carb = Math.round(_foodLogBase100g.carb * currentVal * 10) / 10;
+      fat = Math.round(_foodLogBase100g.fat * currentVal * 10) / 10;
+    } else {
+      const factor = currentVal / 100;
+      cal = Math.round(_foodLogBase100g.cal * factor);
+      prot = Math.round(_foodLogBase100g.prot * factor * 10) / 10;
+      carb = Math.round(_foodLogBase100g.carb * factor * 10) / 10;
+      fat = Math.round(_foodLogBase100g.fat * factor * 10) / 10;
+    }
+
+    calValEl.textContent = cal;
+    protValEl.textContent = `${prot}g`;
+    carbValEl.textContent = `${carb}g`;
+    fatValEl.textContent = `${fat}g`;
+
+    const protKcal = prot * 4;
+    const carbKcal = carb * 4;
+    const fatKcal = fat * 9;
+    const totalKcal = protKcal + carbKcal + fatKcal || 1;
+
+    const protPct = protKcal / totalKcal;
+    const carbPct = carbKcal / totalKcal;
+    const fatPct = fatKcal / totalKcal;
+
+    const segProt = protPct * CIRC;
+    const segCarb = carbPct * CIRC;
+    const segFat = fatPct * CIRC;
+
+    if (ringProt && ringCarb && ringFat) {
+      ringProt.style.opacity = segProt >= 1 ? '1' : '0';
+      ringProt.setAttribute('stroke-dasharray', `${segProt} ${Math.max(0, CIRC - segProt)}`);
+      ringProt.setAttribute('stroke-dashoffset', '0');
+      ringProt.setAttribute('transform', 'rotate(-90 34 34)');
+
+      ringCarb.style.opacity = segCarb >= 1 ? '1' : '0';
+      ringCarb.setAttribute('stroke-dasharray', `${segCarb} ${Math.max(0, CIRC - segCarb)}`);
+      ringCarb.setAttribute('stroke-dashoffset', `${-(segProt)}`);
+      ringCarb.setAttribute('transform', 'rotate(-90 34 34)');
+
+      ringFat.style.opacity = segFat >= 1 ? '1' : '0';
+      ringFat.setAttribute('stroke-dasharray', `${segFat} ${Math.max(0, CIRC - segFat)}`);
+      ringFat.setAttribute('stroke-dashoffset', `${-(segProt + segCarb)}`);
+      ringFat.setAttribute('transform', 'rotate(-90 34 34)');
+    }
+  }
+
+  // Configurar unidad e input
+  const unitEl = document.querySelector('.food-log-unit');
+  if (unitEl) {
+    unitEl.textContent = _foodLogIsPortionBased ? 'porción(es)' : (log.type === 'liquid' ? 'mililitros' : 'gramos');
+  }
+
+  gramInput.value = qty;
+  renderLiveMacros(qty);
+  checkDirty();
+
+  // Botones de paso (+ / -) con incremento de 10 en 10 para mayor precisión
+  const step = _foodLogIsPortionBased ? 1 : (log.type === 'liquid' ? 50 : 10);
+  const minVal = _foodLogIsPortionBased ? 1 : 5;
+  const maxVal = _foodLogIsPortionBased ? 20 : 3000;
+
+  const btnMinus = document.getElementById('btn-food-log-minus');
+  const btnPlus = document.getElementById('btn-food-log-plus');
+
+  if (btnMinus) {
+    btnMinus.onclick = () => {
+      let v = (parseInt(gramInput.value) || step) - step;
+      if (v < minVal) v = minVal;
+      gramInput.value = v;
+      renderLiveMacros(v);
+      checkDirty();
+    };
+  }
+
+  if (btnPlus) {
+    btnPlus.onclick = () => {
+      let v = (parseInt(gramInput.value) || 0) + step;
+      if (v > maxVal) v = maxVal;
+      gramInput.value = v;
+      renderLiveMacros(v);
+      checkDirty();
+    };
+  }
+
+  gramInput.oninput = () => {
+    let v = parseInt(gramInput.value) || 0;
+    renderLiveMacros(v);
+    checkDirty();
+  };
+
+  // Botón de Favoritos en la cabecera
+  function syncFavUI() {
+    const isFav = window.DB && typeof window.DB.isFavorite === 'function' && window.DB.isFavorite(log.reference_id);
+    if (favBtn) {
+      if (isFav) {
+        favBtn.classList.add('is-fav');
+        favBtn.querySelector('.fav-icon').textContent = '★';
+        favBtn.setAttribute('title', 'En favoritos');
+      } else {
+        favBtn.classList.remove('is-fav');
+        favBtn.querySelector('.fav-icon').textContent = '⭐';
+        favBtn.setAttribute('title', 'Añadir a favoritos');
+      }
+    }
+  }
+  syncFavUI();
+
+  if (favBtn) {
+    favBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (window.DB && typeof window.DB.toggleFavorite === 'function') {
+        window.DB.toggleFavorite(log.reference_id);
+        const isFavNow = window.DB.isFavorite(log.reference_id);
+        syncFavUI();
+        if (typeof showToast === 'function') {
+          showToast(isFavNow ? '⭐ Añadido a favoritos' : 'Eliminado de favoritos');
+        }
+      }
+    };
+  }
+
+  // Guardar Cambios (Solo activo si hubo cambios)
+  if (saveBtn) {
+    saveBtn.onclick = () => {
+      const finalQty = parseInt(gramInput.value) || qty;
+      window.DB.updateFoodLog(log.id, {
+        quantity_g: finalQty,
+        mealCategory: _foodLogSelectedCategory
+      });
+      closeFoodLogModal();
+      if (typeof showToast === 'function') showToast('✅ Comida actualizada');
+      if (typeof renderDiaryScreen === 'function') renderDiaryScreen();
+      if (typeof renderDashboardScreen === 'function') renderDashboardScreen();
+      if (typeof updateShoppingFab === 'function') updateShoppingFab();
+      if (typeof updateHeaderGamification === 'function') updateHeaderGamification();
+    };
+  }
+
+  // Eliminar comida
+  if (delBtn) {
+    delBtn.onclick = () => {
+      if (confirm(`¿Eliminar "${itemName}" del registro de hoy?`)) {
+        if (log.type === 'meal' && log.planned) {
+          // Revertir ingredientes a despensa si era planificada
+          const ris = window.DB.getRecipeIngredients(log.reference_id) || [];
+          ris.forEach(ri => {
+            const pantry = window.DB.getPantryItem(ri.ingredient_id);
+            const cur = pantry ? pantry.quantity_available : 0;
+            window.DB.updatePantryQuantity(ri.ingredient_id, cur + ri.quantity);
+          });
+        }
+        window.DB.removeFoodLog(log.id);
+        closeFoodLogModal();
+        if (typeof showToast === 'function') showToast('🗑️ Comida eliminada');
+        if (typeof renderDiaryScreen === 'function') renderDiaryScreen();
+        if (typeof renderDashboardScreen === 'function') renderDashboardScreen();
+        if (typeof updateShoppingFab === 'function') updateShoppingFab();
+        if (typeof updateHeaderGamification === 'function') updateHeaderGamification();
+      }
+    };
+  }
+
+  // Evitar arrastrar o scrollear la interfaz de fondo en móviles
+  document.body.classList.add('modal-open');
+  document.body.style.overflow = 'hidden';
+  document.documentElement.style.overflow = 'hidden';
+
+  // Mostrar modal con animación fluida
+  modal.hidden = false;
+  overlay.hidden = false;
+  requestAnimationFrame(() => {
+    modal.classList.add('open');
+    overlay.classList.add('open');
+  });
+}
+
+function closeFoodLogModal() {
+  const modal = document.getElementById('food-log-modal');
+  const overlay = document.getElementById('food-log-overlay');
+  if (!modal || !overlay) return;
+
+  // Restaurar scroll de fondo si no hay otros modales abiertos
+  const otherOpen = document.querySelector('.modal-overlay.open:not(#food-log-overlay)');
+  if (!otherOpen) {
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
+  }
+
+  modal.classList.remove('open');
+  overlay.classList.remove('open');
+  modal.style.transform = '';
+  overlay.style.opacity = '';
+
+  setTimeout(() => {
+    modal.hidden = true;
+    overlay.hidden = true;
+  }, 320);
+}
+
+// Exponer globalmente
+window.openFoodLogModal = openFoodLogModal;
+window.closeFoodLogModal = closeFoodLogModal;
+
+// Inicializar eventos de Food Log Modal (gestos y botones de cierre)
+function initFoodLogModalEvents() {
+  const modal = document.getElementById('food-log-modal');
+  const overlay = document.getElementById('food-log-overlay');
+  const closeBtn = document.getElementById('food-log-close');
+
+  if (overlay) {
+    overlay.addEventListener('click', closeFoodLogModal);
+    overlay.addEventListener('touchmove', (e) => {
+      if (e.cancelable) e.preventDefault();
+    }, { passive: false });
+  }
+  if (closeBtn) closeBtn.addEventListener('click', closeFoodLogModal);
+
+  if (modal) {
+    let startY = 0;
+    let currentY = 0;
+    let isDragging = false;
+    const header = modal.querySelector('.food-log-header');
+    const handle = modal.querySelector('.modal-handle');
+
+    function onDragStart(clientY, target) {
+      if (target && (target.closest('.modal-close') || target.closest('button') || target.closest('input'))) {
+        isDragging = false;
+        return false;
+      }
+      startY = clientY;
+      currentY = startY;
+      isDragging = true;
+      modal.style.transition = 'none';
+      if (overlay) overlay.style.transition = 'none';
+      return true;
+    }
+
+    function onDragMove(clientY, e) {
+      if (!isDragging) return;
+      currentY = clientY;
+      const deltaY = currentY - startY;
+      if (deltaY > 0) {
+        if (e && e.cancelable) e.preventDefault();
+        modal.style.transform = `translateX(-50%) translate3d(0, ${deltaY}px, 0)`;
+        if (overlay) {
+          const progress = Math.min(1, deltaY / 280);
+          overlay.style.opacity = (1 - progress * 0.85).toString();
+        }
+      } else {
+        modal.style.transform = 'translateX(-50%) translateY(0)';
+      }
+    }
+
+    function onDragEnd() {
+      if (!isDragging) return;
+      isDragging = false;
+      modal.style.transition = 'transform 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+      if (overlay) overlay.style.transition = 'opacity 0.35s ease';
+      const deltaY = currentY - startY;
+      if (deltaY > 85) {
+        closeFoodLogModal();
+      } else {
+        modal.style.transform = 'translateX(-50%) translateY(0)';
+        if (overlay) overlay.style.opacity = '';
+      }
+    }
+
+    [handle, header].forEach(el => {
+      if (!el) return;
+      el.addEventListener('touchstart', (e) => {
+        onDragStart(e.touches[0].clientY, e.target);
+      }, { passive: true });
+
+      el.addEventListener('touchmove', (e) => {
+        if (!isDragging) return;
+        onDragMove(e.touches[0].clientY, e);
+      }, { passive: false });
+
+      el.addEventListener('touchend', onDragEnd);
+      el.addEventListener('touchcancel', onDragEnd);
+
+      el.addEventListener('mousedown', (e) => {
+        if (e.button !== 0) return;
+        if (onDragStart(e.clientY, e.target)) {
+          const onMouseMove = (ev) => onDragMove(ev.clientY, ev);
+          const onMouseUp = () => {
+            document.removeEventListener('mousemove', onMouseMove);
+            document.removeEventListener('mouseup', onMouseUp);
+            onDragEnd();
+          };
+          document.addEventListener('mousemove', onMouseMove);
+          document.addEventListener('mouseup', onMouseUp);
+        }
+      });
+    });
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initFoodLogModalEvents);
+} else {
+  initFoodLogModalEvents();
 }

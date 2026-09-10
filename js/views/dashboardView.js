@@ -637,34 +637,33 @@ function renderDashTimeline(dateStr) {
     group.items.forEach(item => {
       const el = document.createElement('div');
       el.className = `dash-timeline-item ${item.isPlanned ? 'item-planned' : 'item-extra'}`;
+      el.style.cursor = 'pointer';
+      el.setAttribute('role', 'button');
+      el.setAttribute('tabindex', '0');
+      el.setAttribute('aria-label', `Detalles de ${item.name}`);
       el.innerHTML = `
         <div class="dash-timeline-icon">${item.typeEmoji}</div>
         <div class="dash-timeline-info">
           <div class="dash-timeline-name">${item.name}</div>
-          <div class="dash-timeline-time">${item.timeStr} \u2022 <span class="badge-${item.isPlanned ? 'plan' : 'extra'}">${item.isPlanned ? 'Del plan' : 'Extra'}</span></div>
+          <div class="dash-timeline-time">${item.timeStr} • <span class="badge-${item.isPlanned ? 'plan' : 'extra'}">${item.isPlanned ? 'Del plan' : 'Extra'}</span></div>
         </div>
         <div class="dash-timeline-cal">${item.calories > 0 ? `${item.calories} kcal` : `${item.log.quantity_g || 250} ml`}</div>
-        <button class="btn-delete-log" data-id="${item.log.id}" title="Eliminar" aria-label="Eliminar comida" style="background:none; border:none; cursor:pointer; font-size:1.1rem; padding: 4px; margin-left: 8px; color: #9ca3af; transition: color 0.2s;">&times;</button>
+        <div class="dash-timeline-arrow" style="color: var(--gray-400, #9ca3af); font-size: 1.25rem; padding: 0 4px; line-height: 1; margin-left: 6px;">›</div>
       `;
-      const delBtn = el.querySelector('.btn-delete-log');
-      if (delBtn) {
-        delBtn.onclick = (e) => {
-          e.stopPropagation();
-          if (confirm('¿Eliminar este registro?')) {
-            // Revertir stock de despensa si es una comida planificada
-            if (item.log.type === 'meal' && item.log.planned) {
-              const ris = window.DB.getRecipeIngredients(item.log.reference_id) || [];
-              ris.forEach(ri => {
-                const pantryItem = window.DB.getPantryItem(ri.ingredient_id);
-                const currentQty = pantryItem ? pantryItem.quantity_available : 0;
-                window.DB.updatePantryQuantity(ri.ingredient_id, currentQty + ri.quantity);
-              });
-            }
-            window.DB.removeFoodLog(item.log.id);
-            if (typeof renderDashboardScreen === 'function') renderDashboardScreen();
-          }
-        };
-      }
+
+      el.onclick = () => {
+        if (typeof openFoodLogModal === 'function') {
+          openFoodLogModal(item.log.id);
+        }
+      };
+
+      el.onkeydown = (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (typeof openFoodLogModal === 'function') openFoodLogModal(item.log.id);
+        }
+      };
+
       container.appendChild(el);
     });
   });

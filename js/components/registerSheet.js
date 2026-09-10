@@ -749,22 +749,37 @@ function renderRSFavoritesView() {
     container.innerHTML = '<div class="rs-result-empty">A\u00fan no tienes favoritos ni frecuentes.<br>Reg\u00edstra alimentos para que aparezcan aqu\u00ed \u{1f331}</div>';
   }
 }
-function resolveItemLabel({ type, reference_id }) {
-  const emojis = { desayuno:'\u{1f305}', almuerzo:'\u{1f37d}\ufe0f', cena:'\u{1f319}', merienda:'\u{1f96a}', food_item:'\u{1f957}', liquid:'\u{1f4a7}' };
+function resolveItemLabel(rawItem) {
+  if (!rawItem) return null;
+  let type = rawItem.type;
+  let reference_id = rawItem.reference_id;
+  if (typeof rawItem === 'string') {
+    if (rawItem.startsWith('rec_')) {
+      type = 'meal';
+      reference_id = rawItem;
+    } else if (rawItem.startsWith('ing_')) {
+      type = 'ingredient';
+      reference_id = rawItem;
+    } else {
+      type = 'food_item';
+      reference_id = rawItem;
+    }
+  }
+  const emojis = { desayuno:'🌅', almuerzo:'🍽️', cena:'🌙', merienda:'🥪', food_item:'🥗', liquid:'💧' };
   if (type === 'meal') {
     const r = DB.getRecipeById(reference_id);
     if (!r) return null;
-    return { label: r.name, emoji: emojis[r.meal_type] || '\u{1f373}', fav: { type, reference_id } };
+    return { label: r.name, emoji: emojis[r.meal_type] || '🍳', fav: { type, reference_id } };
   }
   if (type === 'food_item') {
     const fi = DB.getFoodItemById(reference_id);
     if (!fi) return null;
-    return { label: fi.name, emoji: '\u{1f957}', fav: { type, reference_id } };
+    return { label: fi.name, emoji: '🥗', fav: { type, reference_id } };
   }
   if (type === 'ingredient') {
     const ing = DB.getIngredientById(reference_id);
     if (!ing) return null;
-    return { label: ing.name, emoji: '\u{1f955}', fav: { type, reference_id } };
+    return { label: ing.name, emoji: '🥕', fav: { type, reference_id } };
   }
   return null;
 }

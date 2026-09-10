@@ -39,12 +39,30 @@
   border-radius: 16px;
   padding: 14px 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  border-left: 3.5px solid #f59e0b;
+  border-left: 4px solid #f59e0b;
   display: flex;
   align-items: center;
   gap: 12px;
+  cursor: pointer;
+  user-select: none;
+  transition: transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   animation: cardSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
+
+.card--free-food:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.09);
+}
+
+.card--free-food:active {
+  transform: scale(0.985);
+}
+
+.card--free-food.cat-breakfast { border-left-color: #f59e0b; }
+.card--free-food.cat-lunch     { border-left-color: #10b981; }
+.card--free-food.cat-merienda  { border-left-color: #0284c7; }
+.card--free-food.cat-dinner    { border-left-color: #6366f1; }
+.card--free-food.cat-snack     { border-left-color: #8b5cf6; }
 
 @keyframes cardSlideIn {
   from { opacity: 0; transform: translateY(12px) scale(0.97); }
@@ -52,30 +70,22 @@
 }
 
 .free-food-info { flex: 1; min-width: 0; }
-.free-food-name { font-size: 0.9rem; font-weight: 700; color: #1f2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.free-food-meta { font-size: 0.73rem; color: #6b7280; margin-top: 3px; }
+.free-food-name-row { display: flex; align-items: center; gap: 6px; }
+.free-food-name { font-size: 0.92rem; font-weight: 700; color: #1f2937; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.free-food-meta { font-size: 0.74rem; color: #6b7280; margin-top: 3px; }
 
-.free-food-actions {
-  display: flex;
-  gap: 6px;
+.free-food-arrow {
+  font-size: 1.3rem;
+  color: #9ca3af;
+  flex-shrink: 0;
+  transition: transform 0.15s ease, color 0.15s ease;
+  line-height: 1;
 }
 
-.btn-free-delete {
-  width: 32px;
-  height: 32px;
-  border: none;
-  border-radius: 8px;
-  background: #fee2e2;
-  color: #dc2626;
-  cursor: pointer;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s, transform 0.12s;
+.card--free-food:hover .free-food-arrow {
+  color: #10b981;
+  transform: translateX(2px);
 }
-.btn-free-delete:hover  { background: #fecaca; }
-.btn-free-delete:active { transform: scale(0.93); }
 
 /* ??????????????????????????????????????????????
    HEADER Y TOOLBARS (RECETAS Y DESPENSA)
@@ -572,4 +582,458 @@
 .pantry-list.view-cards .pantry-btns {
   justify-content: center;
   width: 100%;
+}
+
+/* ============================================================
+   MODAL DE DETALLE Y EDICIÓN DE COMIDA (FOOD LOG MODAL)
+   ============================================================ */
+body.modal-open {
+  overflow: hidden !important;
+  overscroll-behavior: none !important;
+}
+
+#food-log-overlay {
+  z-index: 299;
+}
+
+.food-log-modal {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(105%);
+  width: 100%;
+  max-width: 430px;
+  background: #ffffff;
+  border-radius: 28px 28px 0 0;
+  z-index: 300;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 -8px 32px rgba(15, 23, 42, 0.18);
+  transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+  overflow: hidden;
+  overscroll-behavior: contain;
+}
+
+.food-log-modal.open {
+  transform: translateX(-50%) translateY(0);
+}
+
+.food-log-header {
+  background: var(--g-header, linear-gradient(145deg, #7dd5bc 0%, #9ec8e8 50%, #c4b5fd 100%));
+  padding: 12px 20px 20px;
+  position: relative;
+  color: #ffffff;
+  border-radius: 28px 28px 0 0;
+  user-select: none;
+  touch-action: none;
+}
+
+.food-log-header .modal-handle {
+  width: 38px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.60);
+  border-radius: 99px;
+  margin: 0 auto 12px;
+  touch-action: none;
+  cursor: grab;
+}
+
+.food-log-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.food-log-header-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.food-log-cat-badge {
+  background: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  border-radius: 99px;
+  padding: 3px 10px;
+  backdrop-filter: blur(6px);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+.food-log-source-badge {
+  background: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 0.68rem;
+  font-weight: 600;
+  border-radius: 99px;
+  padding: 3px 8px;
+}
+
+.food-log-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.food-log-fav-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.food-log-fav-btn:hover {
+  background: rgba(255, 255, 255, 0.38);
+  transform: scale(1.08);
+}
+
+.food-log-fav-btn.is-fav {
+  background: #ffffff;
+  border-color: #fbbf24;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.35);
+}
+
+.food-log-fav-btn.is-fav .fav-icon {
+  filter: drop-shadow(0 1px 2px rgba(245, 158, 11, 0.5));
+}
+
+.food-log-header .modal-close {
+  position: static;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition: all 0.2s ease;
+}
+
+.food-log-header .modal-close:hover {
+  background: rgba(255, 255, 255, 0.38);
+  transform: scale(1.08);
+}
+
+.food-log-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 2px;
+  line-height: 1.25;
+  letter-spacing: -0.3px;
+}
+
+.food-log-subtitle {
+  font-size: 0.74rem;
+  color: rgba(255, 255, 255, 0.88);
+  margin: 0;
+}
+
+.food-log-body {
+  padding: 16px 20px calc(var(--nav-h, 60px) + 20px);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Tarjeta Macro Donut (Estilo Recetas) */
+.food-log-macro-card {
+  background: #ffffff;
+  border: 1px solid #eef2f6;
+  border-radius: 20px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 14px rgba(100, 120, 160, 0.06);
+}
+
+.food-log-macro-card .macro-chart-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 0;
+}
+
+.food-log-macro-card .donut-wrap {
+  position: relative;
+  flex-shrink: 0;
+  width: 68px;
+  height: 68px;
+}
+
+.food-log-macro-card .donut-center-text {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.food-log-macro-card .donut-kcal {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #1e293b;
+  line-height: 1;
+}
+
+.food-log-macro-card .donut-lbl {
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-top: 1px;
+}
+
+.food-log-macro-card .macro-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  max-width: 180px;
+}
+
+.food-log-macro-card .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.food-log-macro-card .legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.food-log-macro-card .legend-dot.prot { background: #93c5fd; box-shadow: 0 1px 4px rgba(147, 197, 253, 0.6); }
+.food-log-macro-card .legend-dot.carb { background: #fcd9a0; box-shadow: 0 1px 4px rgba(252, 217, 160, 0.6); }
+.food-log-macro-card .legend-dot.fat  { background: #f9a8d4; box-shadow: 0 1px 4px rgba(249, 168, 212, 0.6); }
+
+.food-log-macro-card .legend-label {
+  font-size: 0.78rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.food-log-macro-card .legend-val {
+  margin-left: auto;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+/* Sección Selector Chips (Centrado) */
+.food-log-section {
+  margin-bottom: 16px;
+}
+
+.food-log-section.text-center .food-log-section-label {
+  text-align: center;
+}
+
+.food-log-section-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.food-log-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.food-log-chips.center {
+  justify-content: center;
+}
+
+.food-log-chip {
+  background: #f1f5f9;
+  border: 1.5px solid transparent;
+  color: #475569;
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  user-select: none;
+}
+
+.food-log-chip:hover {
+  background: #e2e8f0;
+}
+
+.food-log-chip.active {
+  background: #ecfdf5;
+  border-color: #10b981;
+  color: #047857;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.16);
+}
+
+/* Modificador Interactivo de Gramos */
+.food-log-stepper-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 6px 14px;
+  max-width: 300px;
+  margin: 0 auto;
+}
+
+.food-log-stepper-wrap .btn-stepper {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: none;
+  background: #ffffff;
+  color: #1e293b;
+  font-size: 1.3rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.food-log-stepper-wrap .btn-stepper:hover {
+  background: #10b981;
+  color: #ffffff;
+  transform: scale(1.04);
+}
+
+.food-log-stepper-wrap .btn-stepper:active {
+  transform: scale(0.94);
+}
+
+.food-log-input-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.food-log-gram-input {
+  width: 90px;
+  text-align: center;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #0f172a;
+  border: none;
+  background: transparent;
+  outline: none;
+  padding: 0;
+  font-family: inherit;
+}
+
+.food-log-unit {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Botones de Acción en Fila (Eliminar + Guardar) */
+.food-log-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.btn-food-log-del {
+  flex: 1;
+  height: 44px;
+  border: 1px solid #fecaca;
+  border-radius: 14px;
+  background: #fff1f2;
+  color: #e11d48;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.18s ease;
+}
+
+.btn-food-log-del:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  transform: translateY(-1px);
+}
+
+.btn-food-log-del:active {
+  transform: scale(0.97);
+}
+
+.btn-food-log-save {
+  flex: 1.6;
+  height: 44px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: #ffffff;
+  font-size: 0.90rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25);
+  transition: all 0.18s ease;
+}
+
+.btn-food-log-save:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.btn-food-log-save:not(:disabled):hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.35);
+}
+
+.btn-food-log-save:not(:disabled):active {
+  transform: scale(0.97);
 }

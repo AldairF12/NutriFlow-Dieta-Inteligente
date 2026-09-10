@@ -249,6 +249,20 @@ const DB = {
     persistState();
   },
 
+  updateFoodLog(logId, updates) {
+    const log = appState.foodLogs.find(l => l.id === logId);
+    if (log) {
+      Object.assign(log, updates);
+      persistState();
+      return log;
+    }
+    return null;
+  },
+
+  getFoodLogById(logId) {
+    return appState.foodLogs.find(l => l.id === logId) || null;
+  },
+
   toggleDislikedIngredient(ingredientId) {
     if (!appState.userPreferences.dislikedIngredients) {
       appState.userPreferences.dislikedIngredients = appState.userPreferences.disliked_ingredients || [];

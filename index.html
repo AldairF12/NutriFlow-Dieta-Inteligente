@@ -977,33 +977,123 @@
       </div>
     </div>
 
+    <!-- Modal Detalle y Edición de Comida Registrada -->
+    <div id="food-log-overlay" class="modal-overlay" role="presentation"></div>
+    <div id="food-log-modal" class="food-log-modal" role="dialog" aria-modal="true" aria-labelledby="food-log-title" hidden>
+      <header class="food-log-header">
+        <div class="modal-handle" aria-hidden="true"></div>
+        <div class="food-log-header-top">
+          <div class="food-log-header-badge-row">
+            <span id="food-log-category-badge" class="food-log-cat-badge">🍽️ Almuerzo</span>
+            <span id="food-log-type-badge" class="food-log-source-badge">Extra</span>
+          </div>
+          <div class="food-log-header-actions">
+            <button type="button" id="btn-food-log-fav" class="food-log-fav-btn" title="Añadir a favoritos" aria-label="Favorito">
+              <span class="fav-icon">⭐</span>
+            </button>
+            <button type="button" id="food-log-close" class="modal-close" aria-label="Cerrar modal">&#10005;</button>
+          </div>
+        </div>
+        <h2 id="food-log-title" class="food-log-title">Cargando...</h2>
+        <p id="food-log-subtitle" class="food-log-subtitle">Registrado hoy</p>
+      </header>
+
+      <div class="food-log-body rs-scroll-content">
+        <!-- Gráfico Circular y Macros Idéntico al de las Recetas -->
+        <div class="food-log-macro-card">
+          <div class="macro-chart-area">
+            <div class="donut-wrap">
+              <svg id="food-log-donut-svg" viewBox="0 0 68 68" width="68" height="68" style="overflow: visible;">
+                <circle cx="34" cy="34" r="24" fill="none" stroke="#f0f0f5" stroke-width="7"></circle>
+                <circle id="food-log-ring-prot" cx="34" cy="34" r="24" fill="none" stroke="#93c5fd" stroke-width="7" stroke-linecap="round" style="filter: drop-shadow(0 1px 3px rgba(147,197,253,0.70)); transition: stroke-dasharray 0.35s ease, stroke-dashoffset 0.35s ease;"></circle>
+                <circle id="food-log-ring-carb" cx="34" cy="34" r="24" fill="none" stroke="#fcd9a0" stroke-width="7" stroke-linecap="round" style="filter: drop-shadow(0 1px 3px rgba(252,217,160,0.70)); transition: stroke-dasharray 0.35s ease, stroke-dashoffset 0.35s ease;"></circle>
+                <circle id="food-log-ring-fat" cx="34" cy="34" r="24" fill="none" stroke="#f9a8d4" stroke-width="7" stroke-linecap="round" style="filter: drop-shadow(0 1px 3px rgba(249,168,212,0.70)); transition: stroke-dasharray 0.35s ease, stroke-dashoffset 0.35s ease;"></circle>
+              </svg>
+              <div class="donut-center-text">
+                <span id="food-log-cal-val" class="donut-kcal">0</span>
+                <span class="donut-lbl">kcal</span>
+              </div>
+            </div>
+            <div class="macro-legend">
+              <div class="legend-item">
+                <span class="legend-dot prot"></span>
+                <span class="legend-label">Proteína</span>
+                <span id="food-log-prot-val" class="legend-val">0g</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot carb"></span>
+                <span class="legend-label">Carbos</span>
+                <span id="food-log-carb-val" class="legend-val">0g</span>
+              </div>
+              <div class="legend-item">
+                <span class="legend-dot fat"></span>
+                <span class="legend-label">Grasa</span>
+                <span id="food-log-fat-val" class="legend-val">0g</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Selector de Horario / Tipo de Comida (Centrado) -->
+        <div class="food-log-section text-center">
+          <label class="food-log-section-label">Horario / Tiempo de comida:</label>
+          <div class="food-log-chips center" id="food-log-chips">
+            <button type="button" class="food-log-chip" data-val="breakfast">🌅 Desayuno</button>
+            <button type="button" class="food-log-chip" data-val="lunch">🍽️ Almuerzo</button>
+            <button type="button" class="food-log-chip" data-val="merienda">🥪 Merienda</button>
+            <button type="button" class="food-log-chip" data-val="dinner">🌙 Cena</button>
+            <button type="button" class="food-log-chip" data-val="snack">🥨 Snack</button>
+          </div>
+        </div>
+
+        <!-- Modificador Interactivo de Gramos (De 10 en 10, diseño armónico) -->
+        <div class="food-log-section text-center" id="food-log-gram-section">
+          <label class="food-log-section-label">Porción consumida:</label>
+          <div class="food-log-stepper-wrap">
+            <button type="button" id="btn-food-log-minus" class="btn-stepper btn-minus" aria-label="Disminuir gramos">&#8722;</button>
+            <div class="food-log-input-group">
+              <input type="number" id="food-log-gram-input" class="food-log-gram-input" min="1" max="3000" />
+              <span class="food-log-unit">gramos</span>
+            </div>
+            <button type="button" id="btn-food-log-plus" class="btn-stepper btn-plus" aria-label="Aumentar gramos">+</button>
+          </div>
+        </div>
+
+        <!-- Botones de Acción Distribuidos en Fila (Eliminar + Guardar) -->
+        <div class="food-log-actions-row">
+          <button type="button" id="btn-food-log-delete" class="btn-food-log-del" title="Eliminar comida">&#128465; Eliminar</button>
+          <button type="button" id="btn-food-log-save" class="btn-food-log-save" disabled>&#10003; Guardar Cambios</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- Modulos Core -->
-  <script src="js/core/logger.js?v=4.8"></script>
-  <script src="js/core/utils.js?v=4.8"></script>
-  <script src="js/data/catalog.js?v=4.8"></script>
-  <script src="js/services/db.js?v=4.8"></script>
-  <script src="js/utils/calc.js?v=4.8"></script>
-  <script src="js/services/ai.js?v=4.8"></script>
-  <script src="js/services/notificationService.js?v=4.8"></script>
+  <script src="js/core/logger.js?v=4.9"></script>
+  <script src="js/core/utils.js?v=4.9"></script>
+  <script src="js/data/catalog.js?v=4.9"></script>
+  <script src="js/services/db.js?v=4.9"></script>
+  <script src="js/utils/calc.js?v=4.9"></script>
+  <script src="js/services/ai.js?v=4.9"></script>
+  <script src="js/services/notificationService.js?v=4.9"></script>
 
   <!-- Componentes Compartidos -->
-  <script src="js/components/voice.js?v=4.8"></script>
-  <script src="js/components/registerSheet.js?v=4.8"></script>
-  <script src="js/components/aiChat.js?v=4.8"></script>
-  <script src="js/components/recipeEditor.js?v=4.8"></script>
+  <script src="js/components/voice.js?v=4.9"></script>
+  <script src="js/components/registerSheet.js?v=4.9"></script>
+  <script src="js/components/aiChat.js?v=4.9"></script>
+  <script src="js/components/recipeEditor.js?v=4.9"></script>
 
   <!-- Vistas Principales -->
-  <script src="js/views/diaryView.js?v=4.8"></script>
-  <script src="js/views/dashboardView.js?v=4.8"></script>
-  <script src="js/views/profileView.js?v=4.8"></script>
-  <script src="js/views/pantryView.js?v=4.8"></script>
-  <script src="js/views/shoppingView.js?v=4.8"></script>
-  <script src="js/views/recipesView.js?v=4.8"></script>
+  <script src="js/views/diaryView.js?v=4.9"></script>
+  <script src="js/views/dashboardView.js?v=4.9"></script>
+  <script src="js/views/profileView.js?v=4.9"></script>
+  <script src="js/views/pantryView.js?v=4.9"></script>
+  <script src="js/views/shoppingView.js?v=4.9"></script>
+  <script src="js/views/recipesView.js?v=4.9"></script>
 
   <!-- Inicializador (Debe ir al final) -->
-  <script src="js/main.js?v=4.8"></script>
+  <script src="js/main.js?v=4.9"></script>
 
   <!-- Registro de Service Worker para PWA y Notificaciones Móviles -->
 <script>
