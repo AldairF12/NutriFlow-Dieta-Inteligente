@@ -38,7 +38,7 @@
   left: 50%;
   transform: translateX(-50%) translateY(100%);
   width: min(480px, 100vw);
-  max-height: 85svh;
+  max-height: 88dvh;
   background: #fff;
   border-radius: 24px 24px 0 0;
   box-shadow: 0 -6px 40px rgba(0,0,0,0.18);
@@ -46,7 +46,12 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: transform 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition: transform 0.38s cubic-bezier(0.25, 0.46, 0.45, 0.94), height 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.register-sheet.rs-full-height {
+  height: 84vh;
+  height: 84dvh;
 }
 
 .register-sheet.open {
@@ -58,6 +63,7 @@
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
   padding: 4px 0 0;
 }
@@ -72,12 +78,15 @@
   padding: 12px 20px 0;
 }
 
-/* ── Sub-header con botón volver ── */
+/* ── Sub-header con botón volver (Fijo arriba) ── */
 .rs-sub-header {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 16px 0;
+  gap: 8px;
+  padding: 10px 16px 4px;
+  flex-shrink: 0;
+  background: #fff;
+  z-index: 5;
 }
 
 .rs-sub-header .rs-title {
@@ -110,6 +119,8 @@
   gap: 0;
   padding: 8px 12px 20px;
   overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .rs-menu-item {
@@ -135,9 +146,12 @@
 .rs-menu-desc  { font-size: 0.75rem; color: var(--gray-400); }
 .rs-menu-arrow { font-size: 1.2rem; color: var(--gray-300); }
 
-/* ── Buscador ── */
+/* ── Buscador (Fijo arriba) ── */
 .rs-search-wrap {
-  padding: 10px 16px 4px;
+  padding: 6px 16px 8px;
+  flex-shrink: 0;
+  background: #fff;
+  z-index: 5;
 }
 
 .rs-search-input {
@@ -155,11 +169,49 @@
 }
 .rs-search-input:focus { border-color: var(--mint-400); background-color: #fff; }
 
+/* ── Encabezados de sección en resultados ── */
+.rs-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 4px 4px;
+  margin-top: 4px;
+}
+
+.rs-section-title {
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gray-400);
+}
+
+.rs-section-count {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--gray-400);
+  background: var(--gray-100);
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+
+.rs-cat-tag {
+  background: var(--gray-100);
+  color: var(--gray-600);
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 6px;
+}
+
 /* ── Área de scroll con resultados ── */
 .rs-scroll-content {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: 8px 12px 20px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  padding: 6px 12px 24px;
   display: flex;
   flex-direction: column;
   gap: 6px;

@@ -28,6 +28,12 @@ function closeRegisterSheet() {
   if (window.ModalHistory) window.ModalHistory.close('register-sheet');
 }
 function switchRSView(viewName) {
+  const sheet = document.getElementById('register-sheet');
+  if (sheet) {
+    sheet.dataset.currentView = viewName;
+    sheet.classList.toggle('rs-full-height', viewName === 'search' || viewName === 'favorites');
+  }
+
   document.querySelectorAll('.rs-view').forEach(v => {
     if (v.id === `rs-view-${viewName}`) {
       v.hidden = false;
@@ -185,6 +191,109 @@ function updateRegisterFabVisibility() {
   const diaryActive = document.getElementById('screen-diary')?.classList.contains('active');
   fab.style.display = diaryActive ? 'flex' : 'none';
 }
+function renderInitialFoodList() {
+  const results = document.getElementById('rs-search-results');
+  if (!results) return;
+  results.innerHTML = '';
+
+  // 1. Obtener alimentos frecuentes / recientes
+  const frequentIds = (DB.getFrequentItems && DB.getFrequentItems()) || [];
+  const logs = (DB.foodLogs || (DB.state && DB.state.foodLogs) || []).slice(-30);
+  
+  // Extraer nombres/IDs de logs recientes
+  const recentNames = new Set();
+  logs.forEach(l => {
+    if (l.name) recentNames.add(normalizeSearchText(l.name));
+  });
+
+  const allFoodItems = [...(DB.foodItems || [])];
+  const allIngredients = (DB.ingredients || []).map(ing => ({
+    id: ing.id,
+    name: ing.name,
+    calories_per_100g: ing.calories_per_100g || 0,
+    protein_per_100g:  ing.protein_per_100g  || 0,
+    carbs_per_100g:    ing.carbs_per_100g    || 0,
+    fat_per_100g:      ing.fat_per_100g      || 0,
+    category:          ing.category          || 'Otro',
+    typical_serving_g: 100,
+    _fromIngredient: true,
+    _type: 'ingredient'
+  }));
+
+  // Combinar y deduplicar por nombre normalizado
+  const uniqueItemsMap = new Map();
+  allFoodItems.forEach(fi => {
+    const norm = normalizeSearchText(fi.name);
+    if (!uniqueItemsMap.has(norm)) {
+      uniqueItemsMap.set(norm, { ...fi, _type: 'food_item' });
+    }
+  });
+  allIngredients.forEach(ing => {
+    const norm = normalizeSearchText(ing.name);
+    if (!uniqueItemsMap.has(norm)) {
+      uniqueItemsMap.set(norm, ing);
+    }
+  });
+
+  const allItems = Array.from(uniqueItemsMap.values());
+
+  // Frecuentes / Recientes (máx 5)
+  const frequentItems = [];
+  const seenFrequent = new Set();
+
+  allItems.forEach(item => {
+    const norm = normalizeSearchText(item.name);
+    if (frequentIds.includes(item.id) || recentNames.has(norm)) {
+      if (!seenFrequent.has(norm) && frequentItems.length < 5) {
+        seenFrequent.add(norm);
+        frequentItems.push(item);
+      }
+    }
+  });
+
+  // Si aún no hay suficientes frecuentes en historial, poner los alimentos base populares
+  if (frequentItems.length < 3) {
+    const popularKeys = ['huevo', 'pechuga de pollo', 'platano', 'arroz blanco', 'pan integral', 'queso fresco', 'avena'];
+    allItems.forEach(item => {
+      const norm = normalizeSearchText(item.name);
+      if (popularKeys.some(pk => norm.includes(pk)) && !seenFrequent.has(norm) && frequentItems.length < 5) {
+        seenFrequent.add(norm);
+        frequentItems.push(item);
+      }
+    });
+  }
+
+  // Renderizar Frecuentes si existen
+  if (frequentItems.length > 0) {
+    const freqHeader = document.createElement('div');
+    freqHeader.className = 'rs-section-header';
+    freqHeader.innerHTML = `
+      <span class="rs-section-title">⚡ Frecuentes y Recientes</span>
+      <span class="rs-section-count">${frequentItems.length}</span>
+    `;
+    results.appendChild(freqHeader);
+
+    frequentItems.forEach(item => {
+      results.appendChild(buildFoodResultItem(item, item._type || 'food_item'));
+    });
+  }
+
+  // Ordenar todo el catálogo de la A a la Z
+  allItems.sort((a, b) => a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
+
+  const catHeader = document.createElement('div');
+  catHeader.className = 'rs-section-header';
+  catHeader.innerHTML = `
+    <span class="rs-section-title">📋 Catálogo de Alimentos (A–Z)</span>
+    <span class="rs-section-count">${allItems.length}</span>
+  `;
+  results.appendChild(catHeader);
+
+  allItems.forEach(item => {
+    results.appendChild(buildFoodResultItem(item, item._type || 'food_item'));
+  });
+}
+
 function resetRSSearchView() {
   const searchView = document.getElementById('rs-view-search');
   const confirmEl = document.getElementById('rs-gram-confirm');
@@ -196,12 +305,10 @@ function resetRSSearchView() {
     searchView.appendChild(compoundEl);
   }
   const input   = document.getElementById('rs-search-input');
-  const results = document.getElementById('rs-search-results');
   const confirm = document.getElementById('rs-gram-confirm');
   const gramInp = document.getElementById('rs-gram-input');
   if (input)   input.value = '';
   if (gramInp) gramInp.value = '';
-  if (results) results.innerHTML = '<div class="rs-result-empty">Escribe para buscar un alimento 🔍</div>';
   if (confirm) {
     confirm.hidden = true;
     document.getElementById('rs-gram-item-name').textContent = '';
@@ -212,7 +319,10 @@ function resetRSSearchView() {
   }
   _selectedFoodItem = null;
   _selectedCompoundMeal = null;
+
+  renderInitialFoodList();
 }
+
 async function handleFoodSearch() {
   const query   = document.getElementById('rs-search-input')?.value.trim();
   const results = document.getElementById('rs-search-results');
@@ -225,7 +335,7 @@ async function handleFoodSearch() {
   _selectedCompoundMeal = null;
 
   if (!query || query.length < 2) {
-    results.innerHTML = '<div class="rs-result-empty">Escribe para buscar un alimento 🔍</div>';
+    renderInitialFoodList();
     return;
   }
 
@@ -244,6 +354,16 @@ async function handleFoodSearch() {
 
   results.innerHTML = '';
 
+  if (localMatches.length > 0 || ingMatches.length > 0) {
+    const resHeader = document.createElement('div');
+    resHeader.className = 'rs-section-header';
+    resHeader.innerHTML = `
+      <span class="rs-section-title">🔍 Resultados encontrados</span>
+      <span class="rs-section-count">${localMatches.length + ingMatches.length}</span>
+    `;
+    results.appendChild(resHeader);
+  }
+
   if (localMatches.length > 0) {
     localMatches.forEach(item => {
       results.appendChild(buildFoodResultItem(item, 'food_item'));
@@ -260,6 +380,7 @@ async function handleFoodSearch() {
         protein_per_100g:  ing.protein_per_100g  || 0,
         carbs_per_100g:    ing.carbs_per_100g    || 0,
         fat_per_100g:      ing.fat_per_100g      || 0,
+        category:          ing.category          || 'Otro',
         typical_serving_g: 100,
         _fromIngredient: true
       };
@@ -310,6 +431,7 @@ async function handleFoodSearch() {
             protein_per_100g: parseFloat((single.protein * factor100).toFixed(1)),
             carbs_per_100g: parseFloat((single.carbs * factor100).toFixed(1)),
             fat_per_100g: parseFloat((single.fat * factor100).toFixed(1)),
+            category: 'Plato',
             typical_serving_g: single.quantity_g || 100,
             _isTemp: true,
             source: 'gemini'
@@ -338,14 +460,20 @@ async function handleFoodSearch() {
     }
   });
 }
+
 function buildFoodResultItem(item, _type) {
   const el = document.createElement('div');
   el.className = 'rs-result-item';
   const kcalPer100 = Math.round(item.calories_per_100g || 0);
+  const emoji = typeof getCategoryEmoji === 'function' && item.category ? getCategoryEmoji(item.category) : '🥗';
+  const catHtml = item.category ? `<span class="rs-cat-tag">${item.category}</span> · ` : '';
   el.innerHTML = `
-    <div>
-      <div class="rs-result-name">${item.name}</div>
-      <div class="rs-result-meta">${kcalPer100} kcal / 100g</div>
+    <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+      <span style="font-size: 1.25rem; flex-shrink: 0;">${emoji}</span>
+      <div style="min-width: 0;">
+        <div class="rs-result-name" style="white-space: normal; word-break: break-word;">${item.name}</div>
+        <div class="rs-result-meta">${catHtml}${kcalPer100} kcal / 100g</div>
+      </div>
     </div>
     <div class="rs-result-kcal">${kcalPer100} kcal</div>
   `;
