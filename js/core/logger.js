@@ -6,7 +6,7 @@
 
 window.Logger = {
   logs: [],
-  maxLogs: 150,
+  maxLogs: 50,
 
   init() {
     this.loadFromStorage();
@@ -25,10 +25,23 @@ window.Logger = {
     try {
       const stored = localStorage.getItem('nutriflow_logs');
       if (stored) {
-        this.logs = JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        // Depuración automática: descartar logs más antiguos a 48 horas
+        const twoDaysAgo = Date.now() - (48 * 60 * 60 * 1000);
+        this.logs = (Array.isArray(parsed) ? parsed : []).filter(log => {
+          const match = String(log).match(/^\[(.*?)\]/);
+          if (!match) return false;
+          const time = new Date(match[1]).getTime();
+          return !isNaN(time) && time > twoDaysAgo;
+        });
+        // Si superaba maxLogs, conservar solo los más recientes
+        if (this.logs.length > this.maxLogs) {
+          this.logs = this.logs.slice(-this.maxLogs);
+        }
+        this.saveToStorage();
       }
     } catch (e) {
-      // Ignorar
+      this.logs = [];
     }
   },
 
@@ -43,22 +56,27 @@ window.Logger = {
   _addLog(level, args) {
     const timestamp = new Date().toISOString();
     
-    // Convertir argumentos a strings de forma segura
+    // Convertir argumentos a strings de forma segura, truncando para evitar saturar memoria
     const msg = args.map(arg => {
       if (arg instanceof Error) {
         return `${arg.name}: ${arg.message}\n${arg.stack}`;
       }
-      if (typeof arg === 'object') {
-        try { return JSON.stringify(arg); } 
-        catch (e) { return String(arg); }
+      if (typeof arg === 'object' && arg !== null) {
+        try {
+          const str = JSON.stringify(arg);
+          return str.length > 200 ? str.slice(0, 197) + '...' : str;
+        } catch (e) {
+          return String(arg);
+        }
       }
-      return String(arg);
+      const str = String(arg);
+      return str.length > 200 ? str.slice(0, 197) + '...' : str;
     }).join(' ');
 
     this.logs.push(`[${timestamp}] [${level.toUpperCase()}] ${msg}`);
 
     if (this.logs.length > this.maxLogs) {
-      this.logs.shift(); // Eliminar el m\u00e1s antiguo
+      this.logs.shift(); // Eliminar el más antiguo
     }
 
     this.saveToStorage();
@@ -87,18 +105,33 @@ window.Logger = {
 
   exportLogs() {
     if (this.logs.length === 0) {
-      alert("No hay logs registrados a\u00fan.");
+      alert("No hay registros de diagnóstico aún.");
       return;
     }
     const blob = new Blob([this.logs.join('\n')], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `NutriFlow_Logs_${new Date().toISOString().slice(0,10)}.txt`;
+    a.download = `NutriFlow_Diagnostico_${new Date().toISOString().slice(0,10)}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  },
+
+  clearLogs() {
+    this.logs = [];
+    try {
+      localStorage.removeItem('nutriflow_logs');
+    } catch (e) {}
+    if (typeof showToast === 'function') {
+      showToast('🧹 Diagnóstico técnico vaciado');
+    } else {
+      alert('Diagnóstico técnico vaciado.');
+    }
+    if (typeof renderStorageManager === 'function') {
+      renderStorageManager();
+    }
   }
 };
 

@@ -4,6 +4,14 @@
 
 const STORAGE_KEY = 'nutriflow_state';
 
+const DEFAULT_LIQUIDS = [
+  { id: 'liq_001', name: 'Agua', type: 'water', icon: '💧', calories_per_100ml: 0, protein_per_100ml: 0, carbs_per_100ml: 0, fat_per_100ml: 0, goal_ml: 2000 },
+  { id: 'liq_002', name: 'Leche', type: 'milk', icon: '🥛', calories_per_100ml: 45, protein_per_100ml: 3.2, carbs_per_100ml: 4.8, fat_per_100ml: 1.5 },
+  { id: 'liq_003', name: 'Café solo', type: 'infusion', icon: '☕', calories_per_100ml: 2, protein_per_100ml: 0.2, carbs_per_100ml: 0, fat_per_100ml: 0 },
+  { id: 'liq_004', name: 'Gaseosa 0', type: 'other', icon: '🥤', calories_per_100ml: 0, protein_per_100ml: 0, carbs_per_100ml: 0, fat_per_100ml: 0 },
+  { id: 'liq_005', name: 'Jugo natural', type: 'juice', icon: '🧃', calories_per_100ml: 45, protein_per_100ml: 0.7, carbs_per_100ml: 10.4, fat_per_100ml: 0.2 },
+];
+
 const initialState = {
   userPreferences: {
     dislikedIngredients: [],
@@ -77,9 +85,7 @@ const initialState = {
 
   foodLogs: [],
 
-  liquids: [
-    { id: 'liq_001', name: 'Agua', type: 'Agua', icon: '💧', goal_ml: 2000, current_ml: 0 },
-  ],
+  liquids: DEFAULT_LIQUIDS,
 };
 
 let appState = JSON.parse(JSON.stringify(initialState));
@@ -106,25 +112,53 @@ function loadState() {
       parsed.userPreferences.geminiApiKey = loadedKey;
       delete parsed.userPreferences.gemini_api_key;
       
-      if (!parsed.liquids || !parsed.liquids.length) parsed.liquids = initialState.liquids;
-      parsed.liquids.forEach(l => {
-        if (!l.type) l.type = l.name || 'Agua';
-      });
+      if (!parsed.liquids || !parsed.liquids.length) {
+        parsed.liquids = JSON.parse(JSON.stringify(DEFAULT_LIQUIDS));
+      } else {
+        // Enriquecer líquidos existentes con valores nutricionales y fusionar sugerencias base
+        if (parsed.liquids.length === 1 && parsed.liquids[0].id === 'liq_001') {
+          DEFAULT_LIQUIDS.slice(1).forEach(def => {
+            if (!parsed.liquids.some(l => l.id === def.id || l.name.toLowerCase() === def.name.toLowerCase())) {
+              parsed.liquids.push(JSON.parse(JSON.stringify(def)));
+            }
+          });
+        }
+        parsed.liquids.forEach(l => {
+          if (!l.type) l.type = l.name || 'water';
+          if (l.calories_per_100ml == null) l.calories_per_100ml = 0;
+          if (l.protein_per_100ml == null) l.protein_per_100ml = 0;
+          if (l.carbs_per_100ml == null) l.carbs_per_100ml = 0;
+          if (l.fat_per_100ml == null) l.fat_per_100ml = 0;
+        });
+      }
 
       if (!Array.isArray(parsed.customRecipes)) parsed.customRecipes = [];
       if (!Array.isArray(parsed.customRecipeIngredients)) parsed.customRecipeIngredients = [];
       if (!Array.isArray(parsed.customIngredients)) parsed.customIngredients = [];
 
       // Cleanup static data from old localStorage state if it exists
-      delete parsed.ingredients;
-      delete parsed.recipes;
-      delete parsed.recipe_ingredients;
+      let cleanedLegacy = false;
+      if (parsed.ingredients || parsed.recipes || parsed.recipe_ingredients) {
+        delete parsed.ingredients;
+        delete parsed.recipes;
+        delete parsed.recipe_ingredients;
+        cleanedLegacy = true;
+      }
       
       // Preserve custom food items (IDs like fi_1724...) but drop static ones (IDs like fi_001)
       if (parsed.foodItems) {
+        const origLen = parsed.foodItems.length;
         parsed.foodItems = parsed.foodItems.filter(fi => fi.id && fi.id.length > 10);
+        if (parsed.foodItems.length !== origLen) cleanedLegacy = true;
       }
       appState = parsed;
+
+      // Si se limpiaron datos heredados que ocupaban memoria innecesaria, guardar de inmediato
+      if (cleanedLegacy) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+        } catch (e) {}
+      }
     }
   } catch (e) {
     console.error('Error loading state from localStorage:', e);
@@ -191,6 +225,11 @@ const DB = {
     const custom = (appState.customRecipes || []).find(r => r.id === id);
     if (custom) return custom;
     return CATALOG_RECIPES_MAP.get(id) || null;
+  },
+
+  getLiquidById(id) {
+    if (!id) return null;
+    return (appState.liquids || []).find(l => l.id === id) || null;
   },
 
   getRecipeIngredients(recipeId) {

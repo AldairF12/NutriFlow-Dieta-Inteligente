@@ -201,7 +201,25 @@
                     </select>
                   </div>
                 </div>
-                <button id="btn-add-liquid" type="submit" class="btn-add-liquid" aria-label="Anadir liquido">
+                <div class="liquid-form-row liquid-macros-row" style="margin-top: 8px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;">
+                  <div class="liquid-form-field">
+                    <label for="liq-cal" class="liquid-form-label" title="Calorias por 100ml">Kcal/100ml</label>
+                    <input id="liq-cal" type="number" step="1" min="0" max="900" class="liquid-input" placeholder="0" aria-label="Calorias cada 100ml" />
+                  </div>
+                  <div class="liquid-form-field">
+                    <label for="liq-prot" class="liquid-form-label" title="Proteina por 100ml">Prot. (g)</label>
+                    <input id="liq-prot" type="number" step="0.1" min="0" max="100" class="liquid-input" placeholder="0" aria-label="Proteina cada 100ml" />
+                  </div>
+                  <div class="liquid-form-field">
+                    <label for="liq-carb" class="liquid-form-label" title="Carbohidratos por 100ml">Carb. (g)</label>
+                    <input id="liq-carb" type="number" step="0.1" min="0" max="100" class="liquid-input" placeholder="0" aria-label="Carbohidratos cada 100ml" />
+                  </div>
+                  <div class="liquid-form-field">
+                    <label for="liq-fat" class="liquid-form-label" title="Grasa por 100ml">Grasa (g)</label>
+                    <input id="liq-fat" type="number" step="0.1" min="0" max="100" class="liquid-input" placeholder="0" aria-label="Grasa cada 100ml" />
+                  </div>
+                </div>
+                <button id="btn-add-liquid" type="submit" class="btn-add-liquid" aria-label="Anadir liquido" style="margin-top: 10px;">
                   + Anadir liquido
                 </button>
               </form>
@@ -366,20 +384,97 @@
           </div>
         </details>
 
-        <!-- Debugging / Avanzado -->
+        <!-- Almacenamiento y Avanzado -->
         <details class="settings-card" id="scard-debug">
           <summary class="settings-card-header">
-            <div class="settings-card-title">
-              <span class="settings-card-icon">🛠️</span>
-              Avanzado
+            <span class="settings-card-icon">&#128190;</span>
+            <div class="settings-card-header-text">
+              <div class="settings-card-title">Almacenamiento y Respaldo</div>
+              <div class="settings-card-desc">Monitorea el espacio local offline y crea copias de seguridad</div>
             </div>
-            <span class="settings-card-chevron">▼</span>
+            <span class="settings-card-chevron" aria-hidden="true">&#8250;</span>
           </summary>
-          <div class="settings-card-content">
-            <div class="form-group">
-              <label>Depuración de Errores</label>
-              <p style="font-size: 0.8rem; color: var(--gray-500); margin-bottom: 8px;">Descarga un registro interno de errores para enviarlo a soporte si la IA falla.</p>
-              <button type="button" class="btn btn-outline" style="width: 100%;" onclick="if(window.Logger) window.Logger.exportLogs()">Descargar Logs (.txt)</button>
+          <div class="settings-card-body">
+            <div class="settings-card-body-inner">
+              
+              <!-- Tarjeta de Salud de Almacenamiento -->
+              <div class="storage-health-card">
+                <div class="storage-health-top-row">
+                  <div class="storage-health-title-group">
+                    <span class="storage-icon">&#9889;</span>
+                    <h4 class="storage-health-title">Memoria Local</h4>
+                  </div>
+                  <span class="storage-status-badge optimal" id="storage-status-badge">Óptimo ✨</span>
+                </div>
+
+                <div class="storage-health-sub-wrap">
+                  <p class="storage-health-sub" id="storage-summary-text">Calculando uso de memoria...</p>
+                </div>
+
+                <!-- Barra de Progreso de Memoria -->
+                <div class="storage-progress-bar-wrap">
+                  <div class="storage-progress-bar-fill" id="storage-bar-fill" style="width: 1%;"></div>
+                </div>
+
+                <!-- Desglose por módulos -->
+                <div class="storage-breakdown-list" id="storage-breakdown-list">
+                  <div class="storage-breakdown-row">
+                    <span>Comidas registradas y diario:</span>
+                    <span id="storage-kb-diary" class="storage-kb-val">-- KB</span>
+                  </div>
+                  <div class="storage-breakdown-row">
+                    <span>Despensa y recetas guardadas:</span>
+                    <span id="storage-kb-pantry" class="storage-kb-val">-- KB</span>
+                  </div>
+                  <div class="storage-breakdown-row">
+                    <span>Preferencias y metas de agua:</span>
+                    <span id="storage-kb-prefs" class="storage-kb-val">-- KB</span>
+                  </div>
+                  <div class="storage-breakdown-row">
+                    <span>Conversaciones y resúmenes IA:</span>
+                    <span id="storage-kb-ai" class="storage-kb-val">-- KB</span>
+                  </div>
+                  <div class="storage-breakdown-row">
+                    <span>Diagnóstico técnico del sistema:</span>
+                    <span id="storage-kb-logs" class="storage-kb-val">-- KB</span>
+                  </div>
+                  <div class="storage-breakdown-row" id="storage-row-legacy" style="display: none;">
+                    <span style="display: inline-flex; align-items: center; gap: 6px;">
+                      <span>Versión anterior (nutriflow_v2):</span>
+                      <button type="button" id="btn-purge-legacy" class="btn-clean-legacy" title="Eliminar datos antiguos de versión anterior">Limpiar 🗑️</button>
+                    </span>
+                    <span id="storage-kb-legacy" class="storage-kb-val">-- KB</span>
+                  </div>
+                  <div class="storage-breakdown-row" id="storage-row-other" style="display: none;">
+                    <span>Otros proyectos / navegador:</span>
+                    <span id="storage-kb-other" class="storage-kb-val">-- KB</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Botón Exportar Respaldo -->
+              <div class="storage-actions-wrap">
+                <button type="button" id="btn-export-backup" class="btn-storage-action primary">
+                  <span>📥 Exportar copia de seguridad (.json)</span>
+                </button>
+              </div>
+
+              <!-- Sección Diagnóstico y Soporte Técnico -->
+              <div class="storage-debug-box">
+                <div class="storage-debug-info">
+                  <span class="storage-debug-label">Diagnóstico y Soporte Técnico</span>
+                  <p class="storage-debug-desc">Descarga un informe técnico del sistema si necesitas asistencia, o vacíalo para liberar espacio.</p>
+                </div>
+                <div class="storage-debug-actions">
+                  <button type="button" class="btn-storage-action secondary" onclick="if(window.Logger) window.Logger.exportLogs()">
+                    <span>📄 Descargar (.txt)</span>
+                  </button>
+                  <button type="button" class="btn-storage-action secondary danger-hover" onclick="if(window.Logger) window.Logger.clearLogs()" title="Vaciar registros técnicos">
+                    <span>🗑️ Vaciar</span>
+                  </button>
+                </div>
+              </div>
+
             </div>
           </div>
         </details>
@@ -1070,30 +1165,30 @@
   </div>
 
   <!-- Modulos Core -->
-  <script src="js/core/logger.js?v=4.9"></script>
-  <script src="js/core/utils.js?v=4.9"></script>
-  <script src="js/data/catalog.js?v=4.9"></script>
-  <script src="js/services/db.js?v=4.9"></script>
-  <script src="js/utils/calc.js?v=4.9"></script>
-  <script src="js/services/ai.js?v=4.9"></script>
-  <script src="js/services/notificationService.js?v=4.9"></script>
+  <script src="js/core/logger.js?v=6.0"></script>
+  <script src="js/core/utils.js?v=6.0"></script>
+  <script src="js/data/catalog.js?v=6.0"></script>
+  <script src="js/services/db.js?v=6.0"></script>
+  <script src="js/utils/calc.js?v=6.0"></script>
+  <script src="js/services/ai.js?v=6.0"></script>
+  <script src="js/services/notificationService.js?v=6.0"></script>
 
   <!-- Componentes Compartidos -->
-  <script src="js/components/voice.js?v=4.9"></script>
-  <script src="js/components/registerSheet.js?v=4.9"></script>
-  <script src="js/components/aiChat.js?v=4.9"></script>
-  <script src="js/components/recipeEditor.js?v=4.9"></script>
+  <script src="js/components/voice.js?v=6.0"></script>
+  <script src="js/components/registerSheet.js?v=6.0"></script>
+  <script src="js/components/aiChat.js?v=6.0"></script>
+  <script src="js/components/recipeEditor.js?v=6.0"></script>
 
   <!-- Vistas Principales -->
-  <script src="js/views/diaryView.js?v=4.9"></script>
-  <script src="js/views/dashboardView.js?v=4.9"></script>
-  <script src="js/views/profileView.js?v=4.9"></script>
-  <script src="js/views/pantryView.js?v=4.9"></script>
-  <script src="js/views/shoppingView.js?v=4.9"></script>
-  <script src="js/views/recipesView.js?v=4.9"></script>
+  <script src="js/views/diaryView.js?v=6.0"></script>
+  <script src="js/views/dashboardView.js?v=6.0"></script>
+  <script src="js/views/profileView.js?v=6.0"></script>
+  <script src="js/views/pantryView.js?v=6.0"></script>
+  <script src="js/views/shoppingView.js?v=6.0"></script>
+  <script src="js/views/recipesView.js?v=6.0"></script>
 
   <!-- Inicializador (Debe ir al final) -->
-  <script src="js/main.js?v=4.9"></script>
+  <script src="js/main.js?v=6.0"></script>
 
   <!-- Registro de Service Worker para PWA y Notificaciones Móviles -->
 <script>

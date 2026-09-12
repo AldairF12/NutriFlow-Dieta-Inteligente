@@ -397,7 +397,7 @@ function enhanceHydrationView() {
             <span class="btn-water-lbl">Vaso</span>
           </button>
           <button class="btn-water-quick" data-ml="500" aria-label="Agregar botella de 500ml">
-            <span class="btn-water-icon">\u{1F376}</span>
+            <span class="btn-water-icon">🍶</span>
             <span class="btn-water-amount">+500 ml</span>
             <span class="btn-water-lbl">Botella</span>
           </button>
@@ -430,7 +430,7 @@ function enhanceHydrationView() {
   });
 }
 
-// Delegaci\u00f3n de eventos global para clicks de hidrataci\u00f3n
+// // Delegación de eventos global para clicks de hidratación
 document.addEventListener('click', (e) => {
   const quickBtn = e.target.closest('.btn-water-quick');
   if (quickBtn) {
@@ -440,12 +440,24 @@ document.addEventListener('click', (e) => {
     const db = getNutriDB();
     if (db) {
       const liquidsList = db.liquids || (db.state && db.state.liquids) || [];
-      const waterLiq = liquidsList.find(l => l.type === 'water') || liquidsList[0] || { id: 'liq_003' };
-      db.addFoodLog({ type: 'liquid', reference_id: waterLiq.id, quantity_g: amount });
-      if (typeof showToast === 'function') showToast(`\u{1f4a7} +${amount} ml de agua registrados`);
-      enhanceHydrationView();
+      const activeId = window._diaryActiveLiquidId || 'liq_001';
+      const activeLiq = liquidsList.find(l => l.id === activeId) || liquidsList.find(l => l.type === 'water') || liquidsList[0] || { id: 'liq_001', name: 'Agua', icon: '💧' };
+      const mealSlot = (typeof getCurrentMealSlot === 'function') ? getCurrentMealSlot() : 'snack';
+      db.addFoodLog({ type: 'liquid', reference_id: activeLiq.id, quantity_g: amount, mealCategory: mealSlot });
+
+      const c100 = activeLiq.calories_per_100ml || activeLiq.calories_per_100g || 0;
+      const addedCal = Math.round(c100 * amount / 100);
+      if (addedCal > 0) {
+        if (typeof showToast === 'function') showToast(`${activeLiq.icon || '💧'} +${amount} ml de ${activeLiq.name} (+${addedCal} kcal)`);
+      } else {
+        if (typeof showToast === 'function') showToast(`${activeLiq.icon || '💧'} +${amount} ml de ${activeLiq.name} registrados`);
+      }
+
+      if (typeof renderDiaryScreen === 'function') renderDiaryScreen();
+      else enhanceHydrationView();
       updateHeaderGamification();
       if (typeof renderDailyMacros === 'function') renderDailyMacros();
+      if (typeof renderDashboardScreen === 'function') renderDashboardScreen();
     }
     return;
   }
@@ -460,12 +472,14 @@ document.addEventListener('click', (e) => {
       if (todayLogs.length > 0) {
         const lastLog = todayLogs[todayLogs.length - 1];
         db.removeFoodLog(lastLog.id);
-        if (typeof showToast === 'function') showToast('\u21ba \u00daltimo registro de agua eliminado');
-        enhanceHydrationView();
+        if (typeof showToast === 'function') showToast('↺ Último registro de hidratación eliminado');
+        if (typeof renderDiaryScreen === 'function') renderDiaryScreen();
+        else enhanceHydrationView();
         updateHeaderGamification();
         if (typeof renderDailyMacros === 'function') renderDailyMacros();
+        if (typeof renderDashboardScreen === 'function') renderDashboardScreen();
       } else {
-        if (typeof showToast === 'function') showToast('No hay registros de agua hoy');
+        if (typeof showToast === 'function') showToast('No hay registros de hidratación hoy');
       }
     }
   }

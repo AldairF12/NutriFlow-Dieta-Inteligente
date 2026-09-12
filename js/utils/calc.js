@@ -263,6 +263,23 @@ function getDailyMacroSummary(dateStr) {
         carbs    += parseFloat(((fi.carbs_per_100g    || 0) * factor).toFixed(1));
         fat      += parseFloat(((fi.fat_per_100g      || 0) * factor).toFixed(1));
       }
+    } else if (log.type === 'liquid') {
+      const liq = (window.DB && typeof window.DB.getLiquidById === 'function')
+        ? window.DB.getLiquidById(log.reference_id)
+        : ((window.DB && window.DB.liquids) || []).find(l => l.id === log.reference_id);
+      if (liq) {
+        const cal100  = liq.calories_per_100ml || liq.calories_per_100g || 0;
+        const prot100 = liq.protein_per_100ml  || liq.protein_per_100g  || 0;
+        const carb100 = liq.carbs_per_100ml    || liq.carbs_per_100g    || 0;
+        const fat100  = liq.fat_per_100ml      || liq.fat_per_100g      || 0;
+        if (cal100 > 0 || prot100 > 0 || carb100 > 0 || fat100 > 0) {
+          const factor = (log.quantity_g || 250) / 100;
+          calories += Math.round(cal100 * factor);
+          protein  += parseFloat(((prot100 * factor) || 0).toFixed(1));
+          carbs    += parseFloat(((carb100 * factor) || 0).toFixed(1));
+          fat      += parseFloat(((fat100 * factor) || 0).toFixed(1));
+        }
+      }
     }
   }
 
@@ -293,7 +310,15 @@ function getPlanVsExtraSummary(dateStr) {
       const fi = window.DB.getFoodItemById(log.reference_id);
       if (fi) cal = Math.round((fi.calories_per_100g || 0) * (log.quantity_g || 100) / 100);
     } else if (log.type === 'liquid') {
-      continue;
+      const liq = (window.DB && typeof window.DB.getLiquidById === 'function')
+        ? window.DB.getLiquidById(log.reference_id)
+        : ((window.DB && window.DB.liquids) || []).find(l => l.id === log.reference_id);
+      const cal100 = liq ? (liq.calories_per_100ml || liq.calories_per_100g || 0) : 0;
+      if (cal100 > 0) {
+        cal = Math.round(cal100 * (log.quantity_g || 250) / 100);
+      } else {
+        continue;
+      }
     }
 
     const isPlanned = (log.type === 'meal' && log.planned !== false) || log.planned === true;

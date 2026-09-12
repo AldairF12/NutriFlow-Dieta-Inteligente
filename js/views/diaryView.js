@@ -120,59 +120,163 @@ function renderDiaryScreen(options = {}) {
   if (typeof cleanupAnimationClasses === 'function') cleanupAnimationClasses();
 }
 
+let _diaryActiveLiquidId = 'liq_001';
+window._diaryActiveLiquidId = _diaryActiveLiquidId;
+
 function buildHydrationSection() {
   const section = document.createElement('section');
   section.className = 'content-section';
 
   const title = document.createElement('h2');
   title.className = 'section-title';
-  title.textContent = '\u{1F4A7} Hidrataci\u00F3n';
+  title.textContent = '💧 Hidratación';
   section.appendChild(title);
 
   const sub = document.createElement('p');
   sub.className = 'section-subtitle';
-  sub.textContent = 'Mant\u00E9n tu hidrataci\u00F3n diaria';
+  sub.textContent = 'Mantén tu hidratación diaria';
   section.appendChild(sub);
 
-  const row = document.createElement('div');
-  row.className = 'cards-row';
   const liquidsList = window.DB.liquids || (window.DB.state && window.DB.state.liquids) || [];
-  liquidsList.forEach(liq => row.appendChild(buildLiquidCard(liq)));
-  section.appendChild(row);
-  return section;
-}
+  if (!liquidsList.some(l => l.id === _diaryActiveLiquidId)) {
+    _diaryActiveLiquidId = liquidsList[0]?.id || 'liq_001';
+  }
+  window._diaryActiveLiquidId = _diaryActiveLiquidId;
+  const activeLiq = liquidsList.find(l => l.id === _diaryActiveLiquidId) || liquidsList[0] || { id: 'liq_001', name: 'Agua', icon: '💧', calories_per_100ml: 0 };
 
-function buildLiquidCard(liquid) {
-  const card = document.createElement('div');
   const todayLogs = (window.DB && typeof window.DB.getTodayLogs === 'function')
-    ? window.DB.getTodayLogs().filter(l => l.type === 'liquid' && l.reference_id === liquid.id)
+    ? window.DB.getTodayLogs().filter(l => l.type === 'liquid')
     : [];
-  const logCount = todayLogs.length;
-  const isRegistered = logCount > 0;
+  const totalMl = todayLogs.reduce((sum, l) => sum + (l.quantity_g || 250), 0);
+  const goalMl = 2000;
+  const pct = Math.min(100, Math.round((totalMl / goalMl) * 100));
 
-  card.className = `card card-liquid ${isRegistered ? 'registered' : ''}`;
-  if (typeof _isTabSwitching !== 'undefined' && _isTabSwitching) card.classList.add('item-entering');
+  const card = document.createElement('div');
+  card.className = 'hydration-card-animated';
   card.innerHTML = `
-    <div class="liquid-icon">${liquid.icon || '\u{1F4A7}'}</div>
-    <div class="liquid-name">${liquid.name}</div>
-    <div class="liquid-type">${liquid.type || 'Agua'}</div>
-    <button class="btn-log ${isRegistered ? 'registered' : ''}" data-id="${liquid.id}" aria-label="Registrar ${liquid.name}">
-      ${isRegistered ? `\u2713 Registrado (${logCount})` : '+ Registrar'}
-    </button>
-  `;
-  card.querySelector('.btn-log').addEventListener('click', e => {
-    e.stopPropagation();
-    window.DB.addFoodLog({ type: 'liquid', reference_id: liquid.id, quantity_g: 250 });
-    if (typeof showToast === 'function') showToast('\u{1F4A7} +250 ml de hidrataci\u00F3n registrados');
-    renderDiaryScreen();
+    <div class="hydration-top-info">
+      <div class="water-glass-wrap">
+        <div class="water-wave-fill" style="height: ${Math.max(6, pct)}%;">
+          <div class="water-wave-anim"></div>
+        </div>
+      </div>
+      <div class="water-stats-panel">
+        <div class="water-stats-title">META DE HIDRATACIÓN</div>
+        <button class="btn-water-undo-pill" id="btn-water-undo" type="button" title="Deshacer último registro de hidratación" aria-label="Deshacer último registro">
+          <span class="undo-icon">↺</span> Deshacer
+        </button>
+        <div class="water-vol-display">
+          <span class="water-current-ml">${totalMl.toLocaleString()}</span>
+          <span class="water-target-ml">/ ${goalMl.toLocaleString()} ml (${pct}%)</span>
+        </div>
+        <div class="water-progress-bar-wrap">
+          <div class="water-progress-bar-fill" style="width: ${pct}%;"></div>
+        </div>
+      </div>
+    </div>
 
-    const newBtn = document.querySelector(`.card-liquid button[data-id="${liquid.id}"]`);
-    if (newBtn) {
-      newBtn.classList.add('btn-pop-feedback');
-      setTimeout(() => newBtn.classList.remove('btn-pop-feedback'), 400);
-    }
+    <div class="hydration-drink-selector-row" role="tablist" aria-label="Seleccionar bebida">
+      ${liquidsList.map(liq => {
+        const c100 = liq.calories_per_100ml || liq.calories_per_100g || 0;
+        const isActive = liq.id === activeLiq.id;
+        return `
+          <button type="button" class="hydration-drink-chip ${isActive ? 'active' : ''}" data-id="${liq.id}" aria-label="Seleccionar ${liq.name}">
+            <span>${liq.icon || '💧'}</span>
+            <span>${liq.name}</span>
+            ${c100 > 0 ? `<span class="drink-chip-cal">${c100} kcal</span>` : ''}
+          </button>
+        `;
+      }).join('')}
+    </div>
+
+    <div class="quick-water-buttons">
+      <button type="button" class="btn-water-quick" data-ml="250" aria-label="Agregar vaso de 250ml">
+        <span class="btn-water-icon">🥛</span>
+        <span class="btn-water-amount">+250 ml</span>
+        <span class="btn-water-lbl">Vaso</span>
+      </button>
+      <button type="button" class="btn-water-quick" data-ml="500" aria-label="Agregar botella de 500ml">
+        <span class="btn-water-icon">🍶</span>
+        <span class="btn-water-amount">+500 ml</span>
+        <span class="btn-water-lbl">Botella</span>
+      </button>
+      <button type="button" class="btn-water-quick" data-ml="150" aria-label="Agregar taza de 150ml">
+        <span class="btn-water-icon">☕</span>
+        <span class="btn-water-amount">+150 ml</span>
+        <span class="btn-water-lbl">Taza</span>
+      </button>
+      <button type="button" class="btn-water-quick" data-ml="100" aria-label="Agregar 100ml">
+        <span class="btn-water-icon">💧</span>
+        <span class="btn-water-amount">+100 ml</span>
+        <span class="btn-water-lbl">Trago</span>
+      </button>
+    </div>
+  `;
+
+  // Cambiar bebida activa
+  card.querySelectorAll('.hydration-drink-chip').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      _diaryActiveLiquidId = btn.dataset.id;
+      window._diaryActiveLiquidId = _diaryActiveLiquidId;
+      renderDiaryScreen();
+    });
   });
-  return card;
+
+  // Registrar con los 4 botones rápidos
+  function logLiquid(amount) {
+    const mealSlot = (typeof getCurrentMealSlot === 'function') ? getCurrentMealSlot() : 'snack';
+    window.DB.addFoodLog({
+      type: 'liquid',
+      reference_id: activeLiq.id,
+      quantity_g: amount,
+      mealCategory: mealSlot
+    });
+
+    const c100 = activeLiq.calories_per_100ml || activeLiq.calories_per_100g || 0;
+    const addedCal = Math.round(c100 * amount / 100);
+    if (addedCal > 0) {
+      if (typeof showToast === 'function') showToast(`${activeLiq.icon || '💧'} +${amount} ml de ${activeLiq.name} (+${addedCal} kcal)`);
+    } else {
+      if (typeof showToast === 'function') showToast(`${activeLiq.icon || '💧'} +${amount} ml de ${activeLiq.name} registrados`);
+    }
+
+    renderDiaryScreen();
+    if (typeof renderDashboardScreen === 'function') renderDashboardScreen();
+    if (typeof updateHeaderGamification === 'function') updateHeaderGamification();
+  }
+
+  card.querySelectorAll('.btn-water-quick').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const ml = parseInt(btn.dataset.ml, 10) || 250;
+      logLiquid(ml);
+    });
+  });
+
+  // Botón deshacer
+  const undoBtn = card.querySelector('#btn-water-undo');
+  if (undoBtn) {
+    undoBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const todayLogs = (window.DB && typeof window.DB.getTodayLogs === 'function')
+        ? window.DB.getTodayLogs().filter(l => l.type === 'liquid')
+        : [];
+      if (todayLogs.length > 0) {
+        const lastLog = todayLogs[todayLogs.length - 1];
+        window.DB.removeFoodLog(lastLog.id);
+        if (typeof showToast === 'function') showToast('↺ Último registro de hidratación eliminado');
+        renderDiaryScreen();
+        if (typeof renderDashboardScreen === 'function') renderDashboardScreen();
+        if (typeof updateHeaderGamification === 'function') updateHeaderGamification();
+      } else {
+        if (typeof showToast === 'function') showToast('No hay registros de hidratación hoy');
+      }
+    });
+  }
+
+  section.appendChild(card);
+  return section;
 }
 
 function buildUpcomingRecipeSection(title, nextSlot, recipes, canCook) {
@@ -884,9 +988,16 @@ function openFoodLogModal(logId) {
     };
     qty = log.quantity_g || 100;
   } else if (log.type === 'liquid') {
-    const liq = (window.DB.liquids || []).find(l => l.id === log.reference_id);
-    itemName = liq ? `${liq.icon || '💧'} ${liq.name}` : 'Líquido';
-    _foodLogBase100g = { cal: 0, prot: 0, carb: 0, fat: 0 };
+    const liq = (window.DB && typeof window.DB.getLiquidById === 'function')
+      ? window.DB.getLiquidById(log.reference_id)
+      : ((window.DB.liquids || []).find(l => l.id === log.reference_id));
+    itemName = liq ? `${liq.icon || '💧'} ${liq.name}` : 'Bebida';
+    _foodLogBase100g = {
+      cal: liq?.calories_per_100ml || liq?.calories_per_100g || 0,
+      prot: liq?.protein_per_100ml || liq?.protein_per_100g || 0,
+      carb: liq?.carbs_per_100ml || liq?.carbs_per_100g || 0,
+      fat: liq?.fat_per_100ml || liq?.fat_per_100g || 0
+    };
     qty = log.quantity_g || 250;
   }
 

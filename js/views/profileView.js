@@ -80,6 +80,9 @@ function renderProfileScreen() {
 
   // Estado de API Key de IA
   renderAIKeySettings();
+
+  // Almacenamiento y Respaldo Local
+  renderStorageManager();
 }
 
 function renderNotificationsSettings() {
@@ -372,11 +375,17 @@ function renderLiquidsManager() {
     const item = document.createElement('div');
     item.className = 'liquid-manage-item';
     item.setAttribute('role', 'listitem');
+    const cal = liq.calories_per_100ml || liq.calories_per_100g || 0;
+    const prot = liq.protein_per_100ml || liq.protein_per_100g || 0;
+    const carb = liq.carbs_per_100ml || liq.carbs_per_100g || 0;
+    const fat = liq.fat_per_100ml || liq.fat_per_100g || 0;
+    const macroStr = cal > 0 ? `<strong style="color:#0284c7;">${cal} kcal/100ml</strong> (P:${prot}g C:${carb}g G:${fat}g)` : '<span style="color:#0284c7;">0 kcal (Hidratación pura)</span>';
+
     item.innerHTML = `
       <span class="liquid-manage-icon">${liq.icon || '\u{1F4A7}'}</span>
       <div class="liquid-manage-info">
         <div class="liquid-manage-name">${liq.name}</div>
-        <div class="liquid-manage-type">${liq.type || 'Agua'}</div>
+        <div class="liquid-manage-type">${liq.type || 'Agua'} • ${macroStr}</div>
       </div>
       <button class="btn-delete-liquid" data-id="${liq.id}"
               aria-label="Eliminar ${liq.name}" title="Eliminar">\u00D7</button>
@@ -419,6 +428,10 @@ function initLiquidForm() {
     const icon = document.getElementById('liq-icon').value.trim() || '\u{1F4A7}';
     const name = document.getElementById('liq-name').value.trim();
     const type = document.getElementById('liq-type').value || 'Agua';
+    const cal = parseFloat(document.getElementById('liq-cal')?.value) || 0;
+    const prot = parseFloat(document.getElementById('liq-prot')?.value) || 0;
+    const carb = parseFloat(document.getElementById('liq-carb')?.value) || 0;
+    const fat = parseFloat(document.getElementById('liq-fat')?.value) || 0;
 
     if (!name) {
       showToast('\u26A0\uFE0F Escribe un nombre para el l\u00EDquido');
@@ -431,6 +444,10 @@ function initLiquidForm() {
       name,
       type,
       icon,
+      calories_per_100ml: cal,
+      protein_per_100ml: prot,
+      carbs_per_100ml: carb,
+      fat_per_100ml: fat,
       goal_ml: 2000,
       current_ml: 0
     };
@@ -442,6 +459,10 @@ function initLiquidForm() {
     document.getElementById('liq-icon').value = '';
     document.getElementById('liq-name').value = '';
     document.getElementById('liq-type').value = 'water';
+    if (document.getElementById('liq-cal')) document.getElementById('liq-cal').value = '';
+    if (document.getElementById('liq-prot')) document.getElementById('liq-prot').value = '';
+    if (document.getElementById('liq-carb')) document.getElementById('liq-carb').value = '';
+    if (document.getElementById('liq-fat')) document.getElementById('liq-fat').value = '';
 
     renderLiquidsManager();
     if (typeof renderDiaryScreen === 'function') renderDiaryScreen();
@@ -781,3 +802,266 @@ function initAIKeyForm() {
     showToast('\u{1F511} API Key guardada');
   });
 }
+
+// ============================================================
+// GESTIÓN DE ALMACENAMIENTO LOCAL Y RESPALDO
+// ============================================================
+
+const ACTIVE_PREF_KEYS = [
+  'nutriflow_pantry_view',
+  'nutriflow_shopping_view',
+  'nutriflow_recipes_view',
+  'nutriflow_worker_url',
+  'nutriflow_last_notified_v1',
+  'nf_collapse_upcoming',
+  'nf_collapse_needsbuy'
+];
+
+function getStorageStats() {
+  // En JavaScript (DOMStrings), cada carácter representa una unidad de código UTF-16 (2 bytes de memoria).
+  // Multiplicar (key.length + value.length) * 2 es el estándar para medir el uso real en localStorage.
+  let totalBytes = 0;
+  let nutriFlowBytes = 0;
+  let diaryBytes = 0;
+  let pantryBytes = 0;
+  let prefsBytes = 0;
+  let aiBytes = 0;
+  let logsBytes = 0;
+  let legacyBytes = 0;
+  let otherBytes = 0;
+
+  // 1. Desglose del estado principal (nutriflow_state)
+  const rawState = localStorage.getItem('nutriflow_state') || '';
+  const stateBytes = rawState ? (('nutriflow_state'.length + rawState.length) * 2) : 0;
+
+  if (rawState) {
+    try {
+      const parsed = JSON.parse(rawState);
+      for (const [key, val] of Object.entries(parsed)) {
+        if (!val) continue;
+        const partBytes = (key.length + JSON.stringify(val).length) * 2;
+        if (key === 'foodLogs') {
+          diaryBytes += partBytes;
+        } else if (['pantry', 'customRecipes', 'customRecipeIngredients', 'customIngredients', 'foodItems', 'recipes', 'ingredients', 'recipe_ingredients'].includes(key)) {
+          pantryBytes += partBytes;
+        } else if (['userPreferences', 'liquids'].includes(key)) {
+          prefsBytes += partBytes;
+        } else {
+          prefsBytes += partBytes;
+        }
+      }
+
+      // La envoltura JSON restante ("key": ...) se asigna suavemente a preferencias
+      const stateSubtotal = diaryBytes + pantryBytes + prefsBytes;
+      if (stateBytes > stateSubtotal) {
+        prefsBytes += (stateBytes - stateSubtotal);
+      }
+    } catch (e) {
+      prefsBytes = stateBytes;
+    }
+  }
+
+  // 2. Desglose de todas las demás claves en localStorage
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (!key) continue;
+    const val = localStorage.getItem(key) || '';
+    const itemBytes = (key.length + val.length) * 2;
+    totalBytes += itemBytes;
+
+    if (key === 'nutriflow_state') {
+      // Ya desglosado exactamente arriba
+      continue;
+    }
+
+    if (key.startsWith('nutriflow_chat') || key.startsWith('nutriflow_ai_summary')) {
+      aiBytes += itemBytes;
+    } else if (key === 'nutriflow_logs') {
+      logsBytes += itemBytes;
+    } else if (ACTIVE_PREF_KEYS.includes(key)) {
+      prefsBytes += itemBytes;
+    } else if (key === 'nutriflow_v2' || (key.startsWith('nutriflow_') && !ACTIVE_PREF_KEYS.includes(key))) {
+      // Claves obsoletas de versiones anteriores de la app (ej. nutriflow_v2)
+      legacyBytes += itemBytes;
+    } else {
+      // Clave que no pertenece a NutriFlow (otros proyectos en localhost o claves del navegador)
+      otherBytes += itemBytes;
+    }
+  }
+
+  nutriFlowBytes = diaryBytes + pantryBytes + prefsBytes + aiBytes + logsBytes + legacyBytes;
+
+  const quotaMb = 5;
+  const quotaBytes = quotaMb * 1024 * 1024;
+  const pct = Math.max(0.1, (totalBytes / quotaBytes) * 100);
+  const nutriPct = Math.max(0.1, (nutriFlowBytes / quotaBytes) * 100);
+
+  return {
+    totalKb: (totalBytes / 1024).toFixed(1),
+    nutriFlowKb: (nutriFlowBytes / 1024).toFixed(1),
+    activeNutriFlowKb: ((nutriFlowBytes - legacyBytes) / 1024).toFixed(1),
+    quotaMb,
+    pct: pct < 1 ? pct.toFixed(1) : Math.round(pct),
+    nutriPct: nutriPct < 1 ? nutriPct.toFixed(1) : Math.round(nutriPct),
+    diaryKb: (diaryBytes / 1024).toFixed(1),
+    pantryKb: (pantryBytes / 1024).toFixed(1),
+    prefsKb: (prefsBytes / 1024).toFixed(1),
+    aiKb: (aiBytes / 1024).toFixed(1),
+    logsKb: (logsBytes / 1024).toFixed(1),
+    legacyKb: (legacyBytes / 1024).toFixed(1),
+    otherKb: (otherBytes / 1024).toFixed(1),
+    hasLegacy: legacyBytes > 0,
+    hasOther: otherBytes > 0
+  };
+}
+
+function renderStorageManager() {
+  const summaryEl = document.getElementById('storage-summary-text');
+  const badgeEl = document.getElementById('storage-status-badge');
+  const barEl = document.getElementById('storage-bar-fill');
+  const diaryEl = document.getElementById('storage-kb-diary');
+  const pantryEl = document.getElementById('storage-kb-pantry');
+  const prefsEl = document.getElementById('storage-kb-prefs');
+  const aiEl = document.getElementById('storage-kb-ai');
+  const logsEl = document.getElementById('storage-kb-logs');
+  const legacyRow = document.getElementById('storage-row-legacy');
+  const legacyEl = document.getElementById('storage-kb-legacy');
+  const otherRow = document.getElementById('storage-row-other');
+  const otherEl = document.getElementById('storage-kb-other');
+
+  if (!summaryEl) return;
+
+  const stats = getStorageStats();
+
+  if (stats.hasOther) {
+    summaryEl.textContent = `NutriFlow: ${stats.nutriFlowKb} KB · Total en navegador: ${stats.totalKb} KB de ${stats.quotaMb} MB (${stats.pct}%)`;
+  } else {
+    summaryEl.textContent = `${stats.totalKb} KB de ${stats.quotaMb} MB utilizados (${stats.pct}%)`;
+  }
+  
+  if (barEl) {
+    barEl.style.width = `${Math.max(1, Math.min(100, parseFloat(stats.pct)))}%`;
+  }
+
+  if (badgeEl) {
+    const numPct = parseFloat(stats.pct);
+    if (numPct < 60) {
+      badgeEl.textContent = 'Óptimo ✨';
+      badgeEl.className = 'storage-status-badge optimal';
+    } else if (numPct < 85) {
+      badgeEl.textContent = 'Atención ⚠️';
+      badgeEl.className = 'storage-status-badge warning';
+    } else {
+      badgeEl.textContent = 'Casi lleno 🔴';
+      badgeEl.className = 'storage-status-badge critical';
+    }
+  }
+
+  if (diaryEl) diaryEl.textContent = `${stats.diaryKb} KB`;
+  if (pantryEl) pantryEl.textContent = `${stats.pantryKb} KB`;
+  if (prefsEl) prefsEl.textContent = `${stats.prefsKb} KB`;
+  if (aiEl) aiEl.textContent = `${stats.aiKb} KB`;
+  if (logsEl) logsEl.textContent = `${stats.logsKb} KB`;
+
+  if (legacyRow && legacyEl) {
+    if (stats.hasLegacy) {
+      legacyRow.style.display = 'flex';
+      legacyEl.textContent = `${stats.legacyKb} KB`;
+    } else {
+      legacyRow.style.display = 'none';
+    }
+  }
+
+  if (otherRow && otherEl) {
+    if (stats.hasOther) {
+      otherRow.style.display = 'flex';
+      otherEl.textContent = `${stats.otherKb} KB`;
+    } else {
+      otherRow.style.display = 'none';
+    }
+  }
+}
+
+function exportBackupData() {
+  try {
+    const state = (window.DB && window.DB.state) ? window.DB.state : JSON.parse(localStorage.getItem('nutriflow_state') || '{}');
+    const backup = {
+      app: 'NutriFlow',
+      version: '6.0',
+      exportedAt: new Date().toISOString(),
+      state: state,
+      // Propiedades de primer nivel para total compatibilidad con la importación
+      ingredients: state.customIngredients || [],
+      recipes: state.customRecipes || [],
+      recipe_ingredients: state.customRecipeIngredients || [],
+      liquids: state.liquids || [],
+      pantry: state.pantry || [],
+      foodLogs: state.foodLogs || [],
+      userPreferences: state.userPreferences || {}
+    };
+
+    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const now = new Date();
+    const datePart = now.toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `nutriflow_respaldo_${datePart}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    if (typeof showToast === 'function') showToast('📥 Copia de seguridad exportada');
+  } catch (err) {
+    console.error('[NutriFlow Storage] Error al exportar respaldo:', err);
+    if (typeof showToast === 'function') showToast('⚠️ Error al generar copia de seguridad');
+  }
+}
+
+function initStorageManager() {
+  const btnExport = document.getElementById('btn-export-backup');
+  if (btnExport) {
+    btnExport.onclick = (e) => {
+      e.stopPropagation();
+      exportBackupData();
+    };
+  }
+
+  const btnPurge = document.getElementById('btn-purge-legacy');
+  if (btnPurge) {
+    btnPurge.onclick = (e) => {
+      e.stopPropagation();
+      try {
+        localStorage.removeItem('nutriflow_v2');
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('nutriflow_v') && key !== 'nutriflow_state') {
+            localStorage.removeItem(key);
+          }
+        }
+      } catch (err) {}
+      if (typeof showToast === 'function') {
+        showToast('🧹 Datos antiguos de v2 eliminados');
+      }
+      renderStorageManager();
+    };
+  }
+
+  const debugCard = document.getElementById('scard-debug');
+  if (debugCard) {
+    const header = debugCard.querySelector('.settings-card-header');
+    if (header) {
+      header.addEventListener('click', () => {
+        setTimeout(renderStorageManager, 50);
+      });
+    }
+  }
+}
+
+// Inicializar al cargar el documento
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initStorageManager);
+} else {
+  initStorageManager();
+}
+

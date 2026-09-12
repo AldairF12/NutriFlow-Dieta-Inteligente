@@ -695,15 +695,20 @@ function renderDashHydration(dateStr) {
   const liquidListHtml = liquidLogs.length > 0 ? `
     <div style="margin-top: 16px; border-top: 1px dashed var(--gray-200, #e2e8f0); padding-top: 12px; display: flex; flex-wrap: wrap; gap: 8px;">
       ${liquidLogs.map(l => {
-        const liq = (window.DB.liquids || []).find(lx => lx.id === l.reference_id) || (window.DB.state && window.DB.state.liquids ? window.DB.state.liquids.find(lx => lx.id === l.reference_id) : null);
+        const liq = (window.DB && typeof window.DB.getLiquidById === 'function')
+          ? window.DB.getLiquidById(l.reference_id)
+          : ((window.DB.liquids || []).find(lx => lx.id === l.reference_id) || (window.DB.state && window.DB.state.liquids ? window.DB.state.liquids.find(lx => lx.id === l.reference_id) : null));
         const name = liq ? liq.name : 'Agua';
         const icon = liq ? liq.icon : '💧';
         const ml = l.quantity_g || 250;
+        const c100 = liq ? (liq.calories_per_100ml || liq.calories_per_100g || 0) : 0;
+        const cal = Math.round(c100 * ml / 100);
         const time = new Date(l.timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-        return `<div style="display:flex; align-items:center; background: var(--gray-50, #f8fafc); padding: 4px 8px; border-radius: 8px; font-size: 0.75rem; color: var(--gray-600, #475569); gap: 6px;">
+        return `<div style="display:flex; align-items:center; background: var(--gray-50, #f8fafc); padding: 5px 10px; border-radius: 10px; font-size: 0.75rem; color: var(--gray-700, #334155); gap: 6px; border: 1px solid var(--gray-200, #e2e8f0); cursor: pointer;" onclick="if(typeof openFoodLogModal==='function') openFoodLogModal('${l.id}')">
           <span>${icon} ${name} ${ml}ml</span>
+          ${cal > 0 ? `<span style="background:#f0f9ff; color:#0284c7; border:1px solid #bae6fd; padding:1px 6px; border-radius:99px; font-size:0.7rem; font-weight:700;">+${cal} kcal</span>` : ''}
           <span style="color: var(--gray-400, #94a3b8); font-size: 0.7rem;">${time}</span>
-          <button onclick="if(confirm('¿Eliminar este líquido?')) { window.DB.removeFoodLog('${l.id}'); renderDashboardScreen(); }" style="background:none; border:none; cursor:pointer; font-size:1rem; margin-left: 2px; color: var(--gray-400, #94a3b8); padding: 0;">&times;</button>
+          <span style="color: var(--gray-400, #94a3b8); font-size: 0.75rem; margin-left: auto;">›</span>
         </div>`;
       }).join('')}
     </div>
