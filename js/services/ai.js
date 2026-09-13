@@ -561,9 +561,9 @@ Responde directamente al nuevo mensaje del usuario tomando en cuenta el historia
    * Genera un resumen motivador del d\u00eda para el Dashboard.
    * @returns {string}
    */
-    async getDailySummary(dateStr) {
+  async getDailySummary(dateStr) {
     const todayIso = (typeof getDashTodayIso === 'function') ? getDashTodayIso() : new Date().toISOString().slice(0, 10);
-    const targetDate = dateStr || todayIso;
+    const targetDate = dateStr || (typeof getDashSelectedDate === 'function' ? getDashSelectedDate() : todayIso);
     const isToday = (targetDate === todayIso);
 
     const consumed = (typeof getDailyMacroSummary === 'function') ? getDailyMacroSummary(targetDate) : { calories: 0, protein: 0, carbs: 0, fat: 0 };
@@ -596,9 +596,15 @@ Responde directamente al nuevo mensaje del usuario tomando en cuenta el historia
     const totalConsumed = plan.calories + extra.calories;
     const adherencia = totalConsumed > 0 ? Math.round((plan.calories / totalConsumed) * 100) : 100;
 
-    const prompt = `Eres un asistente nutricional empático y experto. Genera UN SOLO párrafo de máximo 75 palabras en español, motivador y conciso, que evalúe el día (${targetDate}) del usuario. No repitas mecánicamente los números que ya ve en pantalla; enfócate en su balance de proteína y adherencia, y da un consejo práctico y positivo.
+    const timeInstruction = isToday
+      ? 'Jornada en curso de HOY. Habla en presente dando ánimo o consejos prácticos para el cierre del día.'
+      : `Jornada HISTÓRICA ya finalizada (${targetDate}). Habla en tiempo pasado evaluando en retrospectiva cómo transcurrió ese día.`;
 
-Fecha: ${targetDate} (${isToday ? 'Hoy' : 'Día Histórico'})
+    const prompt = `Eres un asistente nutricional empático y experto. Genera UN SOLO párrafo de máximo 75 palabras en español, motivador y conciso, que evalúe la fecha ${targetDate} del usuario.
+${timeInstruction}
+No repitas mecánicamente los números que ya ve en pantalla; enfócate en su balance de proteína y adherencia, y da un comentario constructivo y positivo.
+
+Fecha: ${targetDate} (${isToday ? 'Hoy' : 'Histórico'})
 Calorías: ${consumed.calories}/${goals.calories} (${calPct}%)
 Proteína: ${consumed.protein}g/${goals.protein}g (${protPct}%)
 Del plan: ${plan.calories} kcal (${plan.entries} comidas)

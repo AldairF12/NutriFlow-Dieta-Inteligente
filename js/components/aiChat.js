@@ -502,35 +502,10 @@ async function sendChatMessage() {
 function initDashboardAIBtn() {
   const btn = document.getElementById('btn-dash-refresh-ai');
   if (!btn) return;
-  btn.addEventListener('click', async () => {
-    if (!navigator.onLine) {
-      showToast('📡 Sin conexión: El resumen de IA requiere internet');
-      return;
+  btn.onclick = async () => {
+    const targetDate = (typeof getDashSelectedDate === 'function') ? getDashSelectedDate() : undefined;
+    if (typeof handleGenerateDailyInsight === 'function') {
+      await handleGenerateDailyInsight(targetDate);
     }
-    if (!AI.isConfigured()) {
-      showToast('⚠️ Configura tu API Key en Perfil → Asistente IA');
-      return;
-    }
-    const textEl    = document.getElementById('dash-ai-text');
-    const loadingEl = document.getElementById('dash-ai-loading');
-    btn.disabled = true;
-    btn.textContent = '⏳ Generando…';
-    if (loadingEl) loadingEl.hidden = false;
-    if (textEl)    textEl.style.opacity = '0.4';
-    try {
-      const summary = await AI.getDailySummary();
-      if (textEl) { textEl.textContent = summary; textEl.style.opacity = '1'; }
-    } catch (err) {
-      if (err.message === 'OFFLINE' || !navigator.onLine) {
-        showToast('📡 Sin conexión a internet');
-      } else {
-        showToast('❌ Error al conectar con Gemini');
-      }
-      if (textEl) textEl.style.opacity = '1';
-    } finally {
-      if (loadingEl) loadingEl.hidden = true;
-      btn.disabled = false;
-      btn.textContent = '\u2728 Insight IA';
-    }
-  });
+  };
 }

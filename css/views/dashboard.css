@@ -722,6 +722,10 @@
   padding: 8px 0;
 }
 
+.dash-ai-loading[hidden] {
+  display: none !important;
+}
+
 .ai-typing-dot {
   width: 6px;
   height: 6px;

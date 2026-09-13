@@ -99,53 +99,121 @@ function renderDashboardScreen() {
 function renderCachedAISummary(dateStr) {
   const textEl = document.getElementById('dash-ai-text');
   const loadingEl = document.getElementById('dash-ai-loading');
+  const btnAi = document.getElementById('btn-dash-refresh-ai');
   if (!textEl) return;
   if (loadingEl) loadingEl.hidden = true;
 
+  // 1. Si ya existe un resumen guardado para esta fecha, mostrarlo
   try {
     const raw = localStorage.getItem('nutriflow_ai_summary_' + dateStr);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && parsed.text) {
         textEl.innerHTML = typeof parseMarkdown === 'function' ? parseMarkdown(parsed.text) : parsed.text;
+        if (btnAi) {
+          btnAi.innerHTML = '✨ Regenerar';
+          btnAi.title = 'Regenerar resumen inteligente con IA';
+        }
         return;
       }
     }
   } catch(e) {}
 
-  textEl.textContent = 'Presiona "\u2728 Generar Insight" para obtener un an\u00E1lisis inteligente de tu progreso.';
+  // 2. Si no hay API Key configurada, advertir en el texto y cambiar el botón
+  const isConfigured = window.AI && typeof window.AI.isConfigured === 'function' && window.AI.isConfigured();
+  if (!isConfigured) {
+    textEl.innerHTML = '<span style="color:var(--text-muted, #64748b);">⚠️ Aún no has configurado tu API Key de Gemini. Ve a <strong style="cursor:pointer; color:var(--primary, #2563eb); text-decoration:underline;" onclick="document.querySelector(\'[data-screen=\\\'profile\\\']\')?.click(); setTimeout(() => { const c = document.getElementById(\'scard-ai\'); if (c && !c.open) c.querySelector(\'.settings-card-header\')?.click(); c?.scrollIntoView({ behavior: \'smooth\', block: \'center\' }); }, 350);">Perfil → Asistente IA</strong> para activar los análisis inteligentes.</span>';
+    if (btnAi) {
+      btnAi.innerHTML = '⚙️ Configurar IA';
+      btnAi.title = 'Ir a Perfil para configurar tu API Key';
+    }
+    return;
+  }
+
+  // 3. Si la IA está configurada y lista pero aún no generada para esta fecha
+  textEl.textContent = 'Presiona "✨ Generar Insight" para obtener un análisis inteligente de tu progreso.';
+  if (btnAi) {
+    btnAi.innerHTML = '✨ Generar Insight';
+    btnAi.title = 'Generar resumen inteligente con IA';
+  }
 }
 
 async function handleGenerateDailyInsight(dateStr) {
+  const targetDate = dateStr || (typeof getDashSelectedDate === 'function' ? getDashSelectedDate() : getDashTodayIso());
   const textEl = document.getElementById('dash-ai-text');
   const loadingEl = document.getElementById('dash-ai-loading');
   const btnAi = document.getElementById('btn-dash-refresh-ai');
 
-  if (!window.AI || typeof window.AI.getDailySummary !== 'function') {
-    if (typeof showToast === 'function') showToast('\u26A0\uFE0F M\u00F3dulo de IA no disponible');
+  // 1. Verificación de conexión
+  if (!navigator.onLine) {
+    if (typeof showToast === 'function') showToast('📡 Sin conexión: El resumen de IA requiere internet');
     return;
   }
 
+  // 2. Verificación de módulo de IA
+  if (!window.AI || typeof window.AI.getDailySummary !== 'function') {
+    if (typeof showToast === 'function') showToast('⚠️ Módulo de IA no disponible');
+    return;
+  }
+
+  // 3. Verificación de API Key
   if (!window.AI.isConfigured()) {
-    if (typeof showToast === 'function') showToast('\u26A0\uFE0F Configura tu API Key en Perfil');
+    if (typeof showToast === 'function') showToast('⚠️ Configura tu API Key en Perfil → Asistente IA');
     const profileTab = document.querySelector('[data-screen="profile"]');
     if (profileTab) profileTab.click();
+    setTimeout(() => {
+      const aiCard = document.getElementById('scard-ai');
+      if (aiCard) {
+        if (!aiCard.open) {
+          aiCard.querySelector('.settings-card-header')?.click();
+        }
+        aiCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 350);
     return;
   }
 
   if (loadingEl) loadingEl.hidden = false;
-  if (textEl) textEl.textContent = 'NutriBot est\u00E1 analizando tu progreso...';
-  if (btnAi) btnAi.disabled = true;
+  if (textEl) {
+    textEl.style.opacity = '0.5';
+    textEl.textContent = 'NutriBot está analizando tu progreso...';
+  }
+  if (btnAi) {
+    btnAi.disabled = true;
+    btnAi.textContent = '⏳ Generando…';
+  }
 
   try {
-    const insight = await window.AI.getDailySummary(dateStr);
-    if (textEl) textEl.innerHTML = typeof parseMarkdown === 'function' ? parseMarkdown(insight) : insight;
-    if (typeof showToast === 'function') showToast('\u2728 Resumen IA generado');
+    const insight = await window.AI.getDailySummary(targetDate);
+    if (textEl) {
+      textEl.style.opacity = '1';
+      textEl.innerHTML = typeof parseMarkdown === 'function' ? parseMarkdown(insight) : insight;
+    }
+    if (typeof showToast === 'function') showToast('✨ Resumen IA generado');
   } catch (err) {
-    if (textEl) textEl.textContent = 'No se pudo generar el insight: ' + (err.message || 'Error desconocido');
+    if (err.message === 'OFFLINE' || !navigator.onLine) {
+      if (typeof showToast === 'function') showToast('📡 Sin conexión a internet');
+    } else {
+      if (typeof showToast === 'function') showToast('❌ Error al conectar con Gemini');
+    }
+    if (textEl) {
+      textEl.style.opacity = '1';
+      textEl.textContent = 'No se pudo generar el insight: ' + (err.message || 'Error desconocido');
+    }
   } finally {
     if (loadingEl) loadingEl.hidden = true;
-    if (btnAi) btnAi.disabled = false;
+    if (btnAi) {
+      btnAi.disabled = false;
+      const isConfigured = window.AI && typeof window.AI.isConfigured === 'function' && window.AI.isConfigured();
+      const hasCache = !!localStorage.getItem('nutriflow_ai_summary_' + targetDate);
+      if (!isConfigured) {
+        btnAi.innerHTML = '⚙️ Configurar IA';
+      } else if (hasCache) {
+        btnAi.innerHTML = '✨ Regenerar';
+      } else {
+        btnAi.innerHTML = '✨ Generar Insight';
+      }
+    }
   }
 }
 
