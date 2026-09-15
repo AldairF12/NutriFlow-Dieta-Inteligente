@@ -88,7 +88,7 @@ function createRecipeOptionsMenu(recipe) {
   menu.className = 'recipe-options-menu';
 
   if (recipe.isCustom) {
-    // Receta propia: Editar y Eliminar
+    // Receta propia: Editar, Duplicar y Eliminar
     const btnEdit = document.createElement('button');
     btnEdit.className = 'recipe-option-item';
     btnEdit.innerHTML = '<span>✏️</span><span>Editar receta</span>';
@@ -100,6 +100,18 @@ function createRecipeOptionsMenu(recipe) {
       }
     };
     menu.appendChild(btnEdit);
+
+    const btnDuplicate = document.createElement('button');
+    btnDuplicate.className = 'recipe-option-item';
+    btnDuplicate.innerHTML = '<span>📋</span><span>Duplicar receta</span>';
+    btnDuplicate.onclick = (e) => {
+      e.stopPropagation();
+      menu.classList.remove('open');
+      if (typeof openRecipeEditor === 'function') {
+        openRecipeEditor(recipe.id, true);
+      }
+    };
+    menu.appendChild(btnDuplicate);
 
     const btnDelete = document.createElement('button');
     btnDelete.className = 'recipe-option-item danger';
@@ -116,7 +128,19 @@ function createRecipeOptionsMenu(recipe) {
     };
     menu.appendChild(btnDelete);
   } else {
-    // Receta predeterminada del sistema: Ocultar / Mostrar
+    // Receta predeterminada del sistema: Crear a partir de esta y Ocultar / Mostrar
+    const btnDuplicate = document.createElement('button');
+    btnDuplicate.className = 'recipe-option-item';
+    btnDuplicate.innerHTML = '<span>📋</span><span>Crear a partir de esta</span>';
+    btnDuplicate.onclick = (e) => {
+      e.stopPropagation();
+      menu.classList.remove('open');
+      if (typeof openRecipeEditor === 'function') {
+        openRecipeEditor(recipe.id, true);
+      }
+    };
+    menu.appendChild(btnDuplicate);
+
     const isHidden = window.DB.isRecipeHidden ? window.DB.isRecipeHidden(recipe.id) : false;
     const btnHide = document.createElement('button');
     btnHide.className = `recipe-option-item ${isHidden ? '' : 'danger'}`;
@@ -167,26 +191,6 @@ function renderRecipesScreen() {
     ? window.DB.state.userPreferences.hiddenRecipes.length 
     : 0;
 
-  if (hiddenCount > 0) {
-    const hiddenBar = document.createElement('div');
-    hiddenBar.style.cssText = 'display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px 14px; border-radius:12px; margin-bottom:14px; border:1px solid #e2e8f0; font-size:0.82rem;';
-    hiddenBar.innerHTML = `
-      <span style="color:#64748b; font-weight:600;">👁️ ${hiddenCount} receta${hiddenCount > 1 ? 's' : ''} oculta${hiddenCount > 1 ? 's' : ''}</span>
-      <button type="button" style="background:none; border:none; color:var(--primary-600, #059669); font-weight:700; cursor:pointer; font-size:0.82rem;" id="btn-toggle-hidden-recipes">
-        ${_showHiddenRecipes ? 'Ocultar estas recetas' : 'Mostrar ocultas'}
-      </button>
-    `;
-    container.appendChild(hiddenBar);
-
-    const btnToggle = hiddenBar.querySelector('#btn-toggle-hidden-recipes');
-    if (btnToggle) {
-      btnToggle.onclick = () => {
-        _showHiddenRecipes = !_showHiddenRecipes;
-        renderRecipesScreen();
-      };
-    }
-  }
-
   const mealTypes = ['desayuno', 'almuerzo', 'merienda', 'cena', 'snack'];
   let totalShown = 0;
 
@@ -220,6 +224,11 @@ function renderRecipesScreen() {
 
         card.style.position = 'relative';
 
+        const isHidden = window.DB && typeof window.DB.isRecipeHidden === 'function' ? window.DB.isRecipeHidden(recipe.id) : false;
+        if (isHidden) {
+          card.classList.add('is-hidden-recipe');
+        }
+
         // Badge propia si aplica (en la línea de tipo de comida, sin empujar el título ni cambiar la altura de la tarjeta)
         if (recipe.isCustom) {
           const typeEl = card.querySelector('.recipe-meal-type');
@@ -227,6 +236,17 @@ function renderRecipesScreen() {
             const badge = document.createElement('span');
             badge.className = 'badge-own-recipe';
             badge.innerHTML = '✨ Propia';
+            typeEl.appendChild(badge);
+          }
+        }
+
+        // Badge oculta si aplica
+        if (isHidden) {
+          const typeEl = card.querySelector('.recipe-meal-type');
+          if (typeEl) {
+            const badge = document.createElement('span');
+            badge.className = 'badge-hidden-recipe';
+            badge.innerHTML = '👁️ Oculta';
             typeEl.appendChild(badge);
           }
         }
@@ -253,10 +273,11 @@ function renderRecipesScreen() {
         const isRegistered = todayLogs.length > 0;
         const logCount = todayLogs.length;
 
+        const isHidden = window.DB && typeof window.DB.isRecipeHidden === 'function' ? window.DB.isRecipeHidden(recipe.id) : false;
         const statusClass = isRegistered ? 'registered' : canCook ? 'can-cook' : 'needs-buy';
 
         const item = document.createElement('div');
-        item.className = `recipe-compact-item ${statusClass}`;
+        item.className = `recipe-compact-item ${statusClass} ${isHidden ? 'is-hidden-recipe' : ''}`;
         item.dataset.recipeId = recipe.id;
         item.style.position = 'relative';
 
@@ -267,6 +288,7 @@ function renderRecipesScreen() {
             <div class="recipe-compact-name">
               ${recipe.name}
               ${recipe.isCustom ? '<span class="badge-own-recipe">✨ Propia</span>' : ''}
+              ${isHidden ? '<span class="badge-hidden-recipe">👁️ Oculta</span>' : ''}
             </div>
             <div class="recipe-compact-chips">
               <span class="compact-chip chip-cal">🔥 ${macros.calories} kcal</span>
@@ -328,6 +350,27 @@ function renderRecipesScreen() {
       </button>
     `;
     container.appendChild(empty);
+  }
+
+  // Aviso de recetas ocultas al final de la lista
+  if (hiddenCount > 0) {
+    const hiddenBar = document.createElement('div');
+    hiddenBar.style.cssText = 'display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:10px 16px; border-radius:12px; margin-top:24px; margin-bottom:28px; border:1px solid #e2e8f0; font-size:0.82rem;';
+    hiddenBar.innerHTML = `
+      <span style="color:#64748b; font-weight:600;">👁️ ${hiddenCount} receta${hiddenCount > 1 ? 's' : ''} oculta${hiddenCount > 1 ? 's' : ''}</span>
+      <button type="button" style="background:none; border:none; color:var(--primary-600, #059669); font-weight:700; cursor:pointer; font-size:0.82rem;" id="btn-toggle-hidden-recipes">
+        ${_showHiddenRecipes ? 'Ocultar estas recetas' : 'Mostrar ocultas'}
+      </button>
+    `;
+    container.appendChild(hiddenBar);
+
+    const btnToggle = hiddenBar.querySelector('#btn-toggle-hidden-recipes');
+    if (btnToggle) {
+      btnToggle.onclick = () => {
+        _showHiddenRecipes = !_showHiddenRecipes;
+        renderRecipesScreen();
+      };
+    }
   }
 
   if (typeof cleanupAnimationClasses === 'function') {

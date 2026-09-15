@@ -1002,6 +1002,44 @@
   margin-left: 6px;
 }
 
+/* Badge de Receta Oculta en Catálogo */
+.badge-hidden-recipe {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  margin-left: 6px;
+}
+
+/* Estilo distintivo para recetas ocultas cuando se muestran */
+.card-recipe.is-hidden-recipe,
+.recipe-compact-item.is-hidden-recipe {
+  opacity: 0.62;
+  filter: grayscale(0.7);
+  border: 1.5px dashed #cbd5e1 !important;
+  background: #f8fafc !important;
+  transition: opacity 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-recipe.is-hidden-recipe:hover,
+.recipe-compact-item.is-hidden-recipe:hover {
+  opacity: 0.95;
+  filter: grayscale(0.15);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+}
+
+.card-recipe.is-hidden-recipe .btn-recipe-options-trigger {
+  opacity: 1;
+  background: #ffffff;
+  border-color: #94a3b8;
+}
+
 /* Menú de Opciones en Tarjetas de Receta */
 .recipe-options-dropdown {
   position: absolute;
@@ -1042,7 +1080,7 @@
   border: 1px solid var(--gray-200, #e2e8f0);
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
   padding: 6px;
-  min-width: 140px;
+  min-width: 165px;
   display: none;
   flex-direction: column;
   gap: 2px;
@@ -1069,6 +1107,7 @@
   cursor: pointer;
   transition: background 0.15s ease;
   width: 100%;
+  white-space: nowrap;
 }
 
 .recipe-option-item:hover {

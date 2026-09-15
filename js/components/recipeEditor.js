@@ -3,6 +3,7 @@
 // ============================================================
 
 let _editingRecipeId = null;
+let _isDuplicatingRecipe = false;
 let _recipeDraft = {
   name: '',
   meal_type: 'desayuno',
@@ -13,8 +14,9 @@ let _recipeDraft = {
 let _pickerSearchQuery = '';
 let _isCreatingCustomIngredient = false;
 
-function openRecipeEditor(recipeId = null) {
-  _editingRecipeId = recipeId;
+function openRecipeEditor(recipeId = null, isDuplicate = false) {
+  _isDuplicatingRecipe = Boolean(isDuplicate);
+  _editingRecipeId = isDuplicate ? null : recipeId;
   
   if (recipeId) {
     const existing = window.DB.getRecipeById(recipeId);
@@ -24,7 +26,7 @@ function openRecipeEditor(recipeId = null) {
     }
     const ris = window.DB.getRecipeIngredients(recipeId);
     _recipeDraft = {
-      name: existing.name || '',
+      name: isDuplicate ? `${existing.name || 'Receta'} (Copia)` : (existing.name || ''),
       meal_type: (existing.meal_type || 'desayuno').toLowerCase(),
       instructions: existing.instructions || '',
       ingredients: ris.map(ri => ({ ingredient_id: ri.ingredient_id, quantity: ri.quantity || 100 }))
@@ -44,7 +46,16 @@ function openRecipeEditor(recipeId = null) {
 
   const titleEl = document.getElementById('recipe-editor-title');
   if (titleEl) {
-    titleEl.textContent = _editingRecipeId ? '✏️ Editar Receta' : '✨ Nueva Receta';
+    titleEl.textContent = isDuplicate 
+      ? '📋 Duplicar Receta' 
+      : (_editingRecipeId ? '✏️ Editar Receta' : '✨ Nueva Receta');
+  }
+
+  const btnSave = document.getElementById('recipe-editor-save');
+  if (btnSave) {
+    btnSave.textContent = isDuplicate 
+      ? 'Guardar Copia' 
+      : (_editingRecipeId ? 'Guardar Cambios' : 'Guardar Receta');
   }
 
   const nameInput = document.getElementById('recipe-editor-name');
@@ -75,6 +86,7 @@ function openRecipeEditor(recipeId = null) {
 }
 
 function closeRecipeEditor() {
+  _isDuplicatingRecipe = false;
   if (document.activeElement && typeof document.activeElement.blur === 'function') {
     document.activeElement.blur();
   }
@@ -624,6 +636,9 @@ function handleSaveRecipe() {
 
   const instructions = instInput ? instInput.value.trim() : '';
 
+  const wasDuplicate = _isDuplicatingRecipe;
+  const wasEdit = Boolean(_editingRecipeId);
+
   const recipeData = {
     id: _editingRecipeId,
     name: name,
@@ -640,7 +655,9 @@ function handleSaveRecipe() {
   if (typeof renderDiaryScreen === 'function') renderDiaryScreen();
 
   if (typeof showToast === 'function') {
-    showToast(_editingRecipeId ? `✏️ Receta "${saved.name}" actualizada` : `✨ Receta "${saved.name}" creada con éxito`);
+    showToast(wasDuplicate 
+      ? `📋 Receta "${saved.name}" duplicada con éxito` 
+      : (wasEdit ? `✏️ Receta "${saved.name}" actualizada` : `✨ Receta "${saved.name}" creada con éxito`));
   }
 }
 
