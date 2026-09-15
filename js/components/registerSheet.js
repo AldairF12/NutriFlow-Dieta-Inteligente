@@ -196,16 +196,67 @@ function renderInitialFoodList() {
   if (!results) return;
   results.innerHTML = '';
 
-  // 1. Obtener alimentos frecuentes / recientes
-  const frequentIds = (DB.getFrequentItems && DB.getFrequentItems()) || [];
-  const logs = (DB.foodLogs || (DB.state && DB.state.foodLogs) || []).slice(-30);
-  
-  // Extraer nombres/IDs de logs recientes
-  const recentNames = new Set();
-  logs.forEach(l => {
-    if (l.name) recentNames.add(normalizeSearchText(l.name));
-  });
+  // 1. Obtener candidatos frecuentes y recientes dinámicos desde DB (exclusivo para alimentos e ingredientes que se pesan en gramos)
+  const isFoodOrIngredient = cand => {
+    if (!cand || !cand.reference_id) return false;
+    const type = cand.type || (cand.reference_id.startsWith('rec_') ? 'meal' : (cand.reference_id.startsWith('ing_') ? 'ingredient' : 'food_item'));
+    return type !== 'meal' && !cand.reference_id.startsWith('rec_');
+  };
 
+  const rawFrequents = ((DB.getFrequentItems && DB.getFrequentItems(12, 30)) || []).filter(isFoodOrIngredient);
+  const rawRecents   = ((DB.getRecentItems && DB.getRecentItems(10)) || []).filter(isFoodOrIngredient);
+
+  function resolveCandidate(cand) {
+    if (!cand || !cand.reference_id) return null;
+    const type = cand.type || (cand.reference_id.startsWith('rec_') ? 'meal' : (cand.reference_id.startsWith('ing_') ? 'ingredient' : 'food_item'));
+
+    if (type === 'meal') {
+      const r = DB.getRecipeById(cand.reference_id);
+      if (!r) return null;
+      const m = r.macros || (typeof calcRecipeMacros === 'function' ? calcRecipeMacros(r.id) : { calories: 0, protein: 0, carbs: 0, fat: 0 });
+      return {
+        id: r.id,
+        name: r.name,
+        calories_per_100g: m.calories,
+        protein_per_100g:  m.protein,
+        carbs_per_100g:    m.carbs,
+        fat_per_100g:      m.fat,
+        category: r.meal_type || 'Receta',
+        typical_serving_g: 100,
+        _fromRecipe: true,
+        _type: 'meal',
+        _count: cand.count || 1
+      };
+    }
+
+    if (type === 'ingredient') {
+      const ing = DB.getIngredientById(cand.reference_id);
+      if (!ing) return null;
+      return {
+        id: ing.id,
+        name: ing.name,
+        calories_per_100g: ing.calories_per_100g || 0,
+        protein_per_100g:  ing.protein_per_100g  || 0,
+        carbs_per_100g:    ing.carbs_per_100g    || 0,
+        fat_per_100g:      ing.fat_per_100g      || 0,
+        category:          ing.category          || 'Ingrediente',
+        typical_serving_g: 100,
+        _fromIngredient: true,
+        _type: 'ingredient',
+        _count: cand.count || 1
+      };
+    }
+
+    const fi = DB.getFoodItemById(cand.reference_id);
+    if (!fi) return null;
+    return {
+      ...fi,
+      _type: 'food_item',
+      _count: cand.count || 1
+    };
+  }
+
+  // Catálogo completo de alimentos e ingredientes (A–Z)
   const allFoodItems = [...(DB.foodItems || [])];
   const allIngredients = (DB.ingredients || []).map(ing => ({
     id: ing.id,
@@ -220,7 +271,6 @@ function renderInitialFoodList() {
     _type: 'ingredient'
   }));
 
-  // Combinar y deduplicar por nombre normalizado
   const uniqueItemsMap = new Map();
   allFoodItems.forEach(fi => {
     const norm = normalizeSearchText(fi.name);
@@ -237,33 +287,47 @@ function renderInitialFoodList() {
 
   const allItems = Array.from(uniqueItemsMap.values());
 
-  // Frecuentes / Recientes (máx 5)
+  // Frecuentes y Recientes (máx 6)
   const frequentItems = [];
   const seenFrequent = new Set();
 
-  allItems.forEach(item => {
-    const norm = normalizeSearchText(item.name);
-    if (frequentIds.includes(item.id) || recentNames.has(norm)) {
-      if (!seenFrequent.has(norm) && frequentItems.length < 5) {
+  // 1. Agregar frecuentes calculados dinámicamente
+  rawFrequents.forEach(cand => {
+    const item = resolveCandidate(cand);
+    if (item) {
+      const norm = normalizeSearchText(item.name);
+      if (!seenFrequent.has(norm) && frequentItems.length < 6) {
         seenFrequent.add(norm);
         frequentItems.push(item);
       }
     }
   });
 
-  // Si aún no hay suficientes frecuentes en historial, poner los alimentos base populares
+  // 2. Agregar recientes no presentes aún
+  rawRecents.forEach(cand => {
+    const item = resolveCandidate(cand);
+    if (item) {
+      const norm = normalizeSearchText(item.name);
+      if (!seenFrequent.has(norm) && frequentItems.length < 6) {
+        seenFrequent.add(norm);
+        frequentItems.push(item);
+      }
+    }
+  });
+
+  // 3. Si aún no hay suficientes (ej. primer inicio sin historial), completar con alimentos base populares
   if (frequentItems.length < 3) {
     const popularKeys = ['huevo', 'pechuga de pollo', 'platano', 'arroz blanco', 'pan integral', 'queso fresco', 'avena'];
     allItems.forEach(item => {
       const norm = normalizeSearchText(item.name);
-      if (popularKeys.some(pk => norm.includes(pk)) && !seenFrequent.has(norm) && frequentItems.length < 5) {
+      if (popularKeys.some(pk => norm.includes(pk)) && !seenFrequent.has(norm) && frequentItems.length < 6) {
         seenFrequent.add(norm);
         frequentItems.push(item);
       }
     });
   }
 
-  // Renderizar Frecuentes si existen
+  // Renderizar Frecuentes y Recientes si existen
   if (frequentItems.length > 0) {
     const freqHeader = document.createElement('div');
     freqHeader.className = 'rs-section-header';
@@ -465,13 +529,14 @@ function buildFoodResultItem(item, _type) {
   const el = document.createElement('div');
   el.className = 'rs-result-item';
   const kcalPer100 = Math.round(item.calories_per_100g || 0);
-  const emoji = typeof getCategoryEmoji === 'function' && item.category ? getCategoryEmoji(item.category) : '🥗';
+  const emoji = typeof getCategoryEmoji === 'function' && item.category ? getCategoryEmoji(item.category) : (item._fromRecipe ? '🍳' : '🥗');
   const catHtml = item.category ? `<span class="rs-cat-tag">${item.category}</span> · ` : '';
+  const countBadge = (item._count && item._count > 1) ? ` <span class="rs-count-badge">🔥 ${item._count}x</span>` : '';
   el.innerHTML = `
     <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
       <span style="font-size: 1.25rem; flex-shrink: 0;">${emoji}</span>
       <div style="min-width: 0;">
-        <div class="rs-result-name" style="white-space: normal; word-break: break-word;">${item.name}</div>
+        <div class="rs-result-name" style="white-space: normal; word-break: break-word;">${item.name}${countBadge}</div>
         <div class="rs-result-meta">${catHtml}${kcalPer100} kcal / 100g</div>
       </div>
     </div>
@@ -531,6 +596,24 @@ function saveFreeFoodEntry() {
   if (!_selectedFoodItem || !gramInput) return;
   const qty = Math.max(1, parseInt(gramInput.value) || 100);
 
+  const mealSelect = document.getElementById('rs-gram-meal-type');
+  const mealCategory = mealSelect ? mealSelect.value : 'snack';
+
+  // Si es una receta, registrar como tipo 'meal'
+  if (_selectedFoodItem._fromRecipe) {
+    DB.addFoodLog({
+      type: 'meal',
+      reference_id: _selectedFoodItem.id,
+      planned: false,
+      mealCategory: mealCategory
+    });
+    showToast(`✅ ${_selectedFoodItem.name} registrada`);
+    closeRegisterSheet();
+    renderDiaryScreen();
+    renderDailyMacros();
+    return;
+  }
+
   // Si es un ingrediente o un item temporal de Gemini, lo añadimos/actualizamos en food_items
   let refId = _selectedFoodItem.id;
   if (_selectedFoodItem._fromIngredient || _selectedFoodItem._isTemp) {
@@ -546,9 +629,6 @@ function saveFreeFoodEntry() {
     });
     refId = saved.id;
   }
-
-  const mealSelect = document.getElementById('rs-gram-meal-type');
-  const mealCategory = mealSelect ? mealSelect.value : 'snack';
 
   DB.addFoodLog({
     type: 'food_item',
@@ -833,12 +913,12 @@ function renderRSFavoritesView() {
   const favorites  = DB.getFavorites();
   const frequents  = DB.getFrequentItems(8);
 
-  // \u2500\u2500 Favoritos \u2500\u2500
+  // ── Favoritos ──
   const favResolved = favorites.map(fav => resolveItemLabel(fav)).filter(Boolean);
   if (favResolved.length > 0) {
     const title = document.createElement('div');
     title.className = 'rs-fav-section-title';
-    title.textContent = '\u2b50 Tus favoritos';
+    title.textContent = '⭐ Tus favoritos';
     container.appendChild(title);
 
     const chips = document.createElement('div');
@@ -853,20 +933,21 @@ function renderRSFavoritesView() {
     container.appendChild(chips);
   }
 
-  // \u2500\u2500 Frecuentes \u2500\u2500
+  // ── Frecuentes ──
   const freqResolved = frequents.map(f => resolveItemLabel(f)).filter(Boolean);
   if (freqResolved.length > 0) {
     const title2 = document.createElement('div');
     title2.className = 'rs-fav-section-title';
-    title2.textContent = '\u{1f525} M\u00e1s usados (\u00faltimos 30 d\u00edas)';
+    title2.textContent = '🔥 Más usados (últimos 30 días)';
     container.appendChild(title2);
 
     const chips2 = document.createElement('div');
     chips2.className = 'rs-fav-chips';
-    freqResolved.forEach(({ label, emoji, fav }) => {
+    freqResolved.forEach(({ label, emoji, fav, count }) => {
       const chip = document.createElement('button');
       chip.className = 'rs-fav-chip';
-      chip.textContent = `${emoji} ${label}`;
+      const countStr = (count && count > 1) ? ` (${count}x)` : '';
+      chip.textContent = `${emoji} ${label}${countStr}`;
       chip.addEventListener('click', () => quickRegisterFav(fav));
       chips2.appendChild(chip);
     });
@@ -874,13 +955,14 @@ function renderRSFavoritesView() {
   }
 
   if (favResolved.length === 0 && freqResolved.length === 0) {
-    container.innerHTML = '<div class="rs-result-empty">A\u00fan no tienes favoritos ni frecuentes.<br>Reg\u00edstra alimentos para que aparezcan aqu\u00ed \u{1f331}</div>';
+    container.innerHTML = '<div class="rs-result-empty">Aún no tienes favoritos ni frecuentes.<br>Registra alimentos para que aparezcan aquí 🌱</div>';
   }
 }
 function resolveItemLabel(rawItem) {
   if (!rawItem) return null;
   let type = rawItem.type;
   let reference_id = rawItem.reference_id;
+  const count = rawItem.count;
   if (typeof rawItem === 'string') {
     if (rawItem.startsWith('rec_')) {
       type = 'meal';
@@ -897,17 +979,17 @@ function resolveItemLabel(rawItem) {
   if (type === 'meal') {
     const r = DB.getRecipeById(reference_id);
     if (!r) return null;
-    return { label: r.name, emoji: emojis[r.meal_type] || '🍳', fav: { type, reference_id } };
+    return { label: r.name, emoji: emojis[r.meal_type] || '🍳', fav: { type, reference_id }, count };
   }
   if (type === 'food_item') {
     const fi = DB.getFoodItemById(reference_id);
     if (!fi) return null;
-    return { label: fi.name, emoji: '🥗', fav: { type, reference_id } };
+    return { label: fi.name, emoji: '🥗', fav: { type, reference_id }, count };
   }
   if (type === 'ingredient') {
     const ing = DB.getIngredientById(reference_id);
     if (!ing) return null;
-    return { label: ing.name, emoji: '🥕', fav: { type, reference_id } };
+    return { label: ing.name, emoji: '🥕', fav: { type, reference_id }, count };
   }
   return null;
 }
@@ -915,12 +997,28 @@ function quickRegisterFav({ type, reference_id }) {
   if (type === 'meal') {
     DB.addFoodLog({ type: 'meal', reference_id, planned: false });
     const r = DB.getRecipeById(reference_id);
-    showToast(`\u2705 ${r?.name || 'Receta'} registrada`);
+    showToast(`✅ ${r?.name || 'Receta'} registrada`);
   } else if (type === 'food_item') {
     const fi = DB.getFoodItemById(reference_id);
     const qty = fi?.typical_serving_g || 100;
     DB.addFoodLog({ type: 'food_item', reference_id, quantity_g: qty, planned: false });
-    showToast(`\u2705 ${fi?.name || 'Alimento'} (${qty}g) registrado`);
+    showToast(`✅ ${fi?.name || 'Alimento'} (${qty}g) registrado`);
+  } else if (type === 'ingredient') {
+    const ing = DB.getIngredientById(reference_id);
+    if (ing) {
+      const fi = DB.upsertFoodItem({
+        name: ing.name,
+        calories_per_100g: ing.calories_per_100g || 0,
+        protein_per_100g:  ing.protein_per_100g  || 0,
+        carbs_per_100g:    ing.carbs_per_100g    || 0,
+        fat_per_100g:      ing.fat_per_100g      || 0,
+        typical_serving_g: 100,
+        category: ing.category || 'Otro',
+        source: 'ingredient'
+      });
+      DB.addFoodLog({ type: 'food_item', reference_id: fi.id, quantity_g: 100, planned: false });
+      showToast(`✅ ${ing.name} (100g) registrado`);
+    }
   }
   closeRegisterSheet();
   renderDiaryScreen();

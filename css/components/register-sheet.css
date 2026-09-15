@@ -204,6 +204,16 @@
   border-radius: 6px;
 }
 
+.rs-count-badge {
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 6px;
+  border: 1px solid #fde68a;
+}
+
 /* ── Área de scroll con resultados ── */
 .rs-scroll-content {
   flex: 1;

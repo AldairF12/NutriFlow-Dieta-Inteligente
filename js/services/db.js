@@ -444,8 +444,102 @@ const DB = {
     }
   },
 
-  getFrequentItems() {
-    return appState.userPreferences.frequentItems || [];
+  getFrequentItems(limit = 8, days = 30) {
+    const logs = appState.foodLogs || [];
+
+    // Si no hay ningún log registrado, retornar los defaults iniciales formateados
+    if (logs.length === 0) {
+      const initial = appState.userPreferences.frequentItems || ['ing_001', 'ing_014', 'fi_006'];
+      return initial.slice(0, limit).map(id => {
+        if (typeof id === 'object') return id;
+        const type = id.startsWith('rec_') ? 'meal' : (id.startsWith('ing_') ? 'ingredient' : 'food_item');
+        return { type, reference_id: id, count: 1 };
+      });
+    }
+
+    // Filtrar por ventana de tiempo (últimos N días)
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - (days || 30));
+    const cutoffTime = cutoff.getTime();
+
+    let targetLogs = logs.filter(l => {
+      if (!l.reference_id) return false;
+      if (l.type === 'liquid') return false; // Los líquidos van en la barra de hidratación
+      const logTime = l.timestamp ? new Date(l.timestamp).getTime() : (l.date ? new Date(l.date + 'T12:00:00').getTime() : 0);
+      return logTime >= cutoffTime;
+    });
+
+    // Si en los últimos N días hay muy pocos registros, usar todo el historial acumulado
+    if (targetLogs.length < 3) {
+      targetLogs = logs.filter(l => l.reference_id && l.type !== 'liquid');
+    }
+
+    if (targetLogs.length === 0) {
+      const initial = appState.userPreferences.frequentItems || ['ing_001', 'ing_014', 'fi_006'];
+      return initial.slice(0, limit).map(id => {
+        if (typeof id === 'object') return id;
+        const type = id.startsWith('rec_') ? 'meal' : (id.startsWith('ing_') ? 'ingredient' : 'food_item');
+        return { type, reference_id: id, count: 1 };
+      });
+    }
+
+    // Contar ocurrencias por { type, reference_id }
+    const freqMap = new Map();
+    targetLogs.forEach(l => {
+      const type = l.type || (l.reference_id.startsWith('rec_') ? 'meal' : (l.reference_id.startsWith('ing_') ? 'ingredient' : 'food_item'));
+      const key = `${type}:${l.reference_id}`;
+      const logTime = l.timestamp ? new Date(l.timestamp).getTime() : (l.date ? new Date(l.date + 'T12:00:00').getTime() : 0);
+
+      if (!freqMap.has(key)) {
+        freqMap.set(key, {
+          type,
+          reference_id: l.reference_id,
+          count: 1,
+          lastTimestamp: logTime
+        });
+      } else {
+        const item = freqMap.get(key);
+        item.count++;
+        if (logTime > item.lastTimestamp) {
+          item.lastTimestamp = logTime;
+        }
+      }
+    });
+
+    // Ordenar por mayor número de repeticiones y luego por fecha más reciente
+    const sorted = Array.from(freqMap.values()).sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count;
+      return b.lastTimestamp - a.lastTimestamp;
+    });
+
+    return sorted.slice(0, limit);
+  },
+
+  getRecentItems(limit = 6) {
+    const logs = appState.foodLogs || [];
+    if (logs.length === 0) return [];
+
+    const recents = [];
+    const seen = new Set();
+
+    // Recorrer del más reciente al más antiguo
+    for (let i = logs.length - 1; i >= 0; i--) {
+      const l = logs[i];
+      if (!l.reference_id || l.type === 'liquid') continue;
+      const type = l.type || (l.reference_id.startsWith('rec_') ? 'meal' : (l.reference_id.startsWith('ing_') ? 'ingredient' : 'food_item'));
+      const key = `${type}:${l.reference_id}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        recents.push({
+          type,
+          reference_id: l.reference_id,
+          timestamp: l.timestamp || l.date
+        });
+        if (recents.length >= limit) break;
+      }
+    }
+
+    return recents;
   },
 
   getFavorites() {

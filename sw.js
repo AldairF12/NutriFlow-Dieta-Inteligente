@@ -3,7 +3,7 @@
 // Soporte 100% Offline-First + Notificaciones Web Push en Segundo Plano
 // ============================================================================
 
-const CACHE_NAME = 'nutriflow-cache-v6.2';
+const CACHE_NAME = 'nutriflow-cache-v6.4';
 
 const CORE_ASSETS = [
   './',
