@@ -227,11 +227,27 @@ function getLocalIsoDate(d = new Date()) {
 
 function getDailyStreak() {
   const db = getNutriDB();
-  const logs = (db && db.state && db.state.food_logs) ? db.state.food_logs : [];
-  if (!logs.length) return { count: 0, recordedToday: false };
+  const logs = (db && db.state && (db.state.foodLogs || db.state.food_logs)) 
+    ? (db.state.foodLogs || db.state.food_logs) 
+    : ((db && db.foodLogs) ? db.foodLogs : []);
+  if (!logs || !logs.length) return { count: 0, recordedToday: false };
 
-  const dates = new Set(logs.map(l => l.date));
+  const dates = new Set();
+  logs.forEach(l => {
+    if (l && l.date) {
+      dates.add(l.date);
+    } else if (l && l.timestamp) {
+      try {
+        const d = new Date(l.timestamp);
+        dates.add(getLocalIsoDate(d));
+      } catch (e) {}
+    }
+  });
+
+  if (dates.size === 0) return { count: 0, recordedToday: false };
+
   const today = new Date();
+  today.setHours(12, 0, 0, 0);
   const todayStr = getLocalIsoDate(today);
   const recordedToday = dates.has(todayStr);
 
@@ -239,6 +255,7 @@ function getDailyStreak() {
   let curr = new Date(today);
 
   if (!recordedToday) {
+    // Si aún no ha registrado hoy, verificamos si la racha venía activa desde ayer
     curr.setDate(curr.getDate() - 1);
   }
 
@@ -319,11 +336,34 @@ function updateHeaderGamification() {
   if (streakEl) {
     const { count, recordedToday } = getDailyStreak();
     if (count > 0) {
-      streakEl.textContent = `\u{1f525} ${count} ${count === 1 ? 'd\u00eda' : 'd\u00edas'} de racha`;
+      streakEl.textContent = `🔥 ${count} ${count === 1 ? 'día' : 'días'} de racha`;
       streakEl.classList.add('streak-badge--active');
+      streakEl.title = recordedToday 
+        ? '¡Racha al día! Has registrado hoy.' 
+        : '¡Registra una comida hoy para no perder tu racha!';
     } else {
-      streakEl.textContent = '\u{1f525} \u00a1Inicia tu racha hoy!';
+      streakEl.textContent = '🔥 ¡Inicia tu racha hoy!';
       streakEl.classList.remove('streak-badge--active');
+      streakEl.title = 'Registra tus comidas o agua para comenzar tu racha.';
+    }
+
+    if (!streakEl._hasClickListener) {
+      streakEl._hasClickListener = true;
+      streakEl.style.cursor = 'pointer';
+      streakEl.addEventListener('click', () => {
+        const current = getDailyStreak();
+        if (typeof showToast === 'function') {
+          if (current.count > 0) {
+            if (current.recordedToday) {
+              showToast(`🔥 ¡Racha activa de ${current.count} ${current.count === 1 ? 'día' : 'días'}! Ya registraste hoy.`);
+            } else {
+              showToast(`🔥 Tienes ${current.count} ${current.count === 1 ? 'día' : 'días'} de racha. ¡Registra hoy para mantenerla!`);
+            }
+          } else {
+            showToast('🔥 Registra una comida o bebida hoy para iniciar tu racha.');
+          }
+        }
+      });
     }
   }
 

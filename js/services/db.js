@@ -135,6 +135,9 @@ function loadState() {
       if (!Array.isArray(parsed.customRecipes)) parsed.customRecipes = [];
       if (!Array.isArray(parsed.customRecipeIngredients)) parsed.customRecipeIngredients = [];
       if (!Array.isArray(parsed.customIngredients)) parsed.customIngredients = [];
+      if (!Array.isArray(parsed.foodLogs)) {
+        parsed.foodLogs = Array.isArray(parsed.food_logs) ? parsed.food_logs : [];
+      }
 
       // Cleanup static data from old localStorage state if it exists
       let cleanedLegacy = false;
@@ -208,7 +211,7 @@ const DB = {
     return [...CATALOG_RECIPE_INGREDIENTS, ...(appState.customRecipeIngredients || [])]; 
   },
   get pantry() { return appState.pantry; },
-  get foodLogs() { return appState.foodLogs; },
+  get foodLogs() { return appState.foodLogs || appState.food_logs || []; },
   get liquids() { return appState.liquids; },
   get userPreferences() { return appState.userPreferences; },
   get foodItems() { return [...CATALOG_FOOD_ITEMS, ...(appState.foodItems || [])]; },
