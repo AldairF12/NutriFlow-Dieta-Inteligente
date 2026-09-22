@@ -1141,6 +1141,19 @@
           </div>
         </div>
 
+        <!-- Selector Sutil de Fecha del Registro -->
+        <div class="food-log-section text-center" id="food-log-date-section">
+          <label class="food-log-section-label">Fecha del consumo:</label>
+          <div class="food-log-chips center" id="food-log-date-chips">
+            <button type="button" class="food-log-chip" id="btn-food-log-date-yesterday" data-date="yesterday">⬅️ Ayer</button>
+            <button type="button" class="food-log-chip" id="btn-food-log-date-today" data-date="today">📍 Hoy</button>
+            <div class="food-log-chip food-log-date-picker-btn" id="btn-food-log-date-custom" role="button" tabindex="0" title="Elegir otra fecha">
+              <span id="food-log-date-custom-text">📅 Otra fecha</span>
+              <input type="date" id="food-log-date-input" class="food-log-hidden-date-input" aria-label="Seleccionar fecha de consumo" />
+            </div>
+          </div>
+        </div>
+
         <!-- Modificador Interactivo de Gramos (De 10 en 10, diseño armónico) -->
         <div class="food-log-section text-center" id="food-log-gram-section">
           <label class="food-log-section-label">Porción consumida:</label>
@@ -1191,32 +1204,32 @@
   <script src="js/main.js?v=6.2"></script>
 
   <!-- Registro de Service Worker para PWA y Notificaciones Móviles -->
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js')
-        .then(registration => {
-          console.log('Service Worker registrado con éxito:', registration.scope);
-          // Forzar comprobación de nueva versión en cada carga
-            registration.update();
-            registration.onupdatefound = () => {
-              const installingWorker = registration.installing;
-              if (installingWorker) {
-                installingWorker.onstatechange = () => {
-                  if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                    console.log('Nueva versión de NutriFlow detectada. Actualizando...');
-                    window.location.reload();
-                  }
-                };
-              }
-            };
-        })
-        .catch(error => {
-          console.log('Fallo al registrar el Service Worker:', error);
-        });
-    });
-  }
-</script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(registration => {
+            console.log('Service Worker registrado con éxito:', registration.scope);
+            // Forzar comprobación de nueva versión en cada carga
+              registration.update();
+              registration.onupdatefound = () => {
+                const installingWorker = registration.installing;
+                if (installingWorker) {
+                  installingWorker.onstatechange = () => {
+                    if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                      console.log('Nueva versión de NutriFlow detectada. Actualizando...');
+                      window.location.reload();
+                    }
+                  };
+                }
+              };
+          })
+          .catch(error => {
+            console.log('Fallo al registrar el Service Worker:', error);
+          });
+      });
+    }
+  </script>
 
 
 
