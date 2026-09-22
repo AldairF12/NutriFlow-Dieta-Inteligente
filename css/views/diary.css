@@ -900,6 +900,43 @@ body.modal-open {
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.16);
 }
 
+.food-log-date-picker-btn,
+.food-log-date-picker-label {
+  position: relative;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  user-select: none;
+}
+
+.food-log-hidden-date-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+  border: none;
+  z-index: 2;
+}
+
+.food-log-hidden-date-input::-webkit-calendar-picker-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
 /* Modificador Interactivo de Gramos */
 .food-log-stepper-wrap {
   display: flex;

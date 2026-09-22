@@ -868,6 +868,8 @@ function renderFreeDiaryEntries(container) {
 let _foodLogActiveLogId = null;
 let _foodLogSelectedCategory = 'snack';
 let _foodLogInitialCategory = 'snack';
+let _foodLogSelectedDate = '';
+let _foodLogInitialDate = '';
 let _foodLogInitialQty = 100;
 let _foodLogBase100g = { cal: 0, prot: 0, carb: 0, fat: 0 };
 let _foodLogIsPortionBased = false;
@@ -878,9 +880,17 @@ function openFoodLogModal(logId) {
     : null;
   if (!log) return;
 
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const yestD = new Date(now);
+  yestD.setDate(yestD.getDate() - 1);
+  const yestStr = `${yestD.getFullYear()}-${String(yestD.getMonth() + 1).padStart(2, '0')}-${String(yestD.getDate()).padStart(2, '0')}`;
+
   _foodLogActiveLogId = log.id;
   _foodLogSelectedCategory = log.mealCategory || 'snack';
   _foodLogInitialCategory = _foodLogSelectedCategory;
+  _foodLogSelectedDate = log.date || (log.timestamp ? log.timestamp.split('T')[0] : todayStr);
+  _foodLogInitialDate = _foodLogSelectedDate;
 
   const modal = document.getElementById('food-log-modal');
   const overlay = document.getElementById('food-log-overlay');
@@ -911,18 +921,40 @@ function openFoodLogModal(logId) {
     snack: '🥨 Snack'
   };
 
-  // Subtítulo con horario formateado
-  const timeStr = log.timestamp
-    ? new Date(log.timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
-    : '';
-  subtitleEl.textContent = timeStr ? `Registrado hoy a las ${timeStr}` : 'Registrado hoy';
+  // Subtítulo con fecha y horario dinámicos
+  function formatLogSubtitle(dateIso, timestamp) {
+    const timeStr = timestamp
+      ? new Date(timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+      : '';
+    const timeSuffix = timeStr ? ` · ${timeStr}` : '';
+
+    if (dateIso === todayStr) {
+      return `📅 Registrado hoy${timeSuffix}`;
+    } else if (dateIso === yestStr) {
+      return `📅 Registrado ayer${timeSuffix}`;
+    } else {
+      try {
+        const parts = (dateIso || '').split('-');
+        if (parts.length === 3) {
+          const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+          const f = d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
+          return `📅 Registrado el ${f}${timeSuffix}`;
+        }
+      } catch(e) {}
+      return `📅 Registrado el ${dateIso}${timeSuffix}`;
+    }
+  }
+
+  subtitleEl.textContent = formatLogSubtitle(_foodLogSelectedDate, log.timestamp);
   catBadgeEl.textContent = catNames[_foodLogSelectedCategory] || '🥨 Snack';
   typeBadgeEl.textContent = log.planned ? 'Del plan' : 'Extra';
 
-  // Dirty check: Guardar solo se activa si hay cambios
+  // Dirty check: Guardar solo se activa si hay cambios en categoría, porción o fecha
   function checkDirty() {
     const curQty = parseInt(gramInput.value) || 0;
-    const isDirty = (_foodLogSelectedCategory !== _foodLogInitialCategory) || (curQty !== _foodLogInitialQty);
+    const isDirty = (_foodLogSelectedCategory !== _foodLogInitialCategory) || 
+                    (curQty !== _foodLogInitialQty) ||
+                    (_foodLogSelectedDate !== _foodLogInitialDate);
     if (saveBtn) {
       saveBtn.disabled = !isDirty;
     }
@@ -946,6 +978,108 @@ function openFoodLogModal(logId) {
         checkDirty();
       };
     });
+  }
+
+  // Chips interactivos de fecha de consumo (Ayer, Hoy, Otra fecha)
+  const btnDateYest = document.getElementById('btn-food-log-date-yesterday');
+  const btnDateToday = document.getElementById('btn-food-log-date-today');
+  const btnDateCustom = document.getElementById('btn-food-log-date-custom') || document.getElementById('lbl-food-log-date-custom');
+  const customDateText = document.getElementById('food-log-date-custom-text');
+  const dateInput = document.getElementById('food-log-date-input');
+
+  const todayShort = now.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  const yestShort = yestD.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+
+  if (btnDateYest) btnDateYest.textContent = `⬅️ Ayer (${yestShort})`;
+  if (btnDateToday) btnDateToday.textContent = `📍 Hoy (${todayShort})`;
+
+  function updateDateChipsUI() {
+    if (btnDateYest) btnDateYest.classList.toggle('active', _foodLogSelectedDate === yestStr);
+    if (btnDateToday) btnDateToday.classList.toggle('active', _foodLogSelectedDate === todayStr);
+
+    const isCustom = (_foodLogSelectedDate !== todayStr && _foodLogSelectedDate !== yestStr);
+    if (btnDateCustom) btnDateCustom.classList.toggle('active', isCustom);
+
+    if (customDateText) {
+      if (isCustom && _foodLogSelectedDate) {
+        try {
+          const parts = _foodLogSelectedDate.split('-');
+          const d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+          const f = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+          customDateText.textContent = `📅 ${f}`;
+        } catch(e) {
+          customDateText.textContent = `📅 ${_foodLogSelectedDate}`;
+        }
+      } else {
+        customDateText.textContent = '📅 Otra fecha';
+      }
+    }
+
+    if (dateInput) dateInput.value = _foodLogSelectedDate;
+    if (subtitleEl) subtitleEl.textContent = formatLogSubtitle(_foodLogSelectedDate, log.timestamp);
+  }
+
+  updateDateChipsUI();
+
+  if (btnDateYest) {
+    btnDateYest.onclick = () => {
+      _foodLogSelectedDate = yestStr;
+      updateDateChipsUI();
+      checkDirty();
+    };
+  }
+
+  if (btnDateToday) {
+    btnDateToday.onclick = () => {
+      _foodLogSelectedDate = todayStr;
+      updateDateChipsUI();
+      checkDirty();
+    };
+  }
+
+  function triggerCalendarPicker() {
+    if (!dateInput) return;
+    if (typeof dateInput.showPicker === 'function') {
+      try {
+        dateInput.showPicker();
+        return;
+      } catch(err) {
+        // Fallback si el navegador no permite showPicker
+      }
+    }
+    dateInput.focus();
+    dateInput.click();
+  }
+
+  if (btnDateCustom) {
+    btnDateCustom.onclick = (e) => {
+      if (e.target !== dateInput) {
+        triggerCalendarPicker();
+      }
+    };
+    btnDateCustom.onkeydown = (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        triggerCalendarPicker();
+      }
+    };
+  }
+
+  if (dateInput) {
+    dateInput.onclick = () => {
+      if (typeof dateInput.showPicker === 'function') {
+        try {
+          dateInput.showPicker();
+        } catch(err) {}
+      }
+    };
+    dateInput.onchange = (e) => {
+      if (e.target.value) {
+        _foodLogSelectedDate = e.target.value;
+        updateDateChipsUI();
+        checkDirty();
+      }
+    };
   }
 
   // Resolver datos de alimento o receta
@@ -1137,12 +1271,33 @@ function openFoodLogModal(logId) {
   if (saveBtn) {
     saveBtn.onclick = () => {
       const finalQty = parseInt(gramInput.value) || qty;
+      const dateChanged = (_foodLogSelectedDate !== _foodLogInitialDate);
+
       window.DB.updateFoodLog(log.id, {
         quantity_g: finalQty,
-        mealCategory: _foodLogSelectedCategory
+        mealCategory: _foodLogSelectedCategory,
+        date: _foodLogSelectedDate
       });
       closeFoodLogModal();
-      if (typeof showToast === 'function') showToast('✅ Comida actualizada');
+      if (typeof showToast === 'function') {
+        if (dateChanged) {
+          let targetName = 'día de hoy';
+          if (_foodLogSelectedDate === yestStr) {
+            targetName = 'día de ayer';
+          } else if (_foodLogSelectedDate !== todayStr) {
+            try {
+              const p = _foodLogSelectedDate.split('-');
+              const d = new Date(parseInt(p[0]), parseInt(p[1]) - 1, parseInt(p[2]));
+              targetName = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+            } catch(e) {
+              targetName = _foodLogSelectedDate;
+            }
+          }
+          showToast(`✅ Comida movida al ${targetName}`);
+        } else {
+          showToast('✅ Comida actualizada');
+        }
+      }
       if (typeof renderDiaryScreen === 'function') renderDiaryScreen();
       if (typeof renderDashboardScreen === 'function') renderDashboardScreen();
       if (typeof updateShoppingFab === 'function') updateShoppingFab();
@@ -1153,7 +1308,7 @@ function openFoodLogModal(logId) {
   // Eliminar comida
   if (delBtn) {
     delBtn.onclick = () => {
-      if (confirm(`¿Eliminar "${itemName}" del registro de hoy?`)) {
+      if (confirm(`¿Eliminar "${itemName}" de este registro?`)) {
         if (log.type === 'meal' && log.planned) {
           // Revertir ingredientes a despensa si era planificada
           const ris = window.DB.getRecipeIngredients(log.reference_id) || [];
